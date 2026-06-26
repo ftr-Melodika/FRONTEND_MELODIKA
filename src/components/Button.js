@@ -17,19 +17,19 @@ export function Button({ title, onPress, variant = 'primary' }) {
 const styles = StyleSheet.create({
   button: {
     width: '100%',
-    height: 50,
+    height: 44,
     backgroundColor: '#b28cff', // Color lila del botón principal
-    borderRadius: 25, // Bordes redondeados tipo píldora
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   buttonSecondary: {
     backgroundColor: 'rgba(178, 140, 255, 0.6)', // Más transparente para los de abajo
   },
   text: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
   },
 });

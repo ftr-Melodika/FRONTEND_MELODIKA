@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Pressable } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Background } from '../components/Background';
 import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
 
@@ -27,11 +27,7 @@ export function RegisterScreen({ navigation }) {
   };
 
   return (
-    <LinearGradient
-      colors={['#4c52d9', '#6b5ce7', '#8e71ff']}
-      style={styles.container}
-    >
-
+    <Background>
       <View style={styles.glassCard}>
         
         <ScrollView 
@@ -98,7 +94,7 @@ export function RegisterScreen({ navigation }) {
 
         </ScrollView>
       </View>
-    </LinearGradient>
+    </Background>
   );
 }
 

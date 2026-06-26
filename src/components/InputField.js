@@ -16,14 +16,14 @@ export function InputField({ placeholder, secureTextEntry, value, onChangeText }
 const styles = StyleSheet.create({
   input: {
     width: '100%',
-    height: 50,
+    height: 44,
     backgroundColor: 'rgba(255, 255, 255, 0.15)', // Fondo semitransparente
     borderColor: 'rgba(255, 255, 255, 0.3)', // Borde sutil
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    marginBottom: 15,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    marginBottom: 10,
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
   },
 });

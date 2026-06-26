@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Background } from '../components/Background';
 import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
 
@@ -52,10 +52,7 @@ export function LoginScreen({ navigation }) {
   };
 
   return (
-    <LinearGradient
-      colors={['#4c52d9', '#6b5ce7', '#8e71ff']}
-      style={styles.container}
-    >
+    <Background>
       <View style={styles.glassCard}>
         <Text style={styles.title}>Inicio de sesión</Text>
 
@@ -89,7 +86,7 @@ export function LoginScreen({ navigation }) {
         <Button title="Inicia sesión con Google" variant="secondary" />
 
       </View>
-    </LinearGradient>
+    </Background>
   );
 }
 
@@ -110,16 +107,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   title: {
-    fontSize: 32,
+    fontSize: 24,
     color: '#fff',
     textAlign: 'center',
-    marginBottom: 15,
+    marginBottom: 10,
     fontFamily: 'serif', 
     fontWeight: 'bold',
   },
   registerContainer: {
     alignItems: 'center',
-    marginVertical: 5,
+    marginVertical: 6,
   },
   textHelper: {
     color: 'rgba(255, 255, 255, 0.8)',
