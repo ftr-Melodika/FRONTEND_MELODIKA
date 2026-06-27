@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } fr
 import { Background } from '../components/Background';
 import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
+import { ENDPOINTS } from '../config/api';
 
 export function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -18,11 +19,7 @@ export function LoginScreen({ navigation }) {
     setLoading(true);
 
     try {
-      /* ⚠️ IMPORTANTE: 
-         Si estás probando en tu celular físico con Expo Go, 'localhost' no va a funcionar. 
-         Tenés que poner la IP local de tu compu (ej: http://192.168.0.15:3000/api/cuentas/login)
-      */
-      const response = await fetch('http://localhost:3000/api/cuentas/login', {
+      const response = await fetch(ENDPOINTS.login, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -33,16 +30,28 @@ export function LoginScreen({ navigation }) {
         }),
       });
 
-      const data = await response.json();
+      const textResponse = await response.text();
+      let data = null;
 
-      // error
-      if (!response.ok) {
-        throw new Error(data.message || 'Error al iniciar sesión');
+      if (textResponse) {
+        try {
+          data = JSON.parse(textResponse);
+        } catch (e) {
+          throw new Error(`El servidor respondió con un formato inesperado (${response.status}). Revisá que el backend esté corriendo y que la URL sea correcta.`);
+        }
       }
 
-      // login exitoso
-      console.log('¡Token recibido!: ', data.token);
-      Alert.alert('¡Bienvenido!', `Iniciaste sesión como ${data.cuenta.email}`);
+      if (!response.ok) {
+        throw new Error(data?.message || `Error al iniciar sesión (${response.status})`);
+      }
+
+      const token = data?.token || data?.accessToken || data?.session?.access_token || data?.session?.accessToken || data?.cuenta?.token;
+      const cuentaConToken = data?.cuenta ? { ...data.cuenta, token } : null;
+
+      console.log('¡Token real recibido!: ', token);
+      
+      // Redirección dinámica: Mandamos a la pantalla de selección con token seguro
+      navigation.replace('SelectUser', { cuenta: cuentaConToken || data.cuenta, token });
 
     } catch (error) {
       Alert.alert('Error de Inicio de Sesión', error.message);
@@ -56,11 +65,11 @@ export function LoginScreen({ navigation }) {
       <View style={styles.glassCard}>
         <Text style={styles.title}>Inicio de sesión</Text>
 
-        {/* Conectamos los inputs con nuestros estados */}
         <InputField 
           placeholder="Correo electrónico" 
           value={email}
           onChangeText={setEmail}
+          keyboardType="email-address"
         />
         <InputField 
           placeholder="Contraseña" 
@@ -69,7 +78,6 @@ export function LoginScreen({ navigation }) {
           onChangeText={setPassword}
         />
 
-        {/* Botón principal. Si está cargando, mostramos un spinner */}
         {loading ? (
           <ActivityIndicator size="large" color="#b28cff" style={{ marginBottom: 12 }} />
         ) : (
@@ -84,23 +92,17 @@ export function LoginScreen({ navigation }) {
         </View>
 
         <Button title="Inicia sesión con Google" variant="secondary" />
-
       </View>
     </Background>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   glassCard: {
     width: '65%',
     backgroundColor: 'rgba(255, 255, 255, 0.1)', 
     borderRadius: 25,
-    paddingVertical: 5,
+    paddingVertical: 15,
     paddingHorizontal: 25,
     marginVertical: 15,
     borderColor: 'rgba(255, 255, 255, 0.2)',
@@ -110,7 +112,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#fff',
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 15,
     fontFamily: 'serif', 
     fontWeight: 'bold',
   },
