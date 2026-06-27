@@ -122,63 +122,64 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 25,
   },
-  scrollContent: { 
-    paddingVertical: 20 
+  scrollContent: {
+    paddingVertical: 20,
   },
-  title: { 
-    fontSize: 32, color: '#fff', 
-    textAlign: 'center', 
-    marginBottom: 20, 
-    fontFamily: 'serif', 
-    fontWeight: 'bold' 
+  title: {
+    fontSize: 32,
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 20,
+    fontFamily: 'serif',
+    fontWeight: 'bold',
   },
-  checkboxContainer: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginBottom: 15, 
-    paddingHorizontal: 2 
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+    paddingHorizontal: 2,
   },
-  checkbox: { 
-    width: 18, 
-    height: 18, 
-    borderRadius: 4, 
-    borderWidth: 1.5, 
-    borderColor: 'rgba(255, 255, 255, 0.6)', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    marginRight: 10, 
-    backgroundColor: 'rgba(255, 255, 255, 0.05)' 
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
-  checkboxChecked: { 
-    backgroundColor: '#b28cff', 
-    borderColor: '#b28cff' 
+  checkboxChecked: {
+    backgroundColor: '#b28cff',
+    borderColor: '#b28cff',
   },
-  checkboxTick: { 
-    color: '#fff', 
-    fontSize: 11, 
-    fontWeight: 'bold' 
+  checkboxTick: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: 'bold',
   },
-  checkboxLabel: { 
-    color: 'rgba(255, 255, 255, 0.85)', 
-    fontSize: 13, 
-    flex: 1 
+  checkboxLabel: {
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: 13,
+    flex: 1,
   },
-  btnSubmit: { 
-    marginTop: 10 
+  btnSubmit: {
+    marginTop: 10,
   },
-  loginLinkContainer: { 
-    alignItems: 'center', 
-    marginTop: 10 
+  loginLinkContainer: {
+    alignItems: 'center',
+    marginTop: 10,
   },
-  textHelper: { 
-    color: 'rgba(255, 255, 255, 0.7)', 
-    fontSize: 14 
+  textHelper: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 14,
   },
-  textLink: { 
-    color: '#fff', 
-    fontSize: 14, 
-    fontWeight: 'bold', 
-    textDecorationLine: 'underline', 
-    marginTop: 3 
+  textLink: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+    textDecorationLine: 'underline',
+    marginTop: 3,
   },
 });

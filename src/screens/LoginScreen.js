@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Background } from '../components/Background';
 import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
@@ -12,8 +13,7 @@ export function LoginScreen({ navigation }) {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Por favor completá correo y contraseña.');
-      return;
+      return Alert.alert('Error', 'Por favor completá correo y contraseña.');
     }
 
     setLoading(true);
@@ -21,37 +21,21 @@ export function LoginScreen({ navigation }) {
     try {
       const response = await fetch(ENDPOINTS.login, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          email: email.trim(), 
-          password: password 
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
       });
 
-      const textResponse = await response.text();
-      let data = null;
-
-      if (textResponse) {
-        try {
-          data = JSON.parse(textResponse);
-        } catch (e) {
-          throw new Error(`El servidor respondió con un formato inesperado (${response.status}). Revisá que el backend esté corriendo y que la URL sea correcta.`);
-        }
-      }
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.message || `Error al iniciar sesión (${response.status})`);
+        throw new Error(data.message || 'Error al iniciar sesión');
       }
 
-      const token = data?.token || data?.accessToken || data?.session?.access_token || data?.session?.accessToken || data?.cuenta?.token;
-      const cuentaConToken = data?.cuenta ? { ...data.cuenta, token } : null;
+      // GUARDA EL TOKEN Y LA CUENTA EN EL CELULAR
+      await AsyncStorage.setItem('userToken', data.token);
+      await AsyncStorage.setItem('userCuenta', JSON.stringify(data.cuenta)); 
 
-      console.log('¡Token real recibido!: ', token);
-      
-      // Redirección dinámica: Mandamos a la pantalla de selección con token seguro
-      navigation.replace('SelectUser', { cuenta: cuentaConToken || data.cuenta, token });
+      navigation.replace('SelectUser', { cuenta: data.cuenta, token: data.token });
 
     } catch (error) {
       Alert.alert('Error de Inicio de Sesión', error.message);
@@ -64,19 +48,8 @@ export function LoginScreen({ navigation }) {
     <Background>
       <View style={styles.glassCard}>
         <Text style={styles.title}>Inicio de sesión</Text>
-
-        <InputField 
-          placeholder="Correo electrónico" 
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-        />
-        <InputField 
-          placeholder="Contraseña" 
-          secureTextEntry={true} 
-          value={password}
-          onChangeText={setPassword}
-        />
+        <InputField placeholder="Correo electrónico" value={email} onChangeText={setEmail} keyboardType="email-address" />
+        <InputField placeholder="Contraseña" secureTextEntry value={password} onChangeText={setPassword} />
 
         {loading ? (
           <ActivityIndicator size="large" color="#b28cff" style={{ marginBottom: 12 }} />
@@ -100,7 +73,7 @@ export function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
   glassCard: {
     width: '65%',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 25,
     paddingVertical: 15,
     paddingHorizontal: 25,
@@ -113,7 +86,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     textAlign: 'center',
     marginBottom: 15,
-    fontFamily: 'serif', 
+    fontFamily: 'serif',
     fontWeight: 'bold',
   },
   registerContainer: {

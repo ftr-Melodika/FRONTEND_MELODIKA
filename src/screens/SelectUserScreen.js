@@ -4,39 +4,26 @@ import { Background } from '../components/Background';
 import { ENDPOINTS } from '../config/api';
 
 export function SelectUserScreen({ route, navigation }) {
-  // Recibimos la cuenta que acaba de iniciar sesión (o registrarse)
-  const cuenta = route.params?.cuenta;
-  const token = route.params?.token || cuenta?.token || route.params?.cuenta?.token;
+  const { cuenta, token } = route.params || {};
   
   const [perfiles, setPerfiles] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Apenas carga la pantalla, vamos a buscar los perfiles de esta cuenta
   useEffect(() => {
     async function fetchPerfiles() {
       try {
-        const response = await fetch(ENDPOINTS.obtenerPerfiles(cuenta.id), {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const response = await fetch(ENDPOINTS.obtenerPerfiles, {
+          headers: { Authorization: `Bearer ${token}` },
         });
-        const textResponse = await response.text();
-        let data = null;
-
-        if (textResponse) {
-          try {
-            data = JSON.parse(textResponse);
-          } catch (e) {
-            throw new Error(`El servidor respondió con un formato inesperado (${response.status}). Revisá que el backend esté corriendo y que la URL sea correcta.`);
-          }
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.message || 'Error al cargar los perfiles');
         }
         
-        if (response.ok) {
-          // data debería ser un array de perfiles: [{id: 1, nombre: 'Gasti'}, ...]
-          setPerfiles(Array.isArray(data) ? data : []);
-        } else {
-          throw new Error(data?.message || `Error al cargar los perfiles (${response.status})`);
-        }
+        setPerfiles(Array.isArray(data.data) ? data.data : []);
+
       } catch (error) {
         Alert.alert('Error', error.message);
       } finally {
@@ -44,20 +31,8 @@ export function SelectUserScreen({ route, navigation }) {
       }
     }
 
-    if (cuenta?.id) {
-      fetchPerfiles();
-    }
+    if (cuenta?.id && token) fetchPerfiles();
   }, [cuenta, token]);
-
-  // Al tocar un perfil existente -> Vamos directo al Home (Cursos)
-  const handleSelectProfile = (perfil) => {
-    navigation.replace('Home', { cuenta, perfil });
-  };
-
-  // Al tocar el "+" -> Vamos a la pantalla de crear perfil
-  const handleAddProfile = () => {
-    navigation.navigate('CreateUser', { cuenta, token });
-  };
 
   return (
     <Background>
@@ -68,31 +43,24 @@ export function SelectUserScreen({ route, navigation }) {
           <ActivityIndicator size="large" color="#b28cff" style={{ marginTop: 40 }} />
         ) : (
           <View style={styles.profilesRow}>
-            
-            {/* Dibujamos los perfiles que ya existen */}
             {perfiles.map((perfil) => (
               <TouchableOpacity
                 key={perfil.id}
                 style={styles.profileWrapper}
-                onPress={() => handleSelectProfile(perfil)}
+                onPress={() => navigation.replace('Home', { cuenta, perfil, token })}
                 activeOpacity={0.8}
               >
                 <View style={styles.avatarCircle}>
-                  <Text style={styles.avatarInitial}>
-                    {perfil.nombre.charAt(0).toUpperCase()}
-                  </Text>
+                  <Text style={styles.avatarInitial}>{perfil.nombre.charAt(0).toUpperCase()}</Text>
                 </View>
-                <Text style={styles.profileName} numberOfLines={1}>
-                  {perfil.nombre}
-                </Text>
+                <Text style={styles.profileName} numberOfLines={1}>{perfil.nombre}</Text>
               </TouchableOpacity>
             ))}
 
-            {/* Condición: Si hay MENOS de 3 perfiles, mostramos el botón "+" */}
             {perfiles.length < 3 && (
               <TouchableOpacity
                 style={styles.profileWrapper}
-                onPress={handleAddProfile}
+                onPress={() => navigation.navigate('CreateUser', { cuenta, token })}
                 activeOpacity={0.8}
               >
                 <View style={[styles.avatarCircle, styles.addCircle]}>
@@ -101,7 +69,6 @@ export function SelectUserScreen({ route, navigation }) {
                 <Text style={styles.profileName}>Nuevo perfil</Text>
               </TouchableOpacity>
             )}
-
           </View>
         )}
       </View>
@@ -129,7 +96,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 30, // Espacio entre cada circulito
+    gap: 30,
   },
   profileWrapper: {
     alignItems: 'center',
@@ -152,9 +119,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   addCircle: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)', // Fondo cristalino para el "+"
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderColor: 'rgba(255, 255, 255, 0.4)',
-    borderStyle: 'dashed', // Borde punteado para diferenciarlo
+    borderStyle: 'dashed',
   },
   avatarInitial: {
     fontSize: 48,

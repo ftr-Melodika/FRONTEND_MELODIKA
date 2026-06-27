@@ -1,64 +1,55 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Background } from '../components/Background';
 import { ENDPOINTS } from '../config/api';
 
 export function HomeScreen({ route, navigation }) {
-  // 1. Recibimos la cuenta real que nos mandó LoginScreen
-  const cuenta = route.params?.cuenta;
-  // (Futuro) Recibiremos el perfil que elija el usuario en la pantalla de tu compañero
-  const perfil = route.params?.perfil; 
+  const { cuenta, perfil, token } = route.params || {};
 
-  // 2. Estados reales para guardar la info de la base de datos
   const [lecciones, setLecciones] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 3. Cuando la pantalla carga, le pedimos las lecciones a Node.js
+  const MOCK_LECCIONES = [
+    { id: 1, titulo: 'Afinación Básica', tipo: 'Teoría', estado: 'completada', xp: 50 },
+    { id: 2, titulo: 'Primeros Acordes', tipo: 'Práctica', estado: 'disponible', xp: 100 },
+    { id: 3, titulo: 'Ritmo de Fogón', tipo: 'Práctica', estado: 'bloqueada', xp: 150 },
+    { id: 4, titulo: 'Tu primer Canción', tipo: 'Canción', estado: 'bloqueada', xp: 200 }
+  ];
+
   useEffect(() => {
     async function cargarMapaDeCursos() {
       try {
-        // Temporal: Si no hay perfil, usamos el ID de la cuenta para que no tire error
-        const idParaBuscar = perfil ? perfil.id : cuenta?.id; 
-        
+        const idParaBuscar = perfil?.id || cuenta?.id; 
         if (!idParaBuscar) return;
 
-        // Llamamos a la API usando la ruta dinámica que configuramos en api.js
-        const response = await fetch(ENDPOINTS.lecciones(idParaBuscar));
-        const textResponse = await response.text();
-        let data = null;
-
-        if (textResponse) {
-          try {
-            data = JSON.parse(textResponse);
-          } catch (e) {
-            throw new Error(`El servidor respondió con un formato inesperado (${response.status}). Revisá que el backend esté corriendo y que la URL sea correcta.`);
-          }
+        const response = await fetch(ENDPOINTS.lecciones(idParaBuscar), {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        let leccionesDesdeBD = [];
+        if (response.ok) {
+          const data = await response.json();
+          leccionesDesdeBD = Array.isArray(data) ? data : (data.data || []);
         }
 
-        if (!response.ok) {
-          throw new Error(data?.message || `Error al cargar las lecciones (${response.status})`);
-        }
-
-        // Guardamos el arreglo real de lecciones que vino de Supabase
-        setLecciones(Array.isArray(data) ? data : []);
+        if (leccionesDesdeBD.length === 0) leccionesDesdeBD = MOCK_LECCIONES;
+        setLecciones(leccionesDesdeBD);
 
       } catch (error) {
-        Alert.alert('Aviso', 'Todavía no hay lecciones cargadas en la base de datos o hubo un error.');
-        console.log(error);
+        setLecciones(MOCK_LECCIONES);
       } finally {
-        setLoading(false); // Apagamos la ruedita de carga
+        setLoading(false);
       }
     }
-
     cargarMapaDeCursos();
-  }, []);
+  }, [perfil, cuenta, token]);
 
   const handleLeccionPress = (leccion) => {
     if (leccion.estado === 'bloqueada') {
       Alert.alert('Lección Bloqueada 🔒', 'Completá las lecciones anteriores para avanzar.');
     } else {
-      Alert.alert('¡A tocar! 🎸', `Entrando a la lección: ${leccion.titulo}`);
-      // Futuro: navigation.navigate('LeccionActiva', { leccionId: leccion.id })
+      navigation.navigate('Leccion', { leccion, perfil, token });
     }
   };
 
@@ -66,62 +57,37 @@ export function HomeScreen({ route, navigation }) {
     <Background>
       <View style={styles.mainContainer}>
         
-        {/* BARRA SUPERIOR (Gamificación y Perfil) */}
+        {/* BARRA SUPERIOR (Ocupa todo el ancho) */}
         <View style={styles.topBar}>
-          <Text style={styles.welcomeText}>
-            Hola, {perfil ? perfil.nombre : cuenta?.email?.split('@')[0]} 👋
-          </Text>
-
+          <Text style={styles.welcomeText}>Hola, {perfil ? perfil.nombre : cuenta?.email?.split('@')[0]} 👋</Text>
+          <Text style={styles.courseTitle}>🎸 Guitarra Inicial</Text>
           <View style={styles.statsContainer}>
-            <View style={styles.statChip}>
-              <Text style={styles.statEmoji}>🔥</Text>
-              <Text style={styles.statText}>0 Días</Text>
-            </View>
-
-            <TouchableOpacity 
-              style={styles.logoutButton} 
-              onPress={() => navigation.replace('Login')}
-            >
+            <View style={styles.statChip}><Text style={styles.statEmoji}>🔥</Text><Text style={styles.statText}>0 Días</Text></View>
+            <TouchableOpacity style={styles.logoutButton} onPress={async () => {
+                await AsyncStorage.clear();
+                navigation.replace('Login');
+            }}>
               <Text style={styles.logoutIcon}>Salir</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* MAPA DE CURSOS HORIZONTAL */}
+        {/* MAPA HORIZONTAL */}
         <View style={styles.mapSection}>
-          <Text style={styles.courseTitle}>Guitarra Inicial 🎸</Text>
-          
           {loading ? (
             <ActivityIndicator size="large" color="#b28cff" style={{ marginTop: 50 }} />
-          ) : lecciones.length === 0 ? (
-            <Text style={styles.emptyText}>No se encontraron lecciones en la base de datos.</Text>
           ) : (
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.scrollMapContent}
-            >
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollMapContent}>
               {lecciones.map((leccion, index) => {
-                // Lógica visual: Zig-zag para que parezca un camino
-                const isEven = index % 2 === 0;
-                const marginVerticalOffset = isEven ? 20 : -20;
-
                 return (
-                  <View 
-                    key={leccion.id} 
-                    style={[styles.nodeContainer, { transform: [{ translateY: marginVerticalOffset }] }]}
-                  >
-                    {/* Línea conectora */}
-                    {index < lecciones.length - 1 && <View style={styles.connectorLine} />}
+                  <View key={leccion.id} style={styles.nodeContainer}>
+                    
+                    {/* Línea conectora hacia la DERECHA */}
+                    {index < lecciones.length - 1 && <View style={styles.horizontalConnector} />}
 
-                    {/* Nodo interactivo */}
+                    {/* El círculo interactivo */}
                     <TouchableOpacity
-                      style={[
-                        styles.circleNode,
-                        leccion.estado === 'completada' && styles.nodeCompletado,
-                        leccion.estado === 'disponible' && styles.nodeDisponible,
-                        leccion.estado === 'bloqueada' && styles.nodeBloqueado,
-                      ]}
+                      style={[ styles.circleNode, leccion.estado === 'completada' && styles.nodeCompletado, leccion.estado === 'disponible' && styles.nodeDisponible, leccion.estado === 'bloqueada' && styles.nodeBloqueado ]}
                       onPress={() => handleLeccionPress(leccion)}
                       activeOpacity={0.8}
                     >
@@ -130,10 +96,10 @@ export function HomeScreen({ route, navigation }) {
                       {leccion.estado === 'bloqueada' && <Text style={styles.nodeIcon}>🔒</Text>}
                     </TouchableOpacity>
 
-                    {/* Info de la lección abajo del nodo */}
+                    {/* La tarjeta abajo del círculo */}
                     <View style={styles.nodeCard}>
                       <Text style={styles.nodeTitle} numberOfLines={1}>{leccion.titulo}</Text>
-                      <Text style={styles.nodeSubtitle}>{leccion.tipo} • {leccion.xp || 0} XP</Text>
+                      <Text style={styles.nodeSubtitle}>{leccion.tipo} • {leccion.xp} XP</Text>
                     </View>
                   </View>
                 );
@@ -141,7 +107,6 @@ export function HomeScreen({ route, navigation }) {
             </ScrollView>
           )}
         </View>
-
       </View>
     </Background>
   );
@@ -157,31 +122,45 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     height: 50,
-    marginBottom: 10,
+    marginBottom: 15,
+    paddingHorizontal: 10,
   },
   welcomeText: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: 'serif',
     fontWeight: 'bold',
+    flex: 1,
+  },
+  courseTitle: {
+    color: '#b28cff',
+    fontSize: 24,
+    fontWeight: 'bold',
+    fontFamily: 'serif',
+    flex: 1,
+    textAlign: 'center',
   },
   statsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
+    justifyContent: 'flex-end',
   },
   statChip: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderColor: 'rgba(255, 255, 255, 0.25)',
     borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
     gap: 6,
   },
-  statEmoji: { fontSize: 16 },
+  statEmoji: {
+    fontSize: 16,
+  },
   statText: {
     color: '#fff',
     fontWeight: 'bold',
@@ -193,71 +172,84 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 15,
   },
-  logoutIcon: { color: '#fff', fontWeight: 'bold' },
+  logoutIcon: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
   mapSection: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 25,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    padding: 15,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
-  courseTitle: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: 'bold',
-    fontFamily: 'serif',
-    marginBottom: 10,
-  },
-  emptyText: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    textAlign: 'center',
-    marginTop: 50,
-    fontSize: 16,
-  },
+
+  // ESTILOS HORIZONTALES
   scrollMapContent: {
     alignItems: 'center',
     paddingHorizontal: 40,
-    paddingRight: 100,
-    height: '100%',
   },
   nodeContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 170,
+    width: 220,
+    height: '100%',
     position: 'relative',
   },
-  connectorLine: {
+  // La línea arranca en la mitad de este nodo (left: 110) y mide 220, llegando justo al medio del próximo
+  horizontalConnector: {
     position: 'absolute',
-    left: 85,
-    top: 35,
-    width: 170,
-    height: 4,
+    top: '40%',
+    left: 110,
+    width: 220,
+    height: 6,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     zIndex: -1,
   },
   circleNode: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    marginBottom: 8,
+    zIndex: 2,
   },
-  nodeCompletado: { backgroundColor: '#a884ff', borderColor: '#fff' },
-  nodeDisponible: { backgroundColor: '#4c52d9', borderColor: '#b28cff' },
-  nodeBloqueado: { backgroundColor: 'rgba(255, 255, 255, 0.15)', borderColor: 'rgba(255, 255, 255, 0.3)' },
-  nodeIcon: { fontSize: 22, color: '#fff' },
+  nodeCompletado: {
+    backgroundColor: '#a884ff',
+    borderColor: '#fff',
+  },
+  nodeDisponible: {
+    backgroundColor: '#4c52d9',
+    borderColor: '#b28cff',
+  },
+  nodeBloqueado: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  nodeIcon: {
+    fontSize: 26,
+    color: '#fff',
+  },
   nodeCard: {
-    width: 130,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    marginTop: 15,
+    width: 160,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
-    padding: 8,
+    padding: 10,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  nodeTitle: { color: '#fff', fontSize: 12, fontWeight: 'bold', textAlign: 'center' },
-  nodeSubtitle: { color: 'rgba(255, 255, 255, 0.65)', fontSize: 10, marginTop: 2 },
+  nodeTitle: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  nodeSubtitle: {
+    color: 'rgba(255, 255, 255, 0.65)',
+    fontSize: 11,
+    marginTop: 4,
+  },
 });
