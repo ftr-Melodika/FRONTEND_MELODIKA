@@ -6,18 +6,20 @@ import { Button } from '../components/Button';
 import { ENDPOINTS } from '../config/api';
 import axiosClient from '../api/axiosClient';
 
-
 export function RegisterScreen({ navigation }) {
+  const [nombre, setNombre] = useState('');
+  const [apellido, setApellido] = useState('');
+  const [telefono, setTelefono] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
+
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
     // Validaciones
-    if (!email || !password || !confirmPassword) {
+    if (!nombre || !apellido || !email || !password || !confirmPassword) {
       return Alert.alert('Error', 'Por favor, completá todos los campos.');
     }
     if (password !== confirmPassword) {
@@ -30,17 +32,30 @@ export function RegisterScreen({ navigation }) {
     setLoading(true);
 
     try {
-      await axiosClient.post(ENDPOINTS.register, {
+      const response = await axiosClient.post(ENDPOINTS.register, {
+        nombre: nombre.trim(),
+        apellido: apellido.trim(),
+        telefono: telefono.trim() || null, // si no lo completó, va null
         email: email.trim(),
-        password,
+        password: password,
       });
 
       Alert.alert('¡Éxito!', 'Cuenta creada correctamente. Ya podés iniciar sesión.');
       navigation.navigate('Login');
+
     } catch (error) {
-      const mensaje = error.response?.data?.message || error.message || 'Error al registrar la cuenta';
-      console.log('Error de registro:', error.response?.data);
+      let mensaje = 'Ocurrió un error al crear la cuenta.';
+
+      if (error.response) {
+        mensaje = error.response.data?.message || `Error del servidor (${error.response.status})`;
+      } else if (error.request) {
+        mensaje = 'No se pudo conectar con el servidor. Revisá la URL del backend o tu conexión.';
+      } else {
+        mensaje = error.message;
+      }
+
       Alert.alert('Error en Registro', mensaje);
+      console.log(error.response?.data); // para ver el detalle real en consola
     } finally {
       setLoading(false);
     }
@@ -52,21 +67,37 @@ export function RegisterScreen({ navigation }) {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           <Text style={styles.title}>Crear cuenta</Text>
 
-          <InputField 
-            placeholder="Correo electrónico" 
+          <InputField
+            placeholder="Nombre"
+            value={nombre}
+            onChangeText={setNombre}
+          />
+          <InputField
+            placeholder="Apellido"
+            value={apellido}
+            onChangeText={setApellido}
+          />
+          <InputField
+            placeholder="Teléfono (opcional)"
+            value={telefono}
+            onChangeText={setTelefono}
+            keyboardType="phone-pad"
+          />
+          <InputField
+            placeholder="Correo electrónico"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
           />
-          <InputField 
-            placeholder="Contraseña" 
-            secureTextEntry={true} 
+          <InputField
+            placeholder="Contraseña"
+            secureTextEntry={true}
             value={password}
             onChangeText={setPassword}
           />
-          <InputField 
-            placeholder="Confirmar contraseña" 
-            secureTextEntry={true} 
+          <InputField
+            placeholder="Confirmar contraseña"
+            secureTextEntry={true}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
           />
@@ -100,7 +131,7 @@ const styles = StyleSheet.create({
   glassCard: {
     width: '65%',
     maxHeight: '90%',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 25,
     borderColor: 'rgba(255, 255, 255, 0.2)',
     borderWidth: 1,
