@@ -1,17 +1,24 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react'; // 👈 1. Importamos useContext
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// ❌ Borramos el import de AsyncStorage, ya no lo necesitamos acá
 import { Background } from '../components/Background';
 import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
 import { ENDPOINTS } from '../config/api';
+import axiosClient from '../api/axiosClient';
+
+// 👈 2. Importamos nuestra nube
+import { AuthContext } from '../context/AuthContext'; 
 
 export function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
+  // 👈 3. Traemos la función de login desde el altoparlante
+  const { login } = useContext(AuthContext); 
+
+const handleLogin = async () => {
     if (!email || !password) {
       return Alert.alert('Error', 'Por favor completá correo y contraseña.');
     }
@@ -19,26 +26,25 @@ export function LoginScreen({ navigation }) {
     setLoading(true);
 
     try {
-      const response = await fetch(ENDPOINTS.login, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password }),
+      // 2. Usamos axiosClient.post
+      // Al ser una ruta relativa ('/cuentas/login' definida en ENDPOINTS), 
+      // Axios le pega la baseURL automáticamente.
+      const response = await axiosClient.post(ENDPOINTS.login, {
+        email: email.trim(),
+        password: password,
       });
 
-      const data = await response.json();
+      // 3. Axios ya parseó el JSON, no hace falta response.json()
+      const { token, cuenta } = response.data;
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Error al iniciar sesión');
-      }
-
-      // GUARDA EL TOKEN Y LA CUENTA EN EL CELULAR
-      await AsyncStorage.setItem('userToken', data.token);
-      await AsyncStorage.setItem('userCuenta', JSON.stringify(data.cuenta)); 
-
-      navigation.replace('SelectUser', { cuenta: data.cuenta, token: data.token });
+      // 4. Llamamos a la nube
+      await login(token, cuenta);
 
     } catch (error) {
-      Alert.alert('Error de Inicio de Sesión', error.message);
+      // 5. Axios pone la respuesta del backend en error.response.data
+      const mensaje = error.response?.data?.message || 'Error al iniciar sesión';
+      Alert.alert('Error', mensaje);
+      console.log(error.response?.data); // Mirá esto en la terminal para ver el error real
     } finally {
       setLoading(false);
     }
@@ -71,37 +77,10 @@ export function LoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  glassCard: {
-    width: '65%',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 25,
-    paddingVertical: 15,
-    paddingHorizontal: 25,
-    marginVertical: 15,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    borderWidth: 1,
-  },
-  title: {
-    fontSize: 24,
-    color: '#fff',
-    textAlign: 'center',
-    marginBottom: 15,
-    fontFamily: 'serif',
-    fontWeight: 'bold',
-  },
-  registerContainer: {
-    alignItems: 'center',
-    marginVertical: 6,
-  },
-  textHelper: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 14,
-  },
-  textLink: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-    textDecorationLine: 'underline',
-    marginTop: 5,
-  },
+  // ... (Tus estilos se mantienen exactamente iguales)
+  glassCard: { width: '65%', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 25, paddingVertical: 15, paddingHorizontal: 25, marginVertical: 15, borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1 },
+  title: { fontSize: 24, color: '#fff', textAlign: 'center', marginBottom: 15, fontFamily: 'serif', fontWeight: 'bold' },
+  registerContainer: { alignItems: 'center', marginVertical: 6 },
+  textHelper: { color: 'rgba(255, 255, 255, 0.8)', fontSize: 14 },
+  textLink: { color: '#fff', fontSize: 14, fontWeight: 'bold', textDecorationLine: 'underline', marginTop: 5 },
 });

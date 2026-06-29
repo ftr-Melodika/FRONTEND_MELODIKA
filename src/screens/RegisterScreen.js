@@ -4,6 +4,8 @@ import { Background } from '../components/Background';
 import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
 import { ENDPOINTS } from '../config/api';
+import axiosClient from '../api/axiosClient';
+
 
 export function RegisterScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -28,35 +30,17 @@ export function RegisterScreen({ navigation }) {
     setLoading(true);
 
     try {
-      const response = await fetch(ENDPOINTS.register, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email: email.trim(), 
-          password: password 
-        }),
+      await axiosClient.post(ENDPOINTS.register, {
+        email: email.trim(),
+        password,
       });
-
-      const textResponse = await response.text();
-      let data = null;
-
-      if (textResponse) {
-        try {
-          data = JSON.parse(textResponse);
-        } catch (e) {
-          throw new Error(`El servidor respondió con un formato inesperado (${response.status}). Revisá que el backend esté corriendo y que la URL sea correcta.`);
-        }
-      }
-
-      if (!response.ok) {
-        throw new Error(data?.message || `Error al registrar la cuenta (${response.status})`);
-      }
 
       Alert.alert('¡Éxito!', 'Cuenta creada correctamente. Ya podés iniciar sesión.');
       navigation.navigate('Login');
-
     } catch (error) {
-      Alert.alert('Error en Registro', error.message);
+      const mensaje = error.response?.data?.message || error.message || 'Error al registrar la cuenta';
+      console.log('Error de registro:', error.response?.data);
+      Alert.alert('Error en Registro', mensaje);
     } finally {
       setLoading(false);
     }
