@@ -1,14 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, TouchableWithoutFeedback, ScrollView, Alert, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
-const DRAWER_WIDTH = 280;
+const DRAWER_WIDTH = 300; 
 
 export function SideMenu({ visible, onClose, perfil, cuenta, token, navigation }) {
-  // Animación nativa de React (No usa reanimated)
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const [isRendering, setIsRendering] = useState(false);
+
+  // 📂 ESTADOS PARA EXPANDIR/COLAPSAR SECCIONES
+  const [perfilOpen, setPerfilOpen] = useState(false);
+  const [seguimientoOpen, setSeguimientoOpen] = useState(false);
+  const [comunidadOpen, setComunidadOpen] = useState(false);
+  const [soporteOpen, setSoporteOpen] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -21,11 +26,18 @@ export function SideMenu({ visible, onClose, perfil, cuenta, token, navigation }
     }
   }, [visible]);
 
-  // Si no está visible y ya terminó la animación, no lo renderizamos para no tapar la pantalla
   if (!isRendering) return null;
 
-  const nombreMostrar = perfil ? perfil.nombre : cuenta?.email?.split('@')[0] || 'Usuario';
-  const inicial = nombreMostrar.charAt(0).toUpperCase();
+  // 👤 OBTENCIÓN DE DATOS REALES DEL PERFIL (DE LA BASE DE DATOS)
+  const nombreMostrar = perfil?.nombre || 'Usuario';
+  const usernameMostrar = perfil?.username ? `@${perfil.username}` : '@usuario_melodika';
+  
+  // Si el perfil tiene avatar_url en la DB lo usa, sino carga un lindo avatar genérico por defecto
+  const fotoPerfilUri = perfil?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80';
+
+  const handleProximamente = (nombreItem) => {
+    Alert.alert('Melodika', `${nombreItem} estará disponible próximamente.`);
+  };
 
   const handleLogout = async () => {
     await AsyncStorage.clear();
@@ -40,40 +52,119 @@ export function SideMenu({ visible, onClose, perfil, cuenta, token, navigation }
 
   return (
     <View style={StyleSheet.absoluteFill}>
-      {/* Fondo oscuro semi-transparente que cierra el menú si tocás afuera */}
+      {/* Fondo oscuro para cerrar al tocar afuera */}
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.backdrop} />
       </TouchableWithoutFeedback>
 
-      {/* El Panel del Menú que se desliza */}
+      {/* Panel Lateral del Menú */}
       <Animated.View style={[styles.drawer, { transform: [{ translateX: slideAnim }] }]}>
         
-        {/* ENCABEZADO */}
+        {/* ENCABEZADO DE USUARIO (Con foto a la izquierda y username real de la DB) */}
         <View style={styles.profileHeader}>
-          <View style={styles.avatarCircle}><Text style={styles.avatarText}>{inicial}</Text></View>
+          <Image 
+            source={{ uri: fotoPerfilUri }} 
+            style={styles.avatarImage} 
+          />
           <View style={styles.profileTextWrapper}>
             <Text style={styles.profileName} numberOfLines={1}>{nombreMostrar}</Text>
-            {perfil && <Text style={styles.usernameText}>@{perfil.username}</Text>}
+            <Text style={styles.usernameText} numberOfLines={1}>{usernameMostrar}</Text>
           </View>
         </View>
 
-        {/* LISTA DE OPCIONES */}
-        <View style={styles.menuItems}>
-          <TouchableOpacity style={styles.activeMenuItem} onPress={onClose}>
-            <Text style={styles.activeMenuText}>🎸 Mis Cursos</Text>
+        {/* LISTADO DE ITEMS CON SUBMENÚS DESPLEGABLES */}
+        <ScrollView showsVerticalScrollIndicator={false} style={styles.menuScroll}>
+          
+          {/* 👤 SECCIÓN: PERFIL */}
+          <TouchableOpacity style={styles.menuItem} onPress={() => setPerfilOpen(!perfilOpen)}>
+            <Text style={styles.menuItemText}>👤 Perfil</Text>
+            <Text style={styles.arrowIcon}>{perfilOpen ? '▼' : '▶'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem} onPress={() => alert('Próximamente')}>
-            <Text style={styles.menuItemText}>🏆 Ranking</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem} onPress={() => alert('Próximamente')}>
-            <Text style={styles.menuItemText}>⚙️ Mi Perfil</Text>
-          </TouchableOpacity>
-        </View>
+          
+          {perfilOpen && (
+            <View style={styles.subItemsContainer}>
+              <TouchableOpacity style={styles.subMenuItem} onPress={() => handleProximamente('Configuración')}>
+                <Text style={styles.subMenuItemText}>⚙️ Configuración</Text>
+              </TouchableOpacity>
 
-        {/* BOTONES DE ABAJO */}
+              {/* 📈 SUB-SECCIÓN: SEGUIMIENTO DE USUARIO */}
+              <TouchableOpacity style={styles.subMenuItem} onPress={() => setSeguimientoOpen(!seguimientoOpen)}>
+                <Text style={styles.subMenuItemText}>📈 Seguimiento de usuario</Text>
+                <Text style={styles.arrowIconSub}>{seguimientoOpen ? '▼' : '▶'}</Text>
+              </TouchableOpacity>
+
+              {seguimientoOpen && (
+                <View style={styles.subSubItemsContainer}>
+                  <TouchableOpacity style={styles.subMenuItem} onPress={() => handleProximamente('Logros y recompensas')}>
+                    <Text style={styles.subMenuItemText}>🏅 Logros y recompensas</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.subMenuItem} onPress={() => handleProximamente('Progreso')}>
+                    <Text style={styles.subMenuItemText}>📊 Progreso</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.subMenuItem} onPress={() => handleProximamente('Ranking')}>
+                    <Text style={styles.subMenuItemText}>🏆 Ranking</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* 🎸 ITEM: CURSOS */}
+          <TouchableOpacity 
+            style={[styles.menuItem, styles.activeItem]} 
+            onPress={() => { onClose(); navigation.navigate('Home'); }}
+          >
+            <Text style={[styles.menuItemText, styles.activeItemText]}>🎸 Cursos</Text>
+          </TouchableOpacity>
+
+          {/* 🎹 ITEM: PRÁCTICA */}
+          <TouchableOpacity style={styles.menuItem} onPress={() => handleProximamente('Práctica')}>
+            <Text style={styles.menuItemText}>🎹 Práctica</Text>
+          </TouchableOpacity>
+
+          {/* 👥 SECCIÓN: COMUNIDAD */}
+          <TouchableOpacity style={styles.menuItem} onPress={() => setComunidadOpen(!comunidadOpen)}>
+            <Text style={styles.menuItemText}>👥 Comunidad</Text>
+            <Text style={styles.arrowIcon}>{comunidadOpen ? '▼' : '▶'}</Text>
+          </TouchableOpacity>
+
+          {comunidadOpen && (
+            <View style={styles.subItemsContainer}>
+              <TouchableOpacity style={styles.subMenuItem} onPress={() => handleProximamente('Dar feedback')}>
+                <Text style={styles.subMenuItemText}>💬 Dar feedback</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.subMenuItem} onPress={() => handleProximamente('Grupos')}>
+                <Text style={styles.subMenuItemText}>🤝 Grupos</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* 🛠️ SECCIÓN: SOPORTE */}
+          <TouchableOpacity style={styles.menuItem} onPress={() => setSoporteOpen(!soporteOpen)}>
+            <Text style={styles.menuItemText}>🛠️ Soporte</Text>
+            <Text style={styles.arrowIcon}>{soporteOpen ? '▼' : '▶'}</Text>
+          </TouchableOpacity>
+
+          {soporteOpen && (
+            <View style={styles.subItemsContainer}>
+              <TouchableOpacity style={styles.subMenuItem} onPress={() => handleProximamente('Preguntas frecuentes')}>
+                <Text style={styles.subMenuItemText}>❓ Preguntas frecuentes</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.subMenuItem} onPress={() => handleProximamente('Reportar errores')}>
+                <Text style={styles.subMenuItemText}>🪲 Reportar errores</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.subMenuItem} onPress={() => handleProximamente('Contacto')}>
+                <Text style={styles.subMenuItemText}>📞 Contacto</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+        </ScrollView>
+
+        {/* PIE DE PÁGINA (Acciones) */}
         <View style={styles.footer}>
           <TouchableOpacity style={styles.footerBtn} onPress={handleCambiarPerfil}>
-            <Text style={styles.footerBtnText}>👥 Cambiar Perfil</Text>
+            <Text style={styles.footerBtnText}>🔄 Cambiar Perfil</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.footerBtn, styles.logoutBtn]} onPress={handleLogout}>
             <Text style={styles.footerBtnText}>🚪 Cerrar Sesión</Text>
@@ -88,19 +179,31 @@ export function SideMenu({ visible, onClose, perfil, cuenta, token, navigation }
 const styles = StyleSheet.create({
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
   drawer: { position: 'absolute', top: 0, bottom: 0, left: 0, width: DRAWER_WIDTH, backgroundColor: '#151528', borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.1)' },
+  
+  // MODIFICADO: Estilos del Header para incluir el componente de Imagen real
   profileHeader: { flexDirection: 'row', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)', marginBottom: 15 },
-  avatarCircle: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#b28cff', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' },
-  avatarText: { fontSize: 22, color: '#fff', fontWeight: 'bold' },
-  profileTextWrapper: { marginLeft: 15, flex: 1 },
-  profileName: { fontSize: 18, color: '#fff', fontWeight: 'bold', fontFamily: 'serif' },
-  usernameText: { fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 2 },
-  menuItems: { flex: 1, paddingHorizontal: 15 },
-  menuItem: { paddingVertical: 15, paddingHorizontal: 10, marginBottom: 5 },
-  activeMenuItem: { paddingVertical: 15, paddingHorizontal: 10, marginBottom: 5, backgroundColor: 'rgba(178, 140, 255, 0.1)', borderRadius: 10 },
-  menuItemText: { color: 'rgba(255,255,255,0.7)', fontSize: 16, fontWeight: 'bold' },
-  activeMenuText: { color: '#b28cff', fontSize: 16, fontWeight: 'bold' },
-  footer: { padding: 15, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)', gap: 10 },
-  footerBtn: { width: '100%', paddingVertical: 10, paddingHorizontal: 15, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.05)' },
-  logoutBtn: { backgroundColor: 'rgba(226, 85, 106, 0.2)' },
-  footerBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  avatarImage: { width: 52, height: 50, borderRadius: 25, borderWidth: 2, borderColor: '#fff', backgroundColor: '#333' },
+  profileTextWrapper: { marginLeft: 12, flex: 1 },
+  profileName: { fontSize: 16, color: '#fff', fontWeight: 'bold', fontFamily: 'serif' },
+  usernameText: { fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 2 },
+  
+  menuScroll: { flex: 1 },
+  menuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.03)' },
+  menuItemText: { color: 'rgba(255,255,255,0.85)', fontSize: 15, fontWeight: '700' },
+  arrowIcon: { color: 'rgba(255,255,255,0.4)', fontSize: 12 },
+  
+  activeItem: { backgroundColor: 'rgba(178, 140, 255, 0.12)' },
+  activeItemText: { color: '#b28cff' },
+
+  subItemsContainer: { backgroundColor: 'rgba(0, 0, 0, 0.2)', paddingLeft: 15 },
+  subMenuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 15 },
+  subMenuItemText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '600' },
+  arrowIconSub: { color: 'rgba(255,255,255,0.3)', fontSize: 10 },
+  
+  subSubItemsContainer: { backgroundColor: 'rgba(0, 0, 0, 0.15)', paddingLeft: 15 },
+
+  footer: { padding: 15, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)', gap: 8, backgroundColor: '#131324' },
+  footerBtn: { width: '100%', paddingVertical: 10, paddingHorizontal: 15, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.04)' },
+  logoutBtn: { backgroundColor: 'rgba(226, 85, 106, 0.15)' },
+  footerBtnText: { color: '#fff', fontSize: 13, fontWeight: '600', textAlign: 'center' },
 });
