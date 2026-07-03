@@ -4,14 +4,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // 1. Creamos el altoparlante (El Contexto)
 export const AuthContext = createContext();
 
+// NUEVO: Creamos un "cable de emergencia" hacia afuera de React
+export let globalLogout = () => {};
+
 // 2. Creamos el sistema que controla el altoparlante (El Provider)
 export const AuthProvider = ({ children }) => {
-  // Estados para saber qué está pasando
-  const [isLoading, setIsLoading] = useState(true); // ¿Está cargando?
-  const [userToken, setUserToken] = useState(null); // La llave del usuario
-  const [userData, setUserData] = useState(null);   // Los datos (mail, nombre)
+  const [isLoading, setIsLoading] = useState(true); 
+  const [userToken, setUserToken] = useState(null); 
+  const [userData, setUserData] = useState(null);   
 
-  // Apenas arranca la app, va al disco duro a ver si ya había una sesión guardada
   useEffect(() => {
     const checkLogin = async () => {
       try {
@@ -20,18 +21,17 @@ export const AuthProvider = ({ children }) => {
         
         if (token && cuenta) {
           setUserToken(token);
-          setUserData(JSON.parse(cuenta)); // Transforma el texto guardado en un objeto de JS
+          setUserData(JSON.parse(cuenta)); 
         }
       } catch (error) {
         console.log('Error leyendo sesión:', error);
       } finally {
-        setIsLoading(false); // Ya terminó de buscar, apaga la pantalla de carga
+        setIsLoading(false); 
       }
     };
     checkLogin();
   }, []);
 
-  // Función para cuando el usuario pone su mail y contraseña con éxito
   const login = async (token, cuenta) => {
     setIsLoading(true);
     try {
@@ -46,7 +46,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Función para cuando el usuario toca el botón de "Cerrar Sesión"
   const logout = async () => {
     setIsLoading(true);
     try {
@@ -61,8 +60,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Todo lo que pongamos dentro de "value" va a ser transmitido por el altoparlante
-  // a las pantallas (children) que estén envueltas por este Provider.
+  // NUEVO: Conectamos la función logout de React al "cable de emergencia" global
+  globalLogout = logout;
+
   return (
     <AuthContext.Provider value={{ login, logout, isLoading, userToken, userData }}>
       {children}

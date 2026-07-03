@@ -1,17 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react'; // 👈 1. Importamos useContext
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Background } from '../components/Background';
-import { SideMenu } from '../components/SideMenu'; // 👈 IMPORTAMOS EL MENÚ
+import { SideMenu } from '../components/SideMenu'; 
 import { ENDPOINTS } from '../config/api';
 import axiosClient from '../api/axiosClient';
 
+// 👈 2. Importamos nuestra "nube" global
+import { AuthContext } from '../context/AuthContext'; 
+
 export function HomeScreen({ route, navigation }) {
-  const { cuenta, perfil, token } = route.params || {};
+  // 3. LA MAGIA: Le pedimos el token y la cuenta al AuthContext (Cambiando el nombre interno para no romper tu código)
+  const { userData: cuenta, userToken: token } = useContext(AuthContext);
+
+  // 4. De la ruta anterior (SelectUserScreen) SOLO sacamos el perfil elegido
+  const { perfil } = route.params || {};
 
   const [lecciones, setLecciones] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isMenuOpen, setIsMenuOpen] = useState(false); // 👈 ESTADO DEL MENÚ
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  // ... (El resto de tu código MOCK_LECCIONES, useEffect, etc. queda igual)
   const MOCK_LECCIONES = [
     { id: 1, titulo: 'Afinación Básica', tipo: 'Teoría', estado: 'completada', xp: 50 },
     { id: 2, titulo: 'Primeros Acordes', tipo: 'Práctica', estado: 'disponible', xp: 100 },
@@ -19,30 +27,26 @@ export function HomeScreen({ route, navigation }) {
     { id: 4, titulo: 'Tu primer Canción', tipo: 'Canción', estado: 'bloqueada', xp: 200 }
   ];
 
-  useEffect(() => {
-    async function cargarMapaDeCursos() {
-      try {
-        const idParaBuscar = perfil?.id || cuenta?.id; 
-        if (!idParaBuscar) return;
+useEffect(() => {
+  async function cargarMapaDeCursos() {
+    try {
+      const idParaBuscar = perfil?.id || cuenta?.id;
+      if (!idParaBuscar) return;
 
-        const response = await axiosClient.get(ENDPOINTS.lecciones(idParaBuscar));
-        const data = response.data;
-        let leccionesDesdeBD = Array.isArray(data) ? data : (data.data || []);
-        if (leccionesDesdeBD.length === 0) leccionesDesdeBD = MOCK_LECCIONES;
-        setLecciones(leccionesDesdeBD);
-        
-      } 
-        catch (error) {
-        console.log('Error cargando lecciones:', error.response?.data || error.message);
-        setLecciones(MOCK_LECCIONES); // fallback explícito, no accidental
-        // opcional: mostrar un Alert o un estado de error visible si error.response existe
-      } 
-      finally {
-        setLoading(false);
-      }
+      const response = await axiosClient.get(ENDPOINTS.lecciones(idParaBuscar));
+      const data = response.data;
+      let leccionesDesdeBD = Array.isArray(data) ? data : (data.data || []);
+      if (leccionesDesdeBD.length === 0) leccionesDesdeBD = MOCK_LECCIONES;
+      setLecciones(leccionesDesdeBD);
+    } catch (error) {
+      console.log('Error cargando lecciones:', error.response?.data || error.message);
+      setLecciones(MOCK_LECCIONES);
+    } finally {
+      setLoading(false);
+    }
+  }
 
-    cargarMapaDeCursos();
-}
+  cargarMapaDeCursos(); // 👈 ahora está AFUERA de la función, se ejecuta al montar el efecto
 }, [perfil, cuenta, token]);
 
   const handleLeccionPress = (leccion) => {

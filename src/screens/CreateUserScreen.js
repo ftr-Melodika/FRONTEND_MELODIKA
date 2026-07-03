@@ -17,7 +17,7 @@ const GENDER_OPTIONS = [
 ];
 
 export function CreateUserScreen({ navigation }) {
-  const { userData: cuenta, userToken: token } = useContext(AuthContext);
+  const { userData: cuenta } = useContext(AuthContext); // 👈
   const [nombre, setNombre] = useState('');
   const [username, setUsername] = useState('');
   const [pais, setPais] = useState('');
@@ -44,18 +44,18 @@ export function CreateUserScreen({ navigation }) {
     }
   };
 
-  const handleCreateUser = async () => {
+const handleCreateUser = async () => {
     if (!nombre.trim() || !username.trim() || !birthdayISO) {
       return Alert.alert('Error', 'Por favor completá el nombre, usuario y fecha de nacimiento.');
     }
-    if (!token || !cuenta?.id) {
+    // 2. Quitamos la validación del token acá porque si el usuario llegó a esta pantalla, el Contexto garantiza que hay token.
+    if (!cuenta?.id) {
       return Alert.alert('Error de sesión', 'No se encontró la cuenta activa. Volvé a iniciar sesión.');
     }
 
     setLoading(true);
 
     try {
-      // Objeto limpio, exacto y directo al punto
       const requestBody = {
         cuenta_id: cuenta.id,
         nombre: nombre.trim(),
@@ -67,14 +67,17 @@ export function CreateUserScreen({ navigation }) {
       };
 
       const response = await axiosClient.post(ENDPOINTS.crearPerfil, requestBody);
-      const data = response.data;
-      const nuevoPerfil = data.data;
+      const nuevoPerfil = response.data.data;
 
       Alert.alert('¡Excelente!', `El perfil de ${nuevoPerfil.nombre} está listo.`);
-      navigation.replace('Home', { cuenta, perfil: nuevoPerfil, token });
+      
+      // 3. LA MAGIA: Navegación súper limpia. Solo pasamos lo que Home no sabe: qué perfil elegimos.
+      navigation.replace('Home', { perfil: nuevoPerfil });
 
     } catch (error) {
-      Alert.alert('Error', error.message);
+      // 4. ARREGLO DEL PUNTO 9: Leemos el mensaje real de tu backend formateado.
+      const mensajeError = error.response?.data?.message || 'Ocurrió un error al crear el perfil.';
+      Alert.alert('Error', mensajeError);
     } finally {
       setLoading(false);
     }
