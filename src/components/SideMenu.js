@@ -1,12 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useContext } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, TouchableWithoutFeedback } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AuthContext } from '../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 const DRAWER_WIDTH = 280;
 
-export function SideMenu({ visible, onClose, perfil, cuenta, token, navigation }) {
-  // Animación nativa de React (No usa reanimated)
+export function SideMenu({ visible, onClose, perfil, navigation }) {
+  // Extraemos la función de logout y la cuenta directamente del contexto global
+  const { logout, userData: cuenta } = useContext(AuthContext);
+  
+  // Animación nativa de React
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const [isRendering, setIsRendering] = useState(false);
 
@@ -28,14 +31,13 @@ export function SideMenu({ visible, onClose, perfil, cuenta, token, navigation }
   const inicial = nombreMostrar.charAt(0).toUpperCase();
 
   const handleLogout = async () => {
-    await AsyncStorage.clear();
     onClose();
-    navigation.replace('Login');
+    await logout(); // El contexto limpia el storage y AppNavigator reacciona solo
   };
 
   const handleCambiarPerfil = () => {
     onClose();
-    navigation.replace('SelectUser', { cuenta, token });
+    navigation.replace('SelectUser'); // Ya no pasamos la cuenta ni el token por parámetro
   };
 
   return (

@@ -5,8 +5,8 @@ export function Button({ title, onPress, variant = 'primary' }) {
   const isSecondary = variant === 'secondary';
 
   return (
-    <TouchableOpacity 
-      style={[styles.button, isSecondary && styles.buttonSecondary]} 
+    <TouchableOpacity
+      style={[styles.button, isSecondary && styles.buttonSecondary, style]}
       onPress={onPress}
     >
       <Text style={styles.text}>{title}</Text>

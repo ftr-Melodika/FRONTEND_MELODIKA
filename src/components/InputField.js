@@ -1,6 +1,6 @@
 import { TextInput, StyleSheet } from 'react-native';
 
-export function InputField({ placeholder, secureTextEntry, value, onChangeText }) {
+export function InputField({ placeholder, secureTextEntry, value, onChangeText, ...rest }) {
   return (
     <TextInput
       style={styles.input}
@@ -9,6 +9,7 @@ export function InputField({ placeholder, secureTextEntry, value, onChangeText }
       secureTextEntry={secureTextEntry}
       value={value}
       onChangeText={onChangeText}
+      {...rest}
     />
   );
 }

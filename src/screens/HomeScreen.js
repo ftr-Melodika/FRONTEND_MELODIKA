@@ -27,15 +27,23 @@ export function HomeScreen({ route, navigation }) {
 
         const response = await axiosClient.get(ENDPOINTS.lecciones(idParaBuscar));
         const data = response.data;
-        const leccionesDesdeBD = Array.isArray(data) ? data : (data.data || []);
-
+        let leccionesDesdeBD = Array.isArray(data) ? data : (data.data || []);
         if (leccionesDesdeBD.length === 0) leccionesDesdeBD = MOCK_LECCIONES;
         setLecciones(leccionesDesdeBD);
+        
       } 
-      catch (error) { setLecciones(MOCK_LECCIONES); } finally { setLoading(false); }
-    }
+        catch (error) {
+        console.log('Error cargando lecciones:', error.response?.data || error.message);
+        setLecciones(MOCK_LECCIONES); // fallback explícito, no accidental
+        // opcional: mostrar un Alert o un estado de error visible si error.response existe
+      } 
+      finally {
+        setLoading(false);
+      }
+
     cargarMapaDeCursos();
-  }, [perfil, cuenta, token]);
+}
+}, [perfil, cuenta, token]);
 
   const handleLeccionPress = (leccion) => {
     if (leccion.estado === 'bloqueada') {
