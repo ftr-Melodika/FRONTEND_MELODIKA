@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIn
 import { Background } from '../components/Background';
 import { SideMenu } from '../components/SideMenu'; // 👈 IMPORTAMOS EL MENÚ
 import { ENDPOINTS } from '../config/api';
+import axiosClient from '../api/axiosClient';
 
 export function HomeScreen({ route, navigation }) {
   const { cuenta, perfil, token } = route.params || {};
@@ -24,15 +25,14 @@ export function HomeScreen({ route, navigation }) {
         const idParaBuscar = perfil?.id || cuenta?.id; 
         if (!idParaBuscar) return;
 
-        const response = await fetch(ENDPOINTS.lecciones(idParaBuscar), { headers: { Authorization: `Bearer ${token}` } });
-        let leccionesDesdeBD = [];
-        if (response.ok) {
-          const data = await response.json();
-          leccionesDesdeBD = Array.isArray(data) ? data : (data.data || []);
-        }
+        const response = await axiosClient.get(ENDPOINTS.lecciones(idParaBuscar));
+        const data = response.data;
+        const leccionesDesdeBD = Array.isArray(data) ? data : (data.data || []);
+
         if (leccionesDesdeBD.length === 0) leccionesDesdeBD = MOCK_LECCIONES;
         setLecciones(leccionesDesdeBD);
-      } catch (error) { setLecciones(MOCK_LECCIONES); } finally { setLoading(false); }
+      } 
+      catch (error) { setLecciones(MOCK_LECCIONES); } finally { setLoading(false); }
     }
     cargarMapaDeCursos();
   }, [perfil, cuenta, token]);

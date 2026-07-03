@@ -4,10 +4,11 @@
 const BASE_URL = 'https://hacksaw-cadet-alright.ngrok-free.dev/api'; // NGROK FEDE
 
 export const ENDPOINTS = {
-  login: `${BASE_URL}/cuentas/login`,
-  register: `${BASE_URL}/cuentas/registrar`,
-  crearPerfil: `${BASE_URL}/perfiles`,
-  obtenerPerfiles: `${BASE_URL}/perfiles`,
-  lecciones: (perfilId) => `${BASE_URL}/cursos/guitarra/progreso/${perfilId}` // ver cursos segun el perfil
+  BASE_URL: BASE_URL,
+  login: '/cuentas/login',
+  register: '/cuentas/registrar',
+  crearPerfil: '/perfiles',
+  obtenerPerfiles: '/perfiles',
+  lecciones: (perfilId) => `/cursos/guitarra/progreso/${perfilId}`
 }
   // A medida que hagamos más pantallas, agregaremos las rutas acá

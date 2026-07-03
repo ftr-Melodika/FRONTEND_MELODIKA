@@ -6,6 +6,7 @@ import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
 import { SelectField } from '../components/SelectField';
 import { ENDPOINTS } from '../config/api';
+import axiosClient from '../api/axiosClient';
 
 const GENDER_OPTIONS = [
   { label: 'Masculino', value: 'Masculino' },
@@ -65,22 +66,8 @@ export function CreateUserScreen({ route, navigation }) {
         genero: gender || null,
       };
 
-      const response = await fetch(ENDPOINTS.crearPerfil, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || data.error || 'Error al crear el perfil');
-      }
-
-      // Tu backend devuelve success: true y data: nuevoPerfil
+      const response = await axiosClient.post(ENDPOINTS.crearPerfil, requestBody);
+      const data = response.data;
       const nuevoPerfil = data.data;
 
       Alert.alert('¡Excelente!', `El perfil de ${nuevoPerfil.nombre} está listo.`);
