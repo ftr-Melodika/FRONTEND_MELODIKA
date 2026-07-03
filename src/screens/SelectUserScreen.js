@@ -11,7 +11,7 @@ import axiosClient from '../api/axiosClient';
 export function SelectUserScreen({ navigation }) {
   // 👈 1. Traemos los datos de la cuenta y la función de deslogueo directo del altoparlante
   const { userData, logout } = useContext(AuthContext); 
-  
+  const { userData: cuenta } = useContext(AuthContext);
   const [perfiles, setPerfiles] = useState([]);
   const [loading, setLoading] = useState(true);
 

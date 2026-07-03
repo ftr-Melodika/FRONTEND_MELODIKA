@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Alert, ActivityIndicator } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Background } from '../components/Background';
@@ -7,6 +7,8 @@ import { Button } from '../components/Button';
 import { SelectField } from '../components/SelectField';
 import { ENDPOINTS } from '../config/api';
 import axiosClient from '../api/axiosClient';
+import { useState, useRef, useContext } from 'react'; 
+import { AuthContext } from '../context/AuthContext'; 
 
 const GENDER_OPTIONS = [
   { label: 'Masculino', value: 'Masculino' },
@@ -14,9 +16,8 @@ const GENDER_OPTIONS = [
   { label: 'No binario', value: 'No binario' },
 ];
 
-export function CreateUserScreen({ route, navigation }) {
-  const { cuenta, token } = route.params || {};
-
+export function CreateUserScreen({ navigation }) {
+  const { userData: cuenta, userToken: token } = useContext(AuthContext);
   const [nombre, setNombre] = useState('');
   const [username, setUsername] = useState('');
   const [pais, setPais] = useState('');
@@ -24,7 +25,6 @@ export function CreateUserScreen({ route, navigation }) {
   const [gender, setGender] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-
   const [date, setDate] = useState(new Date(2008, 0, 1));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [birthdayLabel, setBirthdayLabel] = useState('Seleccionar fecha de nacimiento');

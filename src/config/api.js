@@ -1,14 +1,12 @@
 // Reemplazar por IP de la compu de cada uno
 //const BASE_URL = 'http://192.168.1.230:3000/api'; // IP gasti
 //const BASE_URL = ''; // NGROK GASTI
-const BASE_URL = 'https://hacksaw-cadet-alright.ngrok-free.dev/api'; // NGROK FEDE
-
+const BASE_URL = 'https://national-retake-exquisite.ngrok-free.dev/api' //IP IVO
 export const ENDPOINTS = {
-  BASE_URL: BASE_URL,
-  login: '/cuentas/login',
-  register: '/cuentas/registrar',
-  crearPerfil: '/perfiles',
-  obtenerPerfiles: '/perfiles',
-  lecciones: (perfilId) => `/cursos/guitarra/progreso/${perfilId}`
+  login: `${BASE_URL}/cuentas/login`,
+  register: `${BASE_URL}/cuentas/registrar`,
+  crearPerfil: `${BASE_URL}/perfiles`,
+  obtenerPerfiles: `${BASE_URL}/perfiles`,
+  lecciones: (perfilId) => `${BASE_URL}/cursos/guitarra/progreso/${perfilId}` // ver cursos segun el perfil
 }
   // A medida que hagamos más pantallas, agregaremos las rutas acá
