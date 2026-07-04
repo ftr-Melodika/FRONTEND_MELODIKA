@@ -1,12 +1,20 @@
-import { useState, useEffect, useContext } from 'react'; // 👈 1. Importamos useContext
+import { useState, useEffect, useContext, useCallback } from 'react'; // 👈 1. Importamos useContext
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Background } from '../components/Background';
 import { SideMenu } from '../components/SideMenu'; 
 import { ENDPOINTS } from '../config/api';
 import axiosClient from '../api/axiosClient';
-
+import { Alert } from 'react-native';
 // 👈 2. Importamos nuestra "nube" global
 import { AuthContext } from '../context/AuthContext'; 
+
+  const MOCK_LECCIONES = [
+    { id: 1, titulo: 'Afinación Básica', tipo: 'Teoría', estado: 'completada', xp: 50 },
+    { id: 2, titulo: 'Primeros Acordes', tipo: 'Práctica', estado: 'disponible', xp: 100 },
+    { id: 3, titulo: 'Ritmo de Fogón', tipo: 'Práctica', estado: 'bloqueada', xp: 150 },
+    { id: 4, titulo: 'Tu primer Canción', tipo: 'Canción', estado: 'bloqueada', xp: 200 }
+  ];
+
 
 export function HomeScreen({ route, navigation }) {
   // 3. LA MAGIA: Le pedimos el token y la cuenta al AuthContext (Cambiando el nombre interno para no romper tu código)
@@ -18,15 +26,7 @@ export function HomeScreen({ route, navigation }) {
   const [lecciones, setLecciones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  // ... (El resto de tu código MOCK_LECCIONES, useEffect, etc. queda igual)
-  const MOCK_LECCIONES = [
-    { id: 1, titulo: 'Afinación Básica', tipo: 'Teoría', estado: 'completada', xp: 50 },
-    { id: 2, titulo: 'Primeros Acordes', tipo: 'Práctica', estado: 'disponible', xp: 100 },
-    { id: 3, titulo: 'Ritmo de Fogón', tipo: 'Práctica', estado: 'bloqueada', xp: 150 },
-    { id: 4, titulo: 'Tu primer Canción', tipo: 'Canción', estado: 'bloqueada', xp: 200 }
-  ];
-
+  
 useEffect(() => {
   async function cargarMapaDeCursos() {
     try {
@@ -39,24 +39,31 @@ useEffect(() => {
       if (leccionesDesdeBD.length === 0) leccionesDesdeBD = MOCK_LECCIONES;
       setLecciones(leccionesDesdeBD);
     } catch (error) {
-      console.log('Error cargando lecciones:', error.response?.data || error.message);
-      setLecciones(MOCK_LECCIONES);
-    } finally {
-      setLoading(false);
-    }
+    // Leemos el error igual que siempre
+    const mensajeError = error.response?.data?.message || 'Revisá tu conexión a internet.';
+    // Imprimimos para nosotros (los desarrolladores)
+    console.log('Error cargando lecciones:', error.response?.data || error.message);
+    // ¡NUEVO! Le avisamos al usuario y le informamos que está en "Modo Offline"
+    Alert.alert(
+      'Modo sin conexión', 
+      `No pudimos sincronizar tu progreso (${mensajeError}). Te mostramos lecciones de práctica.`
+    );
+    setLecciones(MOCK_LECCIONES);
+  } finally {
+    setLoading(false);
   }
+    }
 
   cargarMapaDeCursos(); // 👈 ahora está AFUERA de la función, se ejecuta al montar el efecto
 }, [perfil, cuenta, token]);
 
-  const handleLeccionPress = (leccion) => {
+  const handleLeccionPress = useCallback((leccion) => {
     if (leccion.estado === 'bloqueada') {
       Alert.alert('Lección Bloqueada 🔒', 'Completá las lecciones anteriores para avanzar.');
     } else {
-      navigation.navigate('Leccion', { leccion, perfil, token });
+      navigation.navigate('Leccion', { leccion });
     }
-  };
-
+  }, [navigation]);
   return (
     <Background>
       <View style={styles.mainContainer}>
@@ -116,8 +123,6 @@ useEffect(() => {
         visible={isMenuOpen} 
         onClose={() => setIsMenuOpen(false)} 
         perfil={perfil} 
-        cuenta={cuenta} 
-        token={token} 
         navigation={navigation} 
       />
     </Background>

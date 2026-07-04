@@ -70,7 +70,11 @@ const handleLogin = async () => {
           </TouchableOpacity>
         </View>
 
-        <Button title="Inicia sesión con Google" variant="secondary" />
+        <Button 
+          title="Inicia sesión con Google" 
+          variant="secondary" 
+          onPress={() => Alert.alert('Próximamente 🚀', 'El inicio de sesión con Google todavía no está disponible. ¡Pronto lo sumaremos!')}
+        />
       </View>
     </Background>
   );
