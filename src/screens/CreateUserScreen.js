@@ -1,5 +1,5 @@
-
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Alert, ActivityIndicator } from 'react-native';
+import { useState, useRef, useContext } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Background } from '../components/Background';
 import { InputField } from '../components/InputField';
@@ -7,8 +7,7 @@ import { Button } from '../components/Button';
 import { SelectField } from '../components/SelectField';
 import { ENDPOINTS } from '../config/api';
 import axiosClient from '../api/axiosClient';
-import { useState, useRef, useContext } from 'react'; 
-import { AuthContext } from '../context/AuthContext'; 
+import { AuthContext } from '../context/AuthContext';
 
 const GENDER_OPTIONS = [
   { label: 'Masculino', value: 'Masculino' },
@@ -104,49 +103,63 @@ const handleCreateUser = async () => {
   };
 
   return (
-    <Background>
-      <View style={styles.glassCard}>
-        <Text style={styles.title}>Crear usuario</Text>
-        <InputField placeholder="Nombre completo" value={nombre} onChangeText={setNombre} />
-        <InputField placeholder="Nombre de usuario" value={username} onChangeText={setUsername} />
-        <InputField placeholder="País" value={pais} onChangeText={setPais} />
-        <InputField placeholder="Foto (URL opcional)" value={fotoUrl} onChangeText={setFotoUrl} />
+    <Background style={styles.background}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.glassCard}>
+          <Text style={styles.title}>Crear usuario</Text>
+          <InputField placeholder="Nombre completo" value={nombre} onChangeText={setNombre} />
+          <InputField placeholder="Nombre de usuario" value={username} onChangeText={setUsername} />
+          <InputField placeholder="País" value={pais} onChangeText={setPais} />
+          <InputField placeholder="Foto (URL opcional)" value={fotoUrl} onChangeText={setFotoUrl} />
 
-        <TouchableOpacity style={styles.datePickerButton} onPress={() => setShowDatePicker(true)}>
-          <Text style={[styles.datePickerText, birthdayISO !== '' && styles.datePickerTextSelected]}>{birthdayLabel}</Text>
-          <Text style={styles.calendarIcon}>📅</Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.datePickerButton} onPress={() => setShowDatePicker(true)}>
+            <Text style={[styles.datePickerText, birthdayISO !== '' && styles.datePickerTextSelected]}>{birthdayLabel}</Text>
+            <Text style={styles.calendarIcon}>📅</Text>
+          </TouchableOpacity>
 
-        {showDatePicker && <DateTimePicker value={date} mode="date" display="default" maximumDate={new Date()} onChange={onChangeDate} />}
+          {showDatePicker && <DateTimePicker value={date} mode="date" display="default" maximumDate={new Date()} onChange={onChangeDate} />}
 
-        <View style={styles.selectContainer}>
-          <SelectField label="Género (opcional)" value={gender} onPress={toggleDropdown} isOpen={dropdownOpen} />
-          <Animated.View style={[styles.dropdownBox, { height: dropdownAnim.interpolate({ inputRange: [0, 1], outputRange: [0, GENDER_OPTIONS.length * 36] }), opacity: dropdownAnim }]}>
-            {GENDER_OPTIONS.map((option) => (
-              <TouchableOpacity key={option.value} onPress={() => selectGender(option.value)} style={styles.dropdownOption}>
-                <Text style={[styles.dropdownText, option.value === gender && styles.dropdownTextSelected]}>{option.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </Animated.View>
+          <View style={styles.selectContainer}>
+            <SelectField label="Género (opcional)" value={gender} onPress={toggleDropdown} isOpen={dropdownOpen} />
+            <Animated.View style={[styles.dropdownBox, { height: dropdownAnim.interpolate({ inputRange: [0, 1], outputRange: [0, GENDER_OPTIONS.length * 36] }), opacity: dropdownAnim }]}>
+              {GENDER_OPTIONS.map((option) => (
+                <TouchableOpacity key={option.value} onPress={() => selectGender(option.value)} style={styles.dropdownOption}>
+                  <Text style={[styles.dropdownText, option.value === gender && styles.dropdownTextSelected]}>{option.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </Animated.View>
+          </View>
+
+          {loading ? <ActivityIndicator size="large" color="#b28cff" style={{ marginVertical: 10 }} /> : <Button title="Crear usuario" onPress={handleCreateUser} />}
         </View>
-
-        {loading ? <ActivityIndicator size="large" color="#b28cff" style={{ marginVertical: 10 }} /> : <Button title="Crear usuario" onPress={handleCreateUser} />}
-      </View>
+      </ScrollView>
     </Background>
   );
 }
 
 const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
   glassCard: {
-    width: '65%',
+    width: '69%',
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 25,
     paddingVertical: 18,
     paddingHorizontal: 25,
-    marginVertical: 15,
     borderColor: 'rgba(255, 255, 255, 0.2)',
     borderWidth: 1,
   },
+
   title: {
     fontSize: 24,
     color: '#fff',
