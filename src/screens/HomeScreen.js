@@ -4,7 +4,6 @@ import { Background } from '../components/Background';
 import { SideMenu } from '../components/SideMenu'; 
 import { ENDPOINTS } from '../config/api';
 import axiosClient from '../api/axiosClient';
-import { Alert } from 'react-native';
 // 👈 2. Importamos nuestra "nube" global
 import { AuthContext } from '../context/AuthContext'; 
 

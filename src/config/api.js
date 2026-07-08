@@ -1,7 +1,7 @@
 // Reemplazar por IP de la compu de cada uno
 //const BASE_URL = 'http://192.168.1.230:3000/api'; // IP gasti
 //const BASE_URL = ''; // NGROK GASTI
-const BASE_URL = 'https://national-retake-exquisite.ngrok-free.dev/api' //IP IVO
+const BASE_URL = 'https://hacksaw-cadet-alright.ngrok-free.dev/api' //IP IVO
 export const ENDPOINTS = {
   login: `${BASE_URL}/cuentas/login`,
   register: `${BASE_URL}/cuentas/registrar`,
