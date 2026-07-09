@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState, useContext } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, TouchableWithoutFeedback, ScrollView, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, TouchableWithoutFeedback, ScrollView, Alert, Image } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
-const { width } = Dimensions.get('window');
 const DRAWER_WIDTH = 300; 
 
 export function SideMenu({ visible, onClose, perfil, navigation }) {
-  // Extraemos la función de logout y la cuenta directamente del contexto global
-  const { logout, userData: cuenta } = useContext(AuthContext);
+  // Extraemos la función de logout directamente del contexto global
+  const { logout } = useContext(AuthContext);
   
   // Animación nativa de React
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;

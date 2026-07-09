@@ -1,14 +1,14 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ENDPOINTS } from '../config/api'; 
 // NUEVO: Importamos el cable de emergencia
 import { globalLogout } from '../context/AuthContext';
 
-const axiosClient = axios.create({
-  baseURL: ENDPOINTS.BASE_URL, 
-  timeout: 10000, 
-});
+import { BASE_URL } from '../config/api'; // 👈 importás la variable, no ENDPOINTS.BASE_URL
 
+const axiosClient = axios.create({
+  baseURL: BASE_URL,
+  timeout: 10000,
+});
 // Interceptor de Salida (Queda igual)
 axiosClient.interceptors.request.use(
   async (config) => {

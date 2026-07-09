@@ -205,8 +205,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     width: '50%',
     marginTop: 10,
-    marginLeft: '0',
-    marginRight: '250',
+    justifyContent: 'space-between',
   },
 
   // ESTILOS DEL MÁSTIL TIPO SIMPLY GUITAR

@@ -32,6 +32,10 @@ export const AuthProvider = ({ children }) => {
     checkLogin();
   }, []);
 
+  useEffect(() => {
+    globalLogout = logout;
+  }, [logout]);
+
   const login = async (token, cuenta) => {
     setIsLoading(true);
     try {
@@ -59,9 +63,6 @@ export const AuthProvider = ({ children }) => {
       setIsLoading(false);
     }
   };
-
-  // NUEVO: Conectamos la función logout de React al "cable de emergencia" global
-  globalLogout = logout;
 
   return (
     <AuthContext.Provider value={{ login, logout, isLoading, userToken, userData }}>

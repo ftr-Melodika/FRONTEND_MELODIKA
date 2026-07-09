@@ -1,11 +1,11 @@
 import React from 'react';
 import { ImageBackground, View, StyleSheet } from 'react-native';
 
-export function Background({ children }) {
+export function Background({ children, style }) {
   return (
     <ImageBackground
       source={require('../../assets/background.png')}
-      style={styles.background}
+      style={[styles.background, style]}
       resizeMode="stretch"
       imageStyle={styles.image}
     >

@@ -42,11 +42,6 @@ useEffect(() => {
     const mensajeError = error.response?.data?.message || 'Revisá tu conexión a internet.';
     // Imprimimos para nosotros (los desarrolladores)
     console.log('Error cargando lecciones:', error.response?.data || error.message);
-    // ¡NUEVO! Le avisamos al usuario y le informamos que está en "Modo Offline"
-    Alert.alert(
-      'Modo sin conexión', 
-      `No pudimos sincronizar tu progreso (${mensajeError}). Te mostramos lecciones de práctica.`
-    );
     setLecciones(MOCK_LECCIONES);
   } finally {
     setLoading(false);
