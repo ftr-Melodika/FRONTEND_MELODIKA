@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { Background } from '../components/Background';
 import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
-import { ENDPOINTS } from '../config/api';
-import axiosClient from '../api/axiosClient';
+import { AuthLink } from '../components/AuthLink';
+import { authService } from '../services/authService';
 
 export function RegisterScreen({ navigation }) {
   const [nombre, setNombre] = useState('');
@@ -13,14 +13,12 @@ export function RegisterScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    // Validaciones
     if (!nombre || !apellido || !email || !password || !confirmPassword) {
-      return Alert.alert('Error', 'Por favor, completá todos los campos.');
+      return Alert.alert('Error', 'Por favor, completá todos los campos obligatorios.');
     }
     if (password !== confirmPassword) {
       return Alert.alert('Error', 'Las contraseñas no coinciden.');
@@ -32,30 +30,18 @@ export function RegisterScreen({ navigation }) {
     setLoading(true);
 
     try {
-      const response = await axiosClient.post(ENDPOINTS.register, {
-        nombre: nombre.trim(),
-        apellido: apellido.trim(),
-        telefono: telefono.trim() || null, // si no lo completó, va null
-        email: email.trim(),
-        password: password,
-      });
+      await authService.registrar(
+        nombre.trim(),
+        apellido.trim(),
+        telefono.trim() || null,
+        email.trim(),
+        password
+      );
 
       Alert.alert('¡Éxito!', 'Cuenta creada correctamente. Ya podés iniciar sesión.');
       navigation.navigate('Login');
-
     } catch (error) {
-      let mensaje = 'Ocurrió un error al crear la cuenta.';
-
-      if (error.response) {
-        mensaje = error.response.data?.message || `Error del servidor (${error.response.status})`;
-      } else if (error.request) {
-        mensaje = 'No se pudo conectar con el servidor. Revisá la URL del backend o tu conexión.';
-      } else {
-        mensaje = error.message;
-      }
-
-      Alert.alert('Error en Registro', mensaje);
-      console.log(error.response?.data); // para ver el detalle real en consola
+      Alert.alert('Error en Registro', error.message);
     } finally {
       setLoading(false);
     }
@@ -67,40 +53,12 @@ export function RegisterScreen({ navigation }) {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           <Text style={styles.title}>Crear cuenta</Text>
 
-          <InputField
-            placeholder="Nombre"
-            value={nombre}
-            onChangeText={setNombre}
-          />
-          <InputField
-            placeholder="Apellido"
-            value={apellido}
-            onChangeText={setApellido}
-          />
-          <InputField
-            placeholder="Teléfono (opcional)"
-            value={telefono}
-            onChangeText={setTelefono}
-            keyboardType="phone-pad"
-          />
-          <InputField
-            placeholder="Correo electrónico"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-          />
-          <InputField
-            placeholder="Contraseña"
-            secureTextEntry={true}
-            value={password}
-            onChangeText={setPassword}
-          />
-          <InputField
-            placeholder="Confirmar contraseña"
-            secureTextEntry={true}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-          />
+          <InputField placeholder="Nombre" value={nombre} onChangeText={setNombre} />
+          <InputField placeholder="Apellido" value={apellido} onChangeText={setApellido} />
+          <InputField placeholder="Teléfono (opcional)" value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" />
+          <InputField placeholder="Correo electrónico" value={email} onChangeText={setEmail} keyboardType="email-address" />
+          <InputField placeholder="Contraseña" secureTextEntry={true} value={password} onChangeText={setPassword} />
+          <InputField placeholder="Confirmar contraseña" secureTextEntry={true} value={confirmPassword} onChangeText={setConfirmPassword} />
 
           <Pressable style={styles.checkboxContainer} onPress={() => setAcceptTerms(!acceptTerms)}>
             <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
@@ -112,15 +70,15 @@ export function RegisterScreen({ navigation }) {
           {loading ? (
             <ActivityIndicator size="large" color="#b28cff" style={{ marginVertical: 10 }} />
           ) : (
-            <Button title="Crear cuenta" onPress={handleRegister} style={styles.btnSubmit} />
+            <Button title="Crear cuenta" onPress={handleRegister} style={{ marginTop: 10 }} />
           )}
 
-          <View style={styles.loginLinkContainer}>
-            <Text style={styles.textHelper}>¿Ya tenés una cuenta?</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                <Text style={styles.textLink}>Inicia sesión</Text>
-            </TouchableOpacity>
-          </View>
+          <AuthLink 
+            textHelper="¿Ya tenés una cuenta?" 
+            textAction="Inicia sesión" 
+            onPress={() => navigation.navigate('Login')} 
+          />
+
         </ScrollView>
       </View>
     </Background>
@@ -128,73 +86,12 @@ export function RegisterScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  glassCard: {
-    width: '65%',
-    maxHeight: '90%',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 25,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    borderWidth: 1,
-    paddingHorizontal: 25,
-  },
-  scrollContent: {
-    paddingVertical: 20,
-  },
-  title: {
-    fontSize: 32,
-    color: '#fff',
-    textAlign: 'center',
-    marginBottom: 20,
-    fontFamily: 'serif',
-    fontWeight: 'bold',
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
-    paddingHorizontal: 2,
-  },
-  checkbox: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  checkboxChecked: {
-    backgroundColor: '#b28cff',
-    borderColor: '#b28cff',
-  },
-  checkboxTick: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  checkboxLabel: {
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontSize: 13,
-    flex: 1,
-  },
-  btnSubmit: {
-    marginTop: 10,
-  },
-  loginLinkContainer: {
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  textHelper: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 14,
-  },
-  textLink: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-    textDecorationLine: 'underline',
-    marginTop: 3,
-  },
+  glassCard: { width: '65%', maxHeight: '90%', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 25, borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1, paddingHorizontal: 25 },
+  scrollContent: { paddingVertical: 20 },
+  title: { fontSize: 32, color: '#fff', textAlign: 'center', marginBottom: 20, fontFamily: 'serif', fontWeight: 'bold' },
+  checkboxContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, paddingHorizontal: 2 },
+  checkbox: { width: 18, height: 18, borderRadius: 4, borderWidth: 1.5, borderColor: 'rgba(255, 255, 255, 0.6)', justifyContent: 'center', alignItems: 'center', marginRight: 10, backgroundColor: 'rgba(255, 255, 255, 0.05)' },
+  checkboxChecked: { backgroundColor: '#b28cff', borderColor: '#b28cff' },
+  checkboxTick: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  checkboxLabel: { color: 'rgba(255, 255, 255, 0.85)', fontSize: 13, flex: 1 },
 });

@@ -1,16 +1,17 @@
-// Archivo: src/utils/errorUtils.js
+
+
 export const getErrorMessage = (error) => {
-  // 1. Si el servidor respondió (ej: error 400, 403, 500)
+  // 1. Si el servidor respondió con un error (ej: 400, 403, 500)
   if (error.response) {
-    // Si tu backend envía el error en un campo 'message' o 'data'
-    return error.response.data?.message || error.response.data || 'Error del servidor';
+    // Busca el mensaje en data.message o data.error (dependiendo de cómo lo armaste en tu backend)
+    return error.response.data?.message || error.response.data?.error || `Error del servidor (${error.response.status})`;
   }
   
-  // 2. Si no hubo respuesta del servidor (error de red)
+  // 2. Si el servidor nunca respondió (ej: sin internet, backend apagado)
   if (error.request) {
-    return 'No hay conexión con el servidor. Revisá tu internet.';
+    return 'No se pudo conectar con el servidor. Revisá tu conexión.';
   }
 
-  // 3. Cualquier otra cosa
-  return error.message || 'Ocurrió un error inesperado';
+  // 3. Cualquier otro error inesperado en la app
+  return error.message || 'Ocurrió un error inesperado.';
 };

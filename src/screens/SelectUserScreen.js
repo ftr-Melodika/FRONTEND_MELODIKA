@@ -1,9 +1,15 @@
+// Archivo: src/screens/SelectUserScreen.js
 import { useState, useEffect, useContext } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { Background } from '../components/Background';
-import { ENDPOINTS } from '../config/api';
 import { AuthContext } from '../context/AuthContext';
-import axiosClient from '../api/axiosClient';
+
+// 1. Importamos al servicio
+import { perfilesService } from '../services/perfilesService';
+// 2. Importamos a nuestros especialistas visuales
+import { ProfileAvatar } from '../components/ProfileAvatar';
+import { Button } from '../components/Button';
+
 
 export function SelectUserScreen({ navigation }) {
   const { logout } = useContext(AuthContext);
@@ -13,16 +19,18 @@ export function SelectUserScreen({ navigation }) {
   useEffect(() => {
     async function fetchPerfiles() {
       try {
-        const response = await axiosClient.get(ENDPOINTS.obtenerPerfiles);
-        const perfilesData = response.data.data;
+        // El servicio nos trae los datos limpios
+        const perfilesData = await perfilesService.obtenerPerfiles();
         setPerfiles(Array.isArray(perfilesData) ? perfilesData : []);
       } catch (error) {
-        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+        // Si el servicio nos avisa que el token venció, deslogueamos
+        if (error.isAuthError) {
           Alert.alert('Sesión Expirada ⏰', 'Tu sesión venció por seguridad. Volvé a ingresar.');
           await logout();
           return;
         }
-        Alert.alert('Error', error.response?.data?.message || 'Error al cargar los perfiles');
+        // Si es un error común, mostramos el mensaje traducido
+        Alert.alert('Error', error.message);
       } finally {
         setLoading(false);
       }
@@ -30,10 +38,6 @@ export function SelectUserScreen({ navigation }) {
 
     fetchPerfiles();
   }, []);
-
-  const handleLogoutApp = async () => {
-    await logout();
-  };
 
   return (
     <Background>
@@ -45,67 +49,44 @@ export function SelectUserScreen({ navigation }) {
             <ActivityIndicator size="large" color="#b28cff" style={{ marginTop: 40 }} />
           ) : (
             <View style={styles.profilesRow}>
+              
               {perfiles.map((perfil) => (
-                <TouchableOpacity
+                <ProfileAvatar 
                   key={perfil.id}
-                  style={styles.profileWrapper}
+                  nombre={perfil.nombre}
                   onPress={() => navigation.replace('Home', { perfil })}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.avatarCircle}>
-                    <Text style={styles.avatarInitial}>{perfil.nombre.charAt(0).toUpperCase()}</Text>
-                  </View>
-                  <Text style={styles.profileName} numberOfLines={1}>{perfil.nombre}</Text>
-                </TouchableOpacity>
+                />
               ))}
 
               {perfiles.length < 3 && (
-                <TouchableOpacity
-                  style={styles.profileWrapper}
+                <ProfileAvatar 
+                  isAddButton={true}
                   onPress={() => navigation.navigate('CreateUser')}
-                  activeOpacity={0.8}
-                >
-                  <View style={[styles.avatarCircle, styles.addCircle]}>
-                    <Text style={styles.addIcon}>+</Text>
-                  </View>
-                  <Text style={styles.profileName}>Nuevo perfil</Text>
-                </TouchableOpacity>
+                />
               )}
+              
             </View>
           )}
         </View>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogoutApp}>
-          <Text style={styles.logoutText}>Cerrar sesión</Text>
-        </TouchableOpacity>
+        {/* 👇 Nuestro nuevo componente modular en acción */}
+        <Button 
+          title="Cerrar sesión" 
+          variant="secondary" 
+          onPress={() => logout()}
+          style={{ minWidth: 160, maxWidth: 220, paddingVertical: 8, borderRadius: 18 }}
+          textStyle={{ fontSize: 12, fontWeight: '600' }}
+        />
+        
       </View>
     </Background>
   );
 }
 
+// Estilos reducidos al mínimo indispensable para el layout de la pantalla
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'space-between', alignItems: 'center', paddingVertical: 24 },
   content: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' },
-  logoutButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-    minWidth: 160,
-    maxWidth: 220,
-    alignItems: 'center',
-    alignSelf: 'center',
-    marginBottom: 8,
-  },
-  logoutText: { color: '#fff', fontSize: 12, fontWeight: '600' },
   title: { fontSize: 32, color: '#fff', fontFamily: 'serif', fontWeight: 'bold', marginBottom: 40, textShadowColor: 'rgba(0, 0, 0, 0.3)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
   profilesRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 30 },
-  profileWrapper: { alignItems: 'center', width: 100 },
-  avatarCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#b28cff', justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6, marginBottom: 12 },
-  addCircle: { backgroundColor: 'rgba(255, 255, 255, 0.1)', borderColor: 'rgba(255, 255, 255, 0.4)', borderStyle: 'dashed' },
-  avatarInitial: { fontSize: 48, color: '#fff', fontWeight: 'bold' },
-  addIcon: { fontSize: 54, color: '#fff', fontWeight: '300', marginTop: -4 },
-  profileName: { fontSize: 18, color: '#fff', fontWeight: '600', textAlign: 'center' },
 });

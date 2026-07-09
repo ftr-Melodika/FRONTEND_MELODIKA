@@ -1,19 +1,29 @@
+// Archivo: src/components/Button.js
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 
-// 1. Agregamos 'style' a los parámetros que recibe la función
-export function Button({ title, onPress, variant = 'primary', style }) {
+export function Button({ title, onPress, variant = 'primary', style, textStyle }) {
   
   const isSecondary = variant === 'secondary';
+  const isLink = variant === 'link'; // 👈 Agregamos la variante link
 
   return (
     <TouchableOpacity
-      // 2. Ahora sí, puede usar la variable 'style' sin crashear
-      style={[styles.button, isSecondary && styles.buttonSecondary, style]}
+      style={[
+        styles.button, 
+        isSecondary && styles.buttonSecondary, 
+        isLink && styles.buttonLink, // 👈 Aplicamos estilo si es link
+        style
+      ]}
       onPress={onPress}
-      activeOpacity={0.8} // Un buen toque Senior para mejorar la UX al presionar
+      activeOpacity={isLink ? 0.6 : 0.8}
     >
-      <Text style={[styles.text, isSecondary && styles.textSecondary]}>
+      <Text style={[
+        styles.text, 
+        isSecondary && styles.textSecondary, 
+        isLink && styles.textLink, // 👈 Aplicamos estilo de texto si es link
+        textStyle
+      ]}>
         {title}
       </Text>
     </TouchableOpacity>
@@ -34,6 +44,12 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
     borderWidth: 1,
   },
+  buttonLink: {
+    backgroundColor: 'transparent', // Sin fondo
+    paddingVertical: 5,             // Menos relleno
+    marginVertical: 0,
+    width: 'auto',                  // Que ocupe solo lo que mide el texto
+  },
   text: {
     color: '#fff',
     fontSize: 16,
@@ -41,5 +57,10 @@ const styles = StyleSheet.create({
   },
   textSecondary: {
     color: '#fff',
+  },
+  textLink: {
+    color: '#fff',
+    fontSize: 14,
+    textDecorationLine: 'underline', // Texto subrayado
   },
 });
