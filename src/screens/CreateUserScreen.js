@@ -1,13 +1,16 @@
-import { useState, useRef, useContext } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Alert, ActivityIndicator, ScrollView } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+// Archivo: src/screens/CreateUserScreen.js
+import { useState, useContext } from 'react';
+import { View, Text, StyleSheet, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { Background } from '../components/Background';
 import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
-import { SelectField } from '../components/SelectField';
 import { ENDPOINTS } from '../config/api';
 import axiosClient from '../api/axiosClient';
 import { AuthContext } from '../context/AuthContext';
+
+// Importamos nuestros especialistas modulares
+import { DatePickerField } from '../components/form/DatePickerField';
+import { DropdownField } from '../components/form/DropdownField';
 
 const GENDER_OPTIONS = [
   { label: 'Masculino', value: 'Masculino' },
@@ -16,38 +19,20 @@ const GENDER_OPTIONS = [
 ];
 
 export function CreateUserScreen({ navigation }) {
-  const { userData: cuenta } = useContext(AuthContext); // 👈
+  const { userData: cuenta } = useContext(AuthContext); 
+  
   const [nombre, setNombre] = useState('');
   const [username, setUsername] = useState('');
   const [pais, setPais] = useState('');
   const [fotoUrl, setFotoUrl] = useState('');
   const [gender, setGender] = useState('');
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [birthdayISO, setBirthdayISO] = useState('');
   const [loading, setLoading] = useState(false);
-  const [date, setDate] = useState(new Date(2008, 0, 1));
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [birthdayLabel, setBirthdayLabel] = useState('Seleccionar fecha de nacimiento');
-  const [birthdayISO, setBirthdayLabelISO] = useState('');
 
-  const dropdownAnim = useRef(new Animated.Value(0)).current;
-
-  const onChangeDate = (event, selectedDate) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      setDate(selectedDate);
-      const dia = String(selectedDate.getDate()).padStart(2, '0');
-      const mes = String(selectedDate.getMonth() + 1).padStart(2, '0');
-      const anio = selectedDate.getFullYear();
-      setBirthdayLabel(`${dia}/${mes}/${anio}`);
-      setBirthdayLabelISO(`${anio}-${mes}-${dia}`);
-    }
-  };
-
-const handleCreateUser = async () => {
+  const handleCreateUser = async () => {
     if (!nombre.trim() || !username.trim() || !birthdayISO) {
       return Alert.alert('Error', 'Por favor completá el nombre, usuario y fecha de nacimiento.');
     }
-    // 2. Quitamos la validación del token acá porque si el usuario llegó a esta pantalla, el Contexto garantiza que hay token.
     if (!cuenta?.id) {
       return Alert.alert('Error de sesión', 'No se encontró la cuenta activa. Volvé a iniciar sesión.');
     }
@@ -69,12 +54,9 @@ const handleCreateUser = async () => {
       const nuevoPerfil = response.data.data;
 
       Alert.alert('¡Excelente!', `El perfil de ${nuevoPerfil.nombre} está listo.`);
-      
-      // 3. LA MAGIA: Navegación súper limpia. Solo pasamos lo que Home no sabe: qué perfil elegimos.
       navigation.replace('Home', { perfil: nuevoPerfil });
 
     } catch (error) {
-      // 4. ARREGLO DEL PUNTO 9: Leemos el mensaje real de tu backend formateado.
       const mensajeError = error.response?.data?.message || 'Ocurrió un error al crear el perfil.';
       Alert.alert('Error', mensajeError);
     } finally {
@@ -82,55 +64,35 @@ const handleCreateUser = async () => {
     }
   };
 
-  const toggleDropdown = () => {
-    Animated.timing(dropdownAnim, {
-      toValue: dropdownOpen ? 0 : 1,
-      duration: 220,
-      easing: Easing.out(Easing.ease),
-      useNativeDriver: false,
-    }).start();
-    setDropdownOpen(!dropdownOpen);
-  };
-
-  const selectGender = (value) => {
-    setGender(value);
-    Animated.timing(dropdownAnim, {
-      toValue: 0,
-      duration: 180,
-      easing: Easing.in(Easing.ease),
-      useNativeDriver: false,
-    }).start(() => setDropdownOpen(false));
-  };
-
   return (
     <Background style={styles.background}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.glassCard}>
           <Text style={styles.title}>Crear usuario</Text>
+          
           <InputField placeholder="Nombre completo" value={nombre} onChangeText={setNombre} />
           <InputField placeholder="Nombre de usuario" value={username} onChangeText={setUsername} />
-          <InputField placeholder="País" value={pais} onChangeText={setPais} />
+          
+          {/* Componente especializado en Fechas */}
+          <DatePickerField onDateChange={setBirthdayISO} />
+
+          <InputField placeholder="País (opcional)" value={pais} onChangeText={setPais} />
+          
+          {/* Componente especializado en Desplegables + Animación */}
+          <DropdownField 
+            label="Género (opcional)" 
+            options={GENDER_OPTIONS} 
+            value={gender} 
+            onSelect={setGender} 
+          />
+
           <InputField placeholder="Foto (URL opcional)" value={fotoUrl} onChangeText={setFotoUrl} />
 
-          <TouchableOpacity style={styles.datePickerButton} onPress={() => setShowDatePicker(true)}>
-            <Text style={[styles.datePickerText, birthdayISO !== '' && styles.datePickerTextSelected]}>{birthdayLabel}</Text>
-            <Text style={styles.calendarIcon}>📅</Text>
-          </TouchableOpacity>
-
-          {showDatePicker && <DateTimePicker value={date} mode="date" display="default" maximumDate={new Date()} onChange={onChangeDate} />}
-
-          <View style={styles.selectContainer}>
-            <SelectField label="Género (opcional)" value={gender} onPress={toggleDropdown} isOpen={dropdownOpen} />
-            <Animated.View style={[styles.dropdownBox, { height: dropdownAnim.interpolate({ inputRange: [0, 1], outputRange: [0, GENDER_OPTIONS.length * 36] }), opacity: dropdownAnim }]}>
-              {GENDER_OPTIONS.map((option) => (
-                <TouchableOpacity key={option.value} onPress={() => selectGender(option.value)} style={styles.dropdownOption}>
-                  <Text style={[styles.dropdownText, option.value === gender && styles.dropdownTextSelected]}>{option.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </Animated.View>
-          </View>
-
-          {loading ? <ActivityIndicator size="large" color="#b28cff" style={{ marginVertical: 10 }} /> : <Button title="Crear usuario" onPress={handleCreateUser} />}
+          {loading ? (
+            <ActivityIndicator size="large" color="#b28cff" style={{ marginVertical: 10 }} />
+          ) : (
+            <Button title="Crear usuario" onPress={handleCreateUser} />
+          )}
         </View>
       </ScrollView>
     </Background>
@@ -138,89 +100,9 @@ const handleCreateUser = async () => {
 }
 
 const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  glassCard: {
-    width: '69%',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 25,
-    paddingVertical: 18,
-    paddingHorizontal: 25,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    borderWidth: 1,
-  },
-
-  title: {
-    fontSize: 24,
-    color: '#fff',
-    textAlign: 'center',
-    marginTop: -8,
-    marginBottom: 8,
-    fontFamily: 'serif',
-    fontWeight: 'bold',
-  },
-  datePickerButton: {
-    width: '100%',
-    height: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    marginBottom: 12,
-  },
-  datePickerText: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.5)',
-  },
-  datePickerTextSelected: {
-    color: '#fff',
-    fontWeight: '500',
-  },
-  calendarIcon: {
-    fontSize: 16,
-    opacity: 0.8,
-  },
-  selectContainer: {
-    width: '100%',
-    position: 'relative',
-    marginBottom: 6,
-  },
-  dropdownBox: {
-    position: 'absolute',
-    top: 48,
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    overflow: 'hidden',
-    zIndex: 10,
-  },
-  dropdownOption: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  dropdownText: {
-    fontSize: 13,
-    color: '#333',
-  },
-  dropdownTextSelected: {
-    color: '#6b5ce7',
-    fontWeight: 'bold',
-  },
+  background: { flex: 1 },
+  scrollView: { flex: 1 },
+  scrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 20 },
+  glassCard: { width: '85%', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 25, paddingVertical: 25, paddingHorizontal: 25, borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1 },
+  title: { fontSize: 24, color: '#fff', textAlign: 'center', marginTop: -8, marginBottom: 15, fontFamily: 'serif', fontWeight: 'bold' },
 });
