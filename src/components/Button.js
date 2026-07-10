@@ -1,66 +1,43 @@
-// Archivo: src/components/Button.js
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
 
-export function Button({ title, onPress, variant = 'primary', style, textStyle }) {
-  
+export function Button({ title, onPress, variant = 'primary', style, textStyle, loading = false }) {
   const isSecondary = variant === 'secondary';
-  const isLink = variant === 'link'; // 👈 Agregamos la variante link
+  const isLink = variant === 'link';
 
   return (
     <TouchableOpacity
       style={[
         styles.button, 
         isSecondary && styles.buttonSecondary, 
-        isLink && styles.buttonLink, // 👈 Aplicamos estilo si es link
+        isLink && styles.buttonLink, 
         style
       ]}
       onPress={onPress}
+      disabled={loading} // 👈 Evita doble tap accidental
       activeOpacity={isLink ? 0.6 : 0.8}
     >
-      <Text style={[
-        styles.text, 
-        isSecondary && styles.textSecondary, 
-        isLink && styles.textLink, // 👈 Aplicamos estilo de texto si es link
-        textStyle
-      ]}>
-        {title}
-      </Text>
+      {loading ? (
+        <ActivityIndicator color={isSecondary || isLink ? "#b28cff" : "#fff"} />
+      ) : (
+        <Text style={[
+          styles.text, 
+          isSecondary && styles.textSecondary, 
+          isLink && styles.textLink,
+          textStyle
+        ]}>
+          {title}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  button: {
-    backgroundColor: '#b28cff',
-    paddingVertical: 15,
-    borderRadius: 30,
-    alignItems: 'center',
-    marginVertical: 10,
-    width: '100%',
-  },
-  buttonSecondary: {
-    backgroundColor: 'transparent',
-    borderColor: '#fff',
-    borderWidth: 1,
-  },
-  buttonLink: {
-    backgroundColor: 'transparent', // Sin fondo
-    paddingVertical: 5,             // Menos relleno
-    marginVertical: 0,
-    width: 'auto',                  // Que ocupe solo lo que mide el texto
-  },
-  text: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  textSecondary: {
-    color: '#fff',
-  },
-  textLink: {
-    color: '#fff',
-    fontSize: 14,
-    textDecorationLine: 'underline', // Texto subrayado
-  },
+  button: { backgroundColor: '#b28cff', paddingVertical: 15, borderRadius: 30, alignItems: 'center', marginVertical: 10, width: '100%' },
+  buttonSecondary: { backgroundColor: 'transparent', borderColor: '#fff', borderWidth: 1 },
+  buttonLink: { backgroundColor: 'transparent', paddingVertical: 5, marginVertical: 0, width: 'auto' },
+  text: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  textSecondary: { color: '#fff' },
+  textLink: { color: '#fff', fontSize: 14, textDecorationLine: 'underline' },
 });

@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { Background } from '../components/Background';
 import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
-import { AuthLink } from '../components/AuthLink';
+import { Checkbox } from '../components/form/Checkbox'; // 👈 Checkbox importado
 import { authService } from '../services/authService';
 
 export function RegisterScreen({ navigation }) {
@@ -17,27 +17,13 @@ export function RegisterScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!nombre || !apellido || !email || !password || !confirmPassword) {
-      return Alert.alert('Error', 'Por favor, completá todos los campos obligatorios.');
-    }
-    if (password !== confirmPassword) {
-      return Alert.alert('Error', 'Las contraseñas no coinciden.');
-    }
-    if (!acceptTerms) {
-      return Alert.alert('Error', 'Debes aceptar los términos y condiciones.');
-    }
+    if (!nombre || !apellido || !email || !password || !confirmPassword) return Alert.alert('Error', 'Faltan campos.');
+    if (password !== confirmPassword) return Alert.alert('Error', 'Las contraseñas no coinciden.');
+    if (!acceptTerms) return Alert.alert('Error', 'Debes aceptar los términos y condiciones.');
 
     setLoading(true);
-
     try {
-      await authService.registrar(
-        nombre.trim(),
-        apellido.trim(),
-        telefono.trim() || null,
-        email.trim(),
-        password
-      );
-
+      await authService.registrar(nombre.trim(), apellido.trim(), telefono.trim() || null, email.trim(), password);
       Alert.alert('¡Éxito!', 'Cuenta creada correctamente. Ya podés iniciar sesión.');
       navigation.navigate('Login');
     } catch (error) {
@@ -52,33 +38,23 @@ export function RegisterScreen({ navigation }) {
       <View style={styles.glassCard}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           <Text style={styles.title}>Crear cuenta</Text>
-
           <InputField placeholder="Nombre" value={nombre} onChangeText={setNombre} />
           <InputField placeholder="Apellido" value={apellido} onChangeText={setApellido} />
-          <InputField placeholder="Teléfono (opcional)" value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" />
+          <InputField placeholder="Teléfono" value={telefono} onChangeText={setTelefono} />
           <InputField placeholder="Correo electrónico" value={email} onChangeText={setEmail} keyboardType="email-address" />
           <InputField placeholder="Contraseña" secureTextEntry={true} value={password} onChangeText={setPassword} />
           <InputField placeholder="Confirmar contraseña" secureTextEntry={true} value={confirmPassword} onChangeText={setConfirmPassword} />
 
-          <Pressable style={styles.checkboxContainer} onPress={() => setAcceptTerms(!acceptTerms)}>
-            <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
-              {acceptTerms && <Text style={styles.checkboxTick}>✓</Text>}
-            </View>
-            <Text style={styles.checkboxLabel}>Acepto los términos y condiciones</Text>
-          </Pressable>
+          {/* 👇 Checkbox limpio */}
+          <Checkbox label="Acepto los términos y condiciones" checked={acceptTerms} onChange={setAcceptTerms} />
 
-          {loading ? (
-            <ActivityIndicator size="large" color="#b28cff" style={{ marginVertical: 10 }} />
-          ) : (
-            <Button title="Crear cuenta" onPress={handleRegister} style={{ marginTop: 10 }} />
-          )}
+          {/* 👇 Botón de carga */}
+          <Button title="Crear cuenta" onPress={handleRegister} loading={loading} style={{ marginTop: 10 }} />
 
-          <AuthLink 
-            textHelper="¿Ya tenés una cuenta?" 
-            textAction="Inicia sesión" 
-            onPress={() => navigation.navigate('Login')} 
-          />
-
+          <View style={{alignItems: 'center', marginTop: 10}}>
+            <Text style={{color: 'rgba(255,255,255,0.7)'}}>¿Ya tenés una cuenta?</Text>
+            <Button title="Inicia sesión" variant="link" onPress={() => navigation.navigate('Login')} />
+          </View>
         </ScrollView>
       </View>
     </Background>
@@ -89,9 +65,4 @@ const styles = StyleSheet.create({
   glassCard: { width: '65%', maxHeight: '90%', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 25, borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1, paddingHorizontal: 25 },
   scrollContent: { paddingVertical: 20 },
   title: { fontSize: 32, color: '#fff', textAlign: 'center', marginBottom: 20, fontFamily: 'serif', fontWeight: 'bold' },
-  checkboxContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, paddingHorizontal: 2 },
-  checkbox: { width: 18, height: 18, borderRadius: 4, borderWidth: 1.5, borderColor: 'rgba(255, 255, 255, 0.6)', justifyContent: 'center', alignItems: 'center', marginRight: 10, backgroundColor: 'rgba(255, 255, 255, 0.05)' },
-  checkboxChecked: { backgroundColor: '#b28cff', borderColor: '#b28cff' },
-  checkboxTick: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
-  checkboxLabel: { color: 'rgba(255, 255, 255, 0.85)', fontSize: 13, flex: 1 },
 });
