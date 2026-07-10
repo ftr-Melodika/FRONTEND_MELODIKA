@@ -4,7 +4,7 @@ import { Button } from '../Button';
 
 export function TheoryStep({ textoPrincipal, textoDestacado, onBack, onNext }) {
   return (
-    <View style={styles.stepWrapper}>
+    <V  <Button title="← Atrás" vaiew style={styles.stepWrapper}>
       <View style={styles.card}>
         <Text style={styles.paragraph}>{textoPrincipal}</Text>
         {textoDestacado && (
@@ -12,7 +12,7 @@ export function TheoryStep({ textoPrincipal, textoDestacado, onBack, onNext }) {
         )}
       </View>
       <View style={styles.btnRow}>
-        <Button title="← Atrás" variant="secondary" onPress={onBack} style={{width: '40%'}} />
+      riant="secondary" onPress={onBack} style={{width: '40%'}} />
         <Button title="¡A Practicar! 🎸" onPress={onNext} style={{width: '40%'}} />
       </View>
     </View>

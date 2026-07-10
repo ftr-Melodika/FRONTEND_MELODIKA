@@ -27,6 +27,8 @@ export function LeccionScreen({ route, navigation }) {
           leccion={leccion} 
           paso={paso} 
           onBack={() => navigation.goBack()} 
+          // 👇 CAMBIO 1: Le inyectamos las instrucciones dinámicas de la lección
+          instrucciones={leccion.instrucciones}
         />
 
         <View style={styles.mainContent}>
@@ -48,9 +50,10 @@ export function LeccionScreen({ route, navigation }) {
 
           {paso === 3 && (
             <PracticeStep 
-              trasteObjetivo="3"
-              dotLeft="46%"
-              dotBottom="76%"
+              // 👇 CAMBIO 2: Dejamos de hardcodear el traste 3 y le pasamos los datos del Mock
+              trasteObjetivo={leccion.trasteObjetivo || "3"}
+              dotLeft={leccion.dotLeft || "46%"}
+              dotBottom={leccion.dotBottom || "76%"}
               onBack={() => setPaso(2)} 
               onFinish={handleTerminar} 
             />

@@ -1,21 +1,37 @@
-
+// Archivo: src/components/leccion/LeccionSidebar.js
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
-export function LeccionSidebar({ leccion, paso, onBack }) {
+export function LeccionSidebar({ leccion, paso, onBack, instrucciones }) {
+  
+  // Si la lección no trae instrucciones propias desde la base de datos, usamos estas por defecto
+  const textosPorDefecto = [
+    "Mirá la técnica que usa el profe en el video antes de agarrar la guitarra.",
+    "Leé la teoría. Acordate que la cuerda más fina es la 1ra y está abajo.",
+    "¡A tocar! Posicioná tus dedos exactamente como marca el mástil."
+  ];
+
+  // Definimos qué lista de textos vamos a usar
+  const listaInstrucciones = instrucciones || textosPorDefecto;
+
   return (
     <View style={styles.sidebar}>
-      <TouchableOpacity onPress={onBack} style={styles.backButton}>
-        <Text style={styles.volver}>← Volver</Text>
-      </TouchableOpacity>
+     <Button 
+        title="← Volver" 
+        variant="link" 
+        onPress={onBack} 
+        style={styles.backButton}
+        textStyle={styles.volverText} 
+      />
       
       <Text style={styles.title}>{leccion?.titulo || 'Lección'}</Text>
-      <Text style={styles.pasosText}>Paso {paso} de 3</Text>
+      <Text style={styles.pasosText}>Paso {paso} de {listaInstrucciones.length}</Text>
 
       <View style={styles.instructionsContainer}> 
-        {paso === 1 && <Text style={styles.instructionInfo}>Mirá la técnica que usael profe en el video antes de agarrar la guitarra.</Text>}
-        {paso === 2 && <Text style={styles.instructionInfo}>Leé la teoría. Acordate que la cuerda más fina es la 1ra y está abajo.</Text>}
-        {paso === 3 && <Text style={styles.instructionInfo}>¡A tocar! Posicioná tus dedos exactamente como marca el mástil.</Text>}
-      </View>
+        {/* Magia pura: El paso 1 es el índice 0 del array, el paso 2 el índice 1, etc. */}
+        <Text style={styles.instructionInfo}>
+          {listaInstrucciones[paso - 1]}
+        </Text>
+      </View> 
     </View>
   );
 }
