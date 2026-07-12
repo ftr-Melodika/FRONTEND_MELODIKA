@@ -9,10 +9,16 @@ import { AuthContext } from '../context/AuthContext';
 import { DatePickerField } from '../components/form/DatePickerField';
 import { DropdownField } from '../components/form/DropdownField';
 
-const GENDER_OPTIONS = [ { label: 'Masculino', value: 'Masculino' }, { label: 'Femenino', value: 'Femenino' }, { label: 'No binario', value: 'No binario' } ];
+const GENDER_OPTIONS = [
+  { label: 'Masculino', value: 'Masculino' },
+  { label: 'Femenino', value: 'Femenino' },
+  { label: 'No binario', value: 'No binario' }
+];
 
 export function CreateUserScreen({ navigation }) {
-  const { userData: cuenta } = useContext(AuthContext); 
+  // 👇 Traemos actualizarPerfil
+  const { userData: cuenta, actualizarPerfil } = useContext(AuthContext); 
+
   const [nombre, setNombre] = useState('');
   const [username, setUsername] = useState('');
   const [pais, setPais] = useState('');
@@ -26,10 +32,21 @@ export function CreateUserScreen({ navigation }) {
     setLoading(true);
     try {
       const response = await axiosClient.post(ENDPOINTS.crearPerfil, {
-        cuenta_id: cuenta.id, nombre: nombre.trim(), username: username.trim(), fecha_nacimiento: birthdayISO, pais: pais.trim() || null, foto: fotoUrl.trim() || null, genero: gender || null
+        cuenta_id: cuenta.id, 
+        nombre: nombre.trim(), 
+        username: username.trim(), 
+        fecha_nacimiento: birthdayISO, 
+        pais: pais.trim() || null, 
+        foto: fotoUrl.trim() || null, 
+        genero: gender || null
       });
-      Alert.alert('¡Excelente!', `El perfil de ${response.data.data.nombre} está listo.`);
-      navigation.replace('Home', { perfil: response.data.data });
+      
+      const nuevoPerfil = response.data.data;
+      Alert.alert('¡Excelente!', `El perfil de ${nuevoPerfil.nombre} está listo.`);
+      
+      // 👇 Lo guardamos en la sesión global y navegamos sin parámetros
+      await actualizarPerfil(nuevoPerfil);
+      navigation.replace('Home');
     } catch (error) {
       Alert.alert('Error', error.response?.data?.message || 'Error al crear.');
     } finally {
@@ -41,15 +58,21 @@ export function CreateUserScreen({ navigation }) {
     <Background>
       <ScrollView style={{flex: 1}} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.glassCard}>
+          
           <Text style={styles.title}>Crear usuario</Text>
+          
           <InputField placeholder="Nombre completo" value={nombre} onChangeText={setNombre} />
+          
           <InputField placeholder="Nombre de usuario" value={username} onChangeText={setUsername} />
+          
           <DatePickerField onDateChange={setBirthdayISO} />
+          
           <InputField placeholder="País (opcional)" value={pais} onChangeText={setPais} />
+          
           <DropdownField label="Género (opcional)" options={GENDER_OPTIONS} value={gender} onSelect={setGender} />
+          
           <InputField placeholder="Foto (URL opcional)" value={fotoUrl} onChangeText={setFotoUrl} />
 
-          {/* 👇 Botón de carga */}
           <Button title="Crear usuario" onPress={handleCreateUser} loading={loading} />
         </View>
       </ScrollView>

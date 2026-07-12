@@ -5,10 +5,11 @@ import { AuthContext } from '../context/AuthContext';
 import { perfilesService } from '../services/perfilesService';
 import { ProfileAvatar } from '../components/ProfileAvatar';
 import { Button } from '../components/Button';
-import { LoadingModal } from '../components/LoadingModal'; // 👈 Importado
+import { LoadingModal } from '../components/LoadingModal';
 
 export function SelectUserScreen({ navigation }) {
-  const { logout } = useContext(AuthContext);
+  // 👇 Traemos actualizarPerfil del contexto
+  const { logout, actualizarPerfil } = useContext(AuthContext);
   const [perfiles, setPerfiles] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,11 +32,15 @@ export function SelectUserScreen({ navigation }) {
     fetchPerfiles();
   }, []);
 
+  const handleSeleccionarPerfil = async (perfil) => {
+    // 👇 Guardamos el perfil globalmente y navegamos limpios
+    await actualizarPerfil(perfil); 
+    navigation.replace('Home'); 
+  };
+
   return (
     <Background>
-      {/* 👇 Tapamos todo mientras carga */}
       <LoadingModal visible={loading} text="Buscando perfiles..." />
-
       <View style={styles.container}>
         <View style={styles.content}>
           <Text style={styles.title}>¿Quién va a tocar hoy?</Text>
@@ -43,21 +48,28 @@ export function SelectUserScreen({ navigation }) {
           {!loading && (
             <View style={styles.profilesRow}>
               {perfiles.map((perfil) => (
-                <ProfileAvatar key={perfil.id} nombre={perfil.nombre} onPress={() => navigation.replace('Home', { perfil })} />
+                <ProfileAvatar 
+                  key={perfil.id} 
+                  nombre={perfil.nombre} 
+                  onPress={() => handleSeleccionarPerfil(perfil)} 
+                />
               ))}
               {perfiles.length < 3 && (
-                <ProfileAvatar isAddButton={true} onPress={() => navigation.navigate('CreateUser')} />
+                <ProfileAvatar 
+                  isAddButton={true} 
+                  onPress={() => navigation.navigate('CreateUser')} 
+                />
               )}
             </View>
           )}
         </View>
-
         <Button 
-          title="Cerrar sesión" variant="secondary" onPress={() => logout()}
+          title="Cerrar sesión" 
+          variant="secondary" 
+          onPress={() => logout()}
           style={{ minWidth: 160, maxWidth: 220, paddingVertical: 8, borderRadius: 18 }}
           textStyle={{ fontSize: 12, fontWeight: '600' }}
         />
-        
       </View>
     </Background>
   );
