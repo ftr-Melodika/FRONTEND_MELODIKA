@@ -1,13 +1,15 @@
+// Archivo: src/screens/CreateUserScreen.js
 import { useState, useContext } from 'react';
 import { View, Text, StyleSheet, Alert, ScrollView } from 'react-native';
 import { Background } from '../components/Background';
 import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
-import { ENDPOINTS } from '../config/api';
-import axiosClient from '../api/axiosClient';
 import { AuthContext } from '../context/AuthContext';
 import { DatePickerField } from '../components/form/DatePickerField';
 import { DropdownField } from '../components/form/DropdownField';
+
+// 👇 Importamos nuestro servicio especialista
+import { perfilesService } from '../services/perfilesService';
 
 const GENDER_OPTIONS = [
   { label: 'Masculino', value: 'Masculino' },
@@ -16,7 +18,6 @@ const GENDER_OPTIONS = [
 ];
 
 export function CreateUserScreen({ navigation }) {
-  // 👇 Traemos actualizarPerfil
   const { userData: cuenta, actualizarPerfil } = useContext(AuthContext); 
 
   const [nombre, setNombre] = useState('');
@@ -30,8 +31,10 @@ export function CreateUserScreen({ navigation }) {
   const handleCreateUser = async () => {
     if (!nombre || !username || !birthdayISO) return Alert.alert('Error', 'Por favor completá los campos clave.');
     setLoading(true);
+
     try {
-      const response = await axiosClient.post(ENDPOINTS.crearPerfil, {
+      // 👇 Usamos el servicio, la pantalla ya no sabe qué es un Endpoint
+      const nuevoPerfil = await perfilesService.crearPerfil({
         cuenta_id: cuenta.id, 
         nombre: nombre.trim(), 
         username: username.trim(), 
@@ -41,14 +44,15 @@ export function CreateUserScreen({ navigation }) {
         genero: gender || null
       });
       
-      const nuevoPerfil = response.data.data;
       Alert.alert('¡Excelente!', `El perfil de ${nuevoPerfil.nombre} está listo.`);
       
-      // 👇 Lo guardamos en la sesión global y navegamos sin parámetros
+      // Guardamos en contexto global y navegamos
       await actualizarPerfil(nuevoPerfil);
       navigation.replace('Home');
+
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.message || 'Error al crear.');
+      // El servicio ya filtró el error a un mensaje legible
+      Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
     }
@@ -58,21 +62,13 @@ export function CreateUserScreen({ navigation }) {
     <Background>
       <ScrollView style={{flex: 1}} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.glassCard}>
-          
           <Text style={styles.title}>Crear usuario</Text>
-          
           <InputField placeholder="Nombre completo" value={nombre} onChangeText={setNombre} />
-          
           <InputField placeholder="Nombre de usuario" value={username} onChangeText={setUsername} />
-          
           <DatePickerField onDateChange={setBirthdayISO} />
-          
           <InputField placeholder="País (opcional)" value={pais} onChangeText={setPais} />
-          
           <DropdownField label="Género (opcional)" options={GENDER_OPTIONS} value={gender} onSelect={setGender} />
-          
           <InputField placeholder="Foto (URL opcional)" value={fotoUrl} onChangeText={setFotoUrl} />
-
           <Button title="Crear usuario" onPress={handleCreateUser} loading={loading} />
         </View>
       </ScrollView>

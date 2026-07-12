@@ -1,38 +1,19 @@
+// Archivo: src/screens/HomeScreen.js
 import { useState, useEffect, useContext, useCallback } from 'react'; 
 import { View, StyleSheet, Alert } from 'react-native';
 import { Background } from '../components/Background';
 import { SideMenu } from '../components/SideMenu'; 
-import { ENDPOINTS } from '../config/api';
-import axiosClient from '../api/axiosClient';
 import { AuthContext } from '../context/AuthContext'; 
 
 import { HeaderHome } from '../components/home/HeaderHome';
 import { CourseMap } from '../components/home/CourseMap';
 import { LoadingModal } from '../components/LoadingModal';
 
-const MOCK_LECCIONES = [
-  { 
-    id: 1, titulo: 'Afinación Básica', tipo: 'Teoría', estado: 'completada', xp: 50,
-    videoId: "6yKz57b0wG8",
-    instrucciones: ["Mirá el video para entender cómo usar la clavija.", "La cuerda más fina (abajo) es la 1ra (Mi).", "Tocala al aire (sin pisar) hasta que afine."],
-    textoTeoria: "La afinación estándar va de la 1ra a la 6ta cuerda: Mi, Si, Sol, Re, La, Mi.",
-    textoDestacado: "Hoy vamos a afinar la 1ra cuerda al aire.",
-    trasteObjetivo: "0", dotLeft: "46%", dotBottom: "10%" 
-  },
-  { 
-    id: 2, titulo: 'Primeros Acordes', tipo: 'Práctica', estado: 'disponible', xp: 100,
-    videoId: "bbzB5qR6N4c",
-    instrucciones: ["Fijate cómo el profe posiciona la mano en forma de 'C'.", "Tratemos de pisar la 1ra cuerda en el traste 3.", "¡Tocá fuerte y claro!"],
-    textoTeoria: "El traste 3 de la 1ra cuerda nos da la nota Sol.",
-    textoDestacado: "Pisá el 3er espacio con tu dedo anular.",
-    trasteObjetivo: "3", dotLeft: "46%", dotBottom: "76%" 
-  },
-  { id: 3, titulo: 'Ritmo de Fogón', tipo: 'Práctica', estado: 'bloqueada', xp: 150 },
-  { id: 4, titulo: 'Tu primer Canción', tipo: 'Canción', estado: 'bloqueada', xp: 200 }
-];
+// 👇 Importamos nuestro nuevo servicio
+import { leccionesService } from '../services/leccionesService';
 
 export function HomeScreen({ navigation }) {
-  // 👇 Nos traemos la triada perfecta de la sesión
+  // Nos traemos el perfil inyectado desde el contexto
   const { userData: cuenta, userToken: token, perfil } = useContext(AuthContext);
 
   const [lecciones, setLecciones] = useState([]);
@@ -42,20 +23,13 @@ export function HomeScreen({ navigation }) {
   useEffect(() => {
     async function cargarMapaDeCursos() {
       try {
-        // En una app robusta, si perfil es null porque lo mataron, podés mandarlo a SelectUser.
-        // Acá usamos el ID del perfil que viene directamente inyectado del estado global.
         const idParaBuscar = perfil?.id || cuenta?.id;
         if (!idParaBuscar) return;
 
-        const response = await axiosClient.get(ENDPOINTS.lecciones(idParaBuscar));
-        const data = response.data;
-        let leccionesDesdeBD = Array.isArray(data) ? data : (data.data || []);
-        
-        if (leccionesDesdeBD.length === 0) leccionesDesdeBD = MOCK_LECCIONES;
-        setLecciones(leccionesDesdeBD);
-      } catch (error) {
-        console.log('Error cargando lecciones:', error.response?.data || error.message);
-        setLecciones(MOCK_LECCIONES);
+        // 👇 Llamamos al servicio de forma limpia, sin Try/Catch pesados de Axios
+        const datosLecciones = await leccionesService.obtenerLecciones(idParaBuscar);
+        setLecciones(datosLecciones);
+
       } finally {
         setLoading(false);
       }
@@ -67,7 +41,6 @@ export function HomeScreen({ navigation }) {
     if (leccion.estado === 'bloqueada') {
       Alert.alert('Lección Bloqueada 🔒', 'Completá las lecciones anteriores para avanzar.');
     } else {
-      // Acá sí está bien pasar 'leccion' por parámetros porque es un dato súper transitorio y local.
       navigation.navigate('Leccion', { leccion });
     }
   }, [navigation]);
@@ -77,7 +50,6 @@ export function HomeScreen({ navigation }) {
       <LoadingModal visible={loading} text="Cargando tu progreso..." />
 
       <View style={styles.mainContainer}>
-        {/* Le pasamos el perfil global limpio hacia abajo */}
         <HeaderHome 
           perfil={perfil} 
           cuenta={cuenta} 

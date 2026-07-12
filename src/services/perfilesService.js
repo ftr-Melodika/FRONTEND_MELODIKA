@@ -9,13 +9,21 @@ export const perfilesService = {
       const response = await axiosClient.get(ENDPOINTS.obtenerPerfiles);
       return response.data.data;
     } catch (error) {
-      // Identificamos si es un problema de token vencido (401 o 403)
       if (error.response && (error.response.status === 401 || error.response.status === 403)) {
         error.isAuthError = true;
-        throw error; // Lanzamos el error para que la pantalla cierre la sesión
+        throw error;
       }
-      
-      // Si es otro tipo de error, lo traducimos normalmente
+      throw new Error(getErrorMessage(error));
+    }
+  },
+
+  // 👇 Nuevo método encargado de la creación
+  crearPerfil: async (datosPerfil) => {
+    try {
+      const response = await axiosClient.post(ENDPOINTS.crearPerfil, datosPerfil);
+      return response.data.data;
+    } catch (error) {
+      // Usamos tu utility para traducir el error del backend
       throw new Error(getErrorMessage(error));
     }
   }

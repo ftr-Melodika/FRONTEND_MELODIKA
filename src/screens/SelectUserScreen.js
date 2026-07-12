@@ -32,10 +32,15 @@ export function SelectUserScreen({ navigation }) {
     fetchPerfiles();
   }, []);
 
-  const handleSeleccionarPerfil = async (perfil) => {
-    // 👇 Guardamos el perfil globalmente y navegamos limpios
-    await actualizarPerfil(perfil); 
-    navigation.replace('Home'); 
+const handleSeleccionarPerfil = async (perfil) => {
+    try {
+      setLoading(true); // Opcional: mostrar un loading mientras el perfil se guarda
+      await actualizarPerfil(perfil); 
+      navigation.replace('Home'); 
+    } catch (error) {
+      Alert.alert('Error', 'No pudimos seleccionar el perfil. Intentá de nuevo.');
+      setLoading(false);
+    }
   };
 
   return (
