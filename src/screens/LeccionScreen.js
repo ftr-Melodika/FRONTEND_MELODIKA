@@ -3,14 +3,12 @@ import { useState } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { Background } from '../components/Background';
 
-// Importamos a los 4 especialistas
 import { LeccionSidebar } from '../components/leccion/LeccionSidebar';
 import { VideoStep } from '../components/leccion/VideoStep';
 import { TheoryStep } from '../components/leccion/TheoryStep';
 import { PracticeStep } from '../components/leccion/PracticeStep';
 
 export function LeccionScreen({ route, navigation }) {
-  // Manejo de seguridad en caso de que leccion venga undefined
   const leccion = route.params?.leccion || {};
   const [paso, setPaso] = useState(1);
 
@@ -27,7 +25,6 @@ export function LeccionScreen({ route, navigation }) {
           leccion={leccion} 
           paso={paso} 
           onBack={() => navigation.goBack()} 
-          // 👇 CAMBIO 1: Le inyectamos las instrucciones dinámicas de la lección
           instrucciones={leccion.instrucciones}
         />
 
@@ -50,7 +47,6 @@ export function LeccionScreen({ route, navigation }) {
 
           {paso === 3 && (
             <PracticeStep 
-              // 👇 CAMBIO 2: Dejamos de hardcodear el traste 3 y le pasamos los datos del Mock
               trasteObjetivo={leccion.trasteObjetivo || "3"}
               dotLeft={leccion.dotLeft || "46%"}
               dotBottom={leccion.dotBottom || "76%"}
@@ -67,5 +63,6 @@ export function LeccionScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   horizontalContainer: { flex: 1, flexDirection: 'row', padding: 15, gap: 15 },
-  mainContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  // Eliminamos alignItems: 'center' para evitar que los steps colapsen
+  mainContent: { flex: 1, justifyContent: 'center' },
 });
