@@ -1,41 +1,34 @@
 import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// 1. Creamos el altoparlante (El Contexto)
 export const AuthContext = createContext();
-
-// NUEVO: Creamos un "cable de emergencia" hacia afuera de React
 export let globalLogout = () => {};
 
-// 2. Creamos el sistema que controla el altoparlante (El Provider)
 export const AuthProvider = ({ children }) => {
-  const [isLoading, setIsLoading] = useState(true); 
-  const [userToken, setUserToken] = useState(null); 
-  const [userData, setUserData] = useState(null);   
+  const [isLoading, setIsLoading] = useState(true);
+  const [userToken, setUserToken] = useState(null);
+  const [userData, setUserData] = useState(null);
 
+  // ✅ Primero cargamos la sesión guardada
   useEffect(() => {
     const checkLogin = async () => {
       try {
         const token = await AsyncStorage.getItem('userToken');
         const cuenta = await AsyncStorage.getItem('userCuenta');
-        
         if (token && cuenta) {
           setUserToken(token);
-          setUserData(JSON.parse(cuenta)); 
+          setUserData(JSON.parse(cuenta));
         }
       } catch (error) {
         console.log('Error leyendo sesión:', error);
       } finally {
-        setIsLoading(false); 
+        setIsLoading(false);
       }
     };
     checkLogin();
   }, []);
 
-  useEffect(() => {
-    globalLogout = logout;
-  }, [logout]);
-
+  // ✅ login y logout declarados ANTES del useEffect que los usa
   const login = async (token, cuenta) => {
     setIsLoading(true);
     try {
@@ -63,6 +56,13 @@ export const AuthProvider = ({ children }) => {
       setIsLoading(false);
     }
   };
+
+  // ✅ Ahora sí, logout ya existe cuando llegamos acá
+  // [] en vez de [logout] porque logout es nueva función en cada render
+  // y no queremos que esto se ejecute infinitamente
+  useEffect(() => {
+    globalLogout = logout;
+  }, []);
 
   return (
     <AuthContext.Provider value={{ login, logout, isLoading, userToken, userData }}>

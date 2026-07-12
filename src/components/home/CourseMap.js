@@ -1,36 +1,29 @@
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+// Archivo: src/components/home/CourseMap.js
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 
-export function CourseMap({ lecciones, loading, onLeccionPress }) {
-  if (loading) {
-    return (
-      <View style={styles.mapSection}>
-        <ActivityIndicator size="large" color="#b28cff" style={{ marginTop: 50 }} />
-      </View>
-    );
-  }
-
+export function CourseMap({ lecciones, onLeccionPress }) {
   return (
     <View style={styles.mapSection}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollMapContent}>
         {lecciones.map((leccion, index) => (
           <View key={leccion.id} style={styles.nodeContainer}>
             {index < lecciones.length - 1 && <View style={styles.horizontalConnector} />}
-            
+
             <TouchableOpacity
-              style={[ 
-                styles.circleNode, 
-                leccion.estado === 'completada' && styles.nodeCompletado, 
-                leccion.estado === 'disponible' && styles.nodeDisponible, 
-                leccion.estado === 'bloqueada' && styles.nodeBloqueado 
+              style={[
+                styles.circleNode,
+                leccion.estado === 'completada' && styles.nodeCompletado,
+                leccion.estado === 'disponible' && styles.nodeDisponible,
+                leccion.estado === 'bloqueada' && styles.nodeBloqueado,
               ]}
-              onPress={() => onLeccionPress(leccion)} 
+              onPress={() => onLeccionPress(leccion)}
               activeOpacity={0.8}
             >
               {leccion.estado === 'completada' && <Text style={styles.nodeIcon}>✔️</Text>}
               {leccion.estado === 'disponible' && <Text style={styles.nodeIcon}>🎸</Text>}
               {leccion.estado === 'bloqueada' && <Text style={styles.nodeIcon}>🔒</Text>}
             </TouchableOpacity>
-            
+
             <View style={styles.nodeCard}>
               <Text style={styles.nodeTitle} numberOfLines={1}>{leccion.titulo}</Text>
               <Text style={styles.nodeSubtitle}>{leccion.tipo} • {leccion.xp} XP</Text>
