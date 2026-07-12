@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useContext } from 'react';
 import { View, StyleSheet, Animated, TouchableWithoutFeedback, ScrollView, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuthContext } from '../context/AuthContext';
 
 // Importamos TODAS nuestras piezas de Lego
@@ -13,8 +14,12 @@ const DRAWER_WIDTH = 300;
 
 export function SideMenu({ visible, onClose, perfil, navigation }) {
   const { logout } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
+  const safeLeft = Math.max(insets.left, 10);
+  const safeDrawerWidth = DRAWER_WIDTH + safeLeft;
+  const closedPosition = -safeDrawerWidth;
   
-  const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
+  const slideAnim = useRef(new Animated.Value(closedPosition)).current;
   const [isRendering, setIsRendering] = useState(false);
 
   useEffect(() => {
@@ -22,7 +27,7 @@ export function SideMenu({ visible, onClose, perfil, navigation }) {
       setIsRendering(true);
       Animated.timing(slideAnim, { toValue: 0, duration: 250, useNativeDriver: true }).start();
     } else {
-      Animated.timing(slideAnim, { toValue: -DRAWER_WIDTH, duration: 250, useNativeDriver: true }).start(() => {
+      Animated.timing(slideAnim, { toValue: closedPosition, duration: 250, useNativeDriver: true }).start(() => {
         setIsRendering(false);
       });
     }
@@ -50,7 +55,7 @@ export function SideMenu({ visible, onClose, perfil, navigation }) {
         <View style={styles.backdrop} />
       </TouchableWithoutFeedback>
 
-      <Animated.View style={[styles.drawer, { transform: [{ translateX: slideAnim }] }]}>
+      <Animated.View style={[styles.drawer, { left: 0, width: safeDrawerWidth, paddingLeft: safeLeft, transform: [{ translateX: slideAnim }] }]}>
         
         <SideMenuHeader perfil={perfil} />
 

@@ -61,13 +61,21 @@ export function CreateUserScreen({ navigation }) {
   return (
     <Background>
       <ScrollView style={{flex: 1}} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+
         <View style={styles.glassCard}>
-          <Text style={styles.title}>Crear usuario</Text>
+          <Button 
+            title="⬅ Volver" 
+            variant="link" 
+            onPress={() => navigation.goBack()} 
+            style={styles.backButtonInside}
+            textStyle={{ fontSize: 16 }}
+          />
+          <Text style={styles.title}>Crear perfil</Text>
           <InputField placeholder="Nombre completo" value={nombre} onChangeText={setNombre} />
           <InputField placeholder="Nombre de usuario" value={username} onChangeText={setUsername} />
           <DatePickerField onDateChange={setBirthdayISO} />
           <InputField placeholder="País (opcional)" value={pais} onChangeText={setPais} />
-          <DropdownField label="Género (opcional)" options={GENDER_OPTIONS} value={gender} onSelect={setGender} />
+          <DropdownField label="Género" options={GENDER_OPTIONS} value={gender} onSelect={setGender} />
           <InputField placeholder="Foto (URL opcional)" value={fotoUrl} onChangeText={setFotoUrl} />
           <Button title="Crear usuario" onPress={handleCreateUser} loading={loading} />
         </View>
@@ -77,6 +85,7 @@ export function CreateUserScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  backButtonInside: { alignSelf: 'flex-start', marginBottom: 15 },
   scrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 20 },
   glassCard: { width: '85%', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 25, paddingVertical: 25, paddingHorizontal: 25, borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1 },
   title: { fontSize: 24, color: '#fff', textAlign: 'center', marginBottom: 15, fontFamily: 'serif', fontWeight: 'bold' },

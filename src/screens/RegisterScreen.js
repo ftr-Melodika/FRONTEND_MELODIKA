@@ -37,6 +37,13 @@ export function RegisterScreen({ navigation }) {
     <Background>
       <View style={styles.glassCard}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          <Button 
+            title="⬅ Volver" 
+            variant="link" 
+            onPress={() => navigation.goBack()} 
+            style={styles.backButtonInside}
+            textStyle={{ fontSize: 16 }}
+          />
           <Text style={styles.title}>Crear cuenta</Text>
           <InputField placeholder="Nombre" value={nombre} onChangeText={setNombre} />
           <InputField placeholder="Apellido" value={apellido} onChangeText={setApellido} />
@@ -62,7 +69,8 @@ export function RegisterScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  glassCard: { width: '65%', maxHeight: '90%', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 25, borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1, paddingHorizontal: 25 },
+  backButtonInside: { alignSelf: 'flex-start' },
+  glassCard: { width: '65%', maxHeight: '90%', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 25, borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1, paddingHorizontal: 25, paddingVertical: 2 },
   scrollContent: { paddingVertical: 20 },
   title: { fontSize: 32, color: '#fff', textAlign: 'center', marginBottom: 20, fontFamily: 'serif', fontWeight: 'bold' },
 });

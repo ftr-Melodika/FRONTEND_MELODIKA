@@ -1,8 +1,10 @@
 // Archivo: src/components/leccion/LeccionSidebar.js
 import { View, Text, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../Button';
 
 export function LeccionSidebar({ leccion, paso, onBack, instrucciones }) {
+  const insets = useSafeAreaInsets();
 
   const textosPorDefecto = [
     "Mirá la técnica que usa el profe en el video antes de agarrar la guitarra.",
@@ -13,7 +15,7 @@ export function LeccionSidebar({ leccion, paso, onBack, instrucciones }) {
   const listaInstrucciones = instrucciones || textosPorDefecto;
 
   return (
-    <View style={styles.sidebar}>
+    <View style={[styles.sidebar, { marginLeft: Math.max(insets.left, 10) }] }>
       <Button
         title="← Volver"
         variant="link"

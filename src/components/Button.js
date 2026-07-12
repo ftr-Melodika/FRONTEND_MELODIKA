@@ -36,7 +36,7 @@ export function Button({ title, onPress, variant = 'primary', style, textStyle, 
 const styles = StyleSheet.create({
   button: { backgroundColor: '#b28cff', paddingVertical: 15, borderRadius: 30, alignItems: 'center', marginVertical: 10, width: '100%' },
   buttonSecondary: { backgroundColor: 'transparent', borderColor: '#fff', borderWidth: 1 },
-  buttonLink: { backgroundColor: 'transparent', paddingVertical: 5, marginVertical: 0, width: 'auto' },
+  buttonLink: { backgroundColor: 'transparent', paddingVertical: 0, marginVertical: 0, width: 'auto' },
   text: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   textSecondary: { color: '#fff' },
   textLink: { color: '#fff', fontSize: 14, textDecorationLine: 'underline' },

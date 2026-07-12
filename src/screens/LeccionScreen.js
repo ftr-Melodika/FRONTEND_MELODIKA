@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { Background } from '../components/Background';
 
-import { LeccionSidebar } from '../components/leccion/LeccionSidebar';
+import { LeccionSidebar } from '../components/leccion/LeccionSideBar';
 import { VideoStep } from '../components/leccion/VideoStep';
 import { TheoryStep } from '../components/leccion/TheoryStep';
 import { PracticeStep } from '../components/leccion/PracticeStep';
