@@ -1,19 +1,22 @@
-import { Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 
-export function MenuItem({ title, onPress, isActive }) {
+export function MenuItem({ title, icon, isActive, onPress }) {
   return (
     <TouchableOpacity 
-      style={[styles.menuItem, isActive && styles.activeItem]} 
+      style={[styles.container, isActive && styles.activeContainer]} 
       onPress={onPress}
+      activeOpacity={0.7}
     >
-      <Text style={[styles.menuItemText, isActive && styles.activeItemText]}>{title}</Text>
+      <Text style={[styles.icon, isActive && styles.activeText]}>{icon}</Text>
+      <Text style={[styles.text, isActive && styles.activeText]}>{title}</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  menuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.03)' },
-  menuItemText: { color: 'rgba(255,255,255,0.85)', fontSize: 15, fontWeight: '700' },
-  activeItem: { backgroundColor: 'rgba(178, 140, 255, 0.12)' },
-  activeItemText: { color: '#b28cff' },
+  container: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 25, borderLeftWidth: 4, borderLeftColor: 'transparent' },
+  activeContainer: { backgroundColor: 'rgba(178, 140, 255, 0.1)', borderLeftColor: '#b28cff' },
+  icon: { fontSize: 20, marginRight: 15, color: 'rgba(255,255,255,0.7)' },
+  text: { color: 'rgba(255,255,255,0.85)', fontSize: 16, fontWeight: '600' },
+  activeText: { color: '#b28cff', fontWeight: 'bold' }
 });

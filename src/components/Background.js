@@ -27,15 +27,16 @@ const styles = StyleSheet.create({
     height: '105%',
     marginLeft: '-5%',
   },
-  overlay: { //el overlay esta SOBRE la imagen de fondo, pero abajo del contenido
+  overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#715AB6',
     opacity: 0.4,
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: '100%',
+    // 👇 Eliminamos justifyContent y alignItems para que no comprima a los hijos.
+    // Ahora cada pantalla es libre de usar todo el ancho disponible.
   },
 });
 

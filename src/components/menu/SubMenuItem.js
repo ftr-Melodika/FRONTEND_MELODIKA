@@ -1,14 +1,19 @@
-import { Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 
-export function SubMenuItem({ title, onPress }) {
+export function SubMenuItem({ title, icon, isActive, onPress }) {
   return (
-    <TouchableOpacity style={styles.subMenuItem} onPress={onPress}>
-      <Text style={styles.subMenuItemText}>{title}</Text>
+    <TouchableOpacity 
+      style={styles.container} 
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <Text style={[styles.text, isActive && styles.activeText]}>{icon}   {title}</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  subMenuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 15 },
-  subMenuItemText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '600' },
+  container: { paddingVertical: 14, paddingHorizontal: 15, borderRadius: 8 },
+  text: { color: 'rgba(255,255,255,0.65)', fontSize: 14, fontWeight: '500' },
+  activeText: { color: '#b28cff', fontWeight: 'bold' }
 });

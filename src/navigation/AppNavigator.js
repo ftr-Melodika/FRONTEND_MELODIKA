@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthContext } from '../context/AuthContext';
 import { LoadingModal } from '../components/LoadingModal'; // 👈 El nuevo modal
+import { ProgresoScreen } from '../screens/ProgresoScreen';
 
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
@@ -40,6 +41,7 @@ export function AppNavigator() {
             <Stack.Screen name="CreateUser" component={CreateUserScreen} />
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Leccion" component={LeccionScreen} />
+            <Stack.Screen name="Progreso" component={ProgresoScreen} />
           </>
         )}
       </Stack.Navigator>

@@ -1,6 +1,7 @@
 // Archivo: src/services/leccionesService.js
 import axiosClient from '../api/axiosClient';
 import { ENDPOINTS } from '../config/api';
+import { getErrorMessage } from '../utils/errorUtils';
 
 // Mudamos el MOCK acá adentro, la vista no necesita saber que existe
 const MOCK_LECCIONES = [
@@ -38,7 +39,7 @@ export const leccionesService = {
       
       return leccionesDesdeBD;
     } catch (error) {
-      console.log('Error cargando lecciones en el servicio:', error.response?.data || error.message);
+      console.log('Error cargando lecciones en el servicio:', getErrorMessage(error));
       // Si el servidor falla, también devolvemos el MOCK
       return MOCK_LECCIONES;
     }
