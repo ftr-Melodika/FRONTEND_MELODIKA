@@ -122,8 +122,5 @@ const styles = StyleSheet.create({
     borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.05)'
   },
   scroll: { flex: 1, paddingTop: 5 },
-  footerBtn: { width: '90%', marginLeft: '5%', paddingVertical: 12, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)', marginBottom: 10 },
-  footerLogoutBtn: { backgroundColor: 'rgba(226, 85, 106, 0.1)', marginBottom: 0 },
-  footerBtnText: { color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: 'bold', textAlign: 'center' },
-  footerLogoutText: { color: '#E2556A', fontSize: 14, fontWeight: 'bold', textAlign: 'center' }
+  
 });
