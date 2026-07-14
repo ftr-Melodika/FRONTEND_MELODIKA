@@ -18,7 +18,8 @@ export function RegisterScreen({ navigation }) {
 
   const handleRegister = async () => {
     if (!nombre || !apellido || !email || !password || !confirmPassword) return Alert.alert('Error', 'Faltan campos.');
-    if (password !== confirmPassword) return Alert.alert('Error', 'Las contraseñas no coinciden.');
+    // Comparamos versiones recortadas para evitar espacios accidentales
+    if (String(password).trim() !== String(confirmPassword).trim()) return Alert.alert('Error', 'Las contraseñas no coinciden.');
     if (!acceptTerms) return Alert.alert('Error', 'Debes aceptar los términos y condiciones.');
 
     setLoading(true);

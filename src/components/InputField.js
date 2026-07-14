@@ -9,6 +9,8 @@ export function InputField({ placeholder, secureTextEntry, value, onChangeText, 
       secureTextEntry={secureTextEntry}
       value={value}
       onChangeText={onChangeText}
+      autoCapitalize="none"
+      autoCorrect={false}
       {...rest}
     />
   );

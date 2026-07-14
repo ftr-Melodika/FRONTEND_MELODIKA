@@ -1,6 +1,6 @@
 // Archivo: src/components/form/DatePickerField.js
 import { useState } from 'react';
-import { View, Platform } from 'react-native';
+import { View, Platform, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SelectField } from '../SelectField';
 
@@ -10,26 +10,29 @@ export function DatePickerField({ onDateChange }) {
   const [birthdayLabel, setBirthdayLabel] = useState('Seleccionar fecha de nacimiento');
   
   const onChangeDate = (event, selectedDate) => {
-    // Solo cerramos si el usuario seleccionó una fecha (evita bugs en iOS al cancelar)
+    // Android: el diálogo cierra automáticamente, manejamos setShowDatePicker aquí
     if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-    }
-    
-    if (selectedDate && event.type !== "dismissed") {
-      setDate(selectedDate);
-      
-      const dia = String(selectedDate.getDate()).padStart(2, '0');
-      const mes = String(selectedDate.getMonth() + 1).padStart(2, '0');
-      const anio = selectedDate.getFullYear();
-      setBirthdayLabel(`${dia}/${mes}/${anio}`);
-      
-      onDateChange(`${anio}-${mes}-${dia}`);
-      
-      if(Platform.OS === 'ios') {
-          setShowDatePicker(false);
+      // event.type suele ser 'set' o 'dismissed'
+      if (event?.type === 'dismissed') {
+        setShowDatePicker(false);
+        return;
       }
-    } else if (event.type === "dismissed") {
-       setShowDatePicker(false); 
+      if (selectedDate) {
+        setDate(selectedDate);
+        const dia = String(selectedDate.getDate()).padStart(2, '0');
+        const mes = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        const anio = selectedDate.getFullYear();
+        setBirthdayLabel(`${dia}/${mes}/${anio}`);
+        onDateChange(`${anio}-${mes}-${dia}`);
+      }
+      setShowDatePicker(false);
+      return;
+    }
+
+    // iOS: el picker tipo spinner emite cambios continuos. Solo actualizamos la fecha
+    // localmente y esperamos a que el usuario confirme (botón "Aceptar").
+    if (selectedDate) {
+      setDate(selectedDate);
     }
   };
 
@@ -42,15 +45,44 @@ export function DatePickerField({ onDateChange }) {
         isOpen={showDatePicker}
       />
       {showDatePicker && (
-        <DateTimePicker
-          value={date}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'} // Mejor renderizado
-          maximumDate={new Date()}
-          onChange={onChangeDate}
-          style={{ alignSelf: 'center', backgroundColor: 'transparent' }} // Intenta centrarlo
-        />
+        <View>
+          <DateTimePicker
+            value={date}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'} // Mejor renderizado
+            maximumDate={new Date()}
+            onChange={onChangeDate}
+            style={{ alignSelf: 'center', backgroundColor: 'transparent' }}
+          />
+          {Platform.OS === 'ios' && (
+            <View style={styles.iosActions}>
+              <TouchableOpacity onPress={() => { setShowDatePicker(false); }} style={styles.iosButton}>
+                <Text style={styles.iosButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => { 
+                // Confirmar selección iOS
+                const selectedDate = date || new Date();
+                const dia = String(selectedDate.getDate()).padStart(2, '0');
+                const mes = String(selectedDate.getMonth() + 1).padStart(2, '0');
+                const anio = selectedDate.getFullYear();
+                setBirthdayLabel(`${dia}/${mes}/${anio}`);
+                onDateChange(`${anio}-${mes}-${dia}`);
+                setShowDatePicker(false);
+               }} style={[styles.iosButton, styles.iosConfirm]}>
+                <Text style={[styles.iosButtonText, styles.iosConfirmText]}>Aceptar</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  iosActions: { flexDirection: 'row', justifyContent: 'flex-end', paddingTop: 8 },
+  iosButton: { paddingHorizontal: 12, paddingVertical: 6 },
+  iosButtonText: { color: '#fff', opacity: 0.9 },
+  iosConfirm: { backgroundColor: 'transparent' },
+  iosConfirmText: { color: '#b28cff', fontWeight: '600' }
+});
