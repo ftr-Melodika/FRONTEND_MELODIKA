@@ -35,8 +35,10 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     width: '100%',
-    // 👇 Eliminamos justifyContent y alignItems para que no comprima a los hijos.
-    // Ahora cada pantalla es libre de usar todo el ancho disponible.
+    // Centramos el contenido por defecto para que formularios queden centrados
+    // en pantallas como Login / Register sin tocar cada pantalla individualmente.
+    alignItems: 'center',
+    justifyContent: 'center'
   },
 });
 

@@ -49,7 +49,7 @@ export function LoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  glassCard: { width: '65%', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 25, paddingVertical: 5, paddingHorizontal: 25, marginVertical: 15, borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1 },
+  glassCard: { alignSelf: 'center', width: '70%', maxWidth: 720, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 25, paddingVertical: 5, paddingHorizontal: 25, marginVertical: 15, borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1 },
   title: { fontSize: 24, color: '#fff', textAlign: 'center', marginBottom: 20, fontFamily: 'serif', fontWeight: 'bold' },
   containerLinks: { alignItems: 'center', marginVertical: 10 }
 });

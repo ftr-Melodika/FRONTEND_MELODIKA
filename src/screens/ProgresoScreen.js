@@ -20,7 +20,7 @@ export function ProgresoScreen({ navigation }) {
 
   return (
     <Background>
-      <View style={[styles.container, { paddingLeft: Math.max(insets.left, 20) }]}>
+      <View style={[styles.container, { paddingLeft: Math.max(insets.left, 20) }]}> 
         
         {/* HEADER */}
         <View style={styles.header}>
@@ -102,7 +102,7 @@ export function ProgresoScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
+  container: { flex: 1, padding: 20, width: '100%' },
   
   // Header
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 25 },

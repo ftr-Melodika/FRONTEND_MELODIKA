@@ -32,15 +32,15 @@ export function AccordotionItem({ title, icon, children }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 25, borderLeftWidth: 4, borderLeftColor: 'transparent' },
+  container: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, paddingLeft: 30, paddingRight: 20, borderLeftWidth: 4, borderLeftColor: 'transparent' },
   openContainer: { backgroundColor: 'rgba(255,255,255,0.02)' },
-  leftContent: { flexDirection: 'row', alignItems: 'center' },
-  icon: { fontSize: 20, marginRight: 15, color: 'rgba(255,255,255,0.7)' },
-  text: { color: 'rgba(255,255,255,0.85)', fontSize: 16, fontWeight: '600' },
+  leftContent: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  icon: { fontSize: 20, marginRight: 12, color: 'rgba(255,255,255,0.7)' },
+  text: { color: 'rgba(255,255,255,0.85)', fontSize: 15, fontWeight: '600', flexShrink: 1, flexWrap: 'wrap' },
   openText: { color: '#fff' },
-  arrow: { color: 'rgba(255,255,255,0.4)', fontSize: 12 },
+  arrow: { color: 'rgba(255,255,255,0.4)', fontSize: 12, marginLeft: 8 },
   
   childrenContainer: { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.15)' },
-  verticalLine: { width: 2, backgroundColor: 'rgba(255,255,255,0.1)', marginLeft: 34, marginTop: 10, marginBottom: 10, borderRadius: 2 },
-  childrenWrapper: { flex: 1, paddingLeft: 10, paddingVertical: 5 }
+  verticalLine: { width: 2, backgroundColor: 'rgba(255,255,255,0.1)', marginLeft: 38, marginTop: 10, marginBottom: 10, borderRadius: 2 },
+  childrenWrapper: { flex: 1, paddingLeft: 12, paddingVertical: 5 }
 });

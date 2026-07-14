@@ -39,9 +39,9 @@ export function RegisterScreen({ navigation }) {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           <Button 
             title="⬅ Volver" 
-            variant="link" 
+            variant="back" 
             onPress={() => navigation.goBack()} 
-            style={styles.backButtonInside}
+            style={[styles.backButtonInside]}
             textStyle={{ fontSize: 16 }}
           />
           <Text style={styles.title}>Crear cuenta</Text>
@@ -70,7 +70,7 @@ export function RegisterScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   backButtonInside: { alignSelf: 'flex-start' },
-  glassCard: { width: '65%', maxHeight: '90%', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 25, borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1, paddingHorizontal: 25, paddingVertical: 2 },
+  glassCard: { alignSelf: 'center', width: '70%', maxWidth: 720, maxHeight: '90%', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 25, borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1, paddingHorizontal: 25, paddingVertical: 2 },
   scrollContent: { paddingVertical: 20 },
   title: { fontSize: 32, color: '#fff', textAlign: 'center', marginBottom: 20, fontFamily: 'serif', fontWeight: 'bold' },
 });

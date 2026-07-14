@@ -11,6 +11,7 @@ import { SubMenuItem } from './menu/SubMenuItem';
 
 const { width } = Dimensions.get('window');
 const DRAWER_WIDTH = 320; 
+const DRAWER_LEFT_OFFSET = 48; // separacion para evitar notch/isla dinámica (ajuste final)
 
 // 👇 2. LIMPIAMOS LAS PROPS FANTASMAS (Chau cuenta y token)
 export function SideMenu({ visible, onClose, perfil, navigation }) {
@@ -54,6 +55,8 @@ export function SideMenu({ visible, onClose, perfil, navigation }) {
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.backdrop} />
       </TouchableWithoutFeedback>
+      {/* Relleno izquierdo para que el contenido del drawer no quede pegado al borde */}
+      <View style={styles.leftFill} />
       <Animated.View style={[styles.drawer, { transform: [{ translateX: slideAnim }] }]}>
         
         {/* Usamos el header de tu compa, pero sin pasarle la 'cuenta' innecesaria */}
@@ -116,11 +119,12 @@ export function SideMenu({ visible, onClose, perfil, navigation }) {
 const styles = StyleSheet.create({
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)' },
   drawer: {
-    position: 'absolute', top: 0, bottom: 0, left: 0,
+    position: 'absolute', top: 0, bottom: 0, left: DRAWER_LEFT_OFFSET,
     width: DRAWER_WIDTH,
     backgroundColor: '#0B0B15', // Fondo Deep Dark Figma
     borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.05)'
   },
   scroll: { flex: 1, paddingTop: 5 },
+  leftFill: { position: 'absolute', left: 0, top: 0, bottom: 0, width: DRAWER_LEFT_OFFSET, backgroundColor: '#0B0B15' },
   
 });

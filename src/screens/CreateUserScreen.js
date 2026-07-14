@@ -1,6 +1,6 @@
 // Archivo: src/screens/CreateUserScreen.js
 import { useState, useContext } from 'react';
-import { View, Text, StyleSheet, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Alert, ScrollView, Dimensions } from 'react-native';
 import { Background } from '../components/Background';
 import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
@@ -27,6 +27,10 @@ export function CreateUserScreen({ navigation }) {
   const [gender, setGender] = useState('');
   const [birthdayISO, setBirthdayISO] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Calcular ancho responsivo para la tarjeta para que nunca supere el ancho de pantalla
+  const SCREEN_WIDTH = Dimensions.get('window').width;
+  const cardWidth = Math.min(Math.round(SCREEN_WIDTH * 0.9), 720); // 90% hasta 720px (más angosto)
 
   const handleCreateUser = async () => {
     if (!nombre || !username || !birthdayISO) return Alert.alert('Error', 'Por favor completá los campos clave.');
@@ -62,10 +66,10 @@ export function CreateUserScreen({ navigation }) {
     <Background>
       <ScrollView style={{flex: 1}} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-        <View style={styles.glassCard}>
+        <View style={[styles.glassCard, { width: cardWidth }]}>
           <Button 
             title="⬅ Volver" 
-            variant="link" 
+            variant="back" 
             onPress={() => navigation.goBack()} 
             style={styles.backButtonInside}
             textStyle={{ fontSize: 16 }}
@@ -77,7 +81,7 @@ export function CreateUserScreen({ navigation }) {
           <InputField placeholder="País (opcional)" value={pais} onChangeText={setPais} />
           <DropdownField label="Género" options={GENDER_OPTIONS} value={gender} onSelect={setGender} />
           <InputField placeholder="Foto (URL opcional)" value={fotoUrl} onChangeText={setFotoUrl} />
-          <Button title="Crear usuario" onPress={handleCreateUser} loading={loading} />
+          <Button title="Crear perfil" onPress={handleCreateUser} loading={loading} />
         </View>
       </ScrollView>
     </Background>
@@ -86,7 +90,7 @@ export function CreateUserScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   backButtonInside: { alignSelf: 'flex-start', marginBottom: 15 },
-  scrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 20 },
-  glassCard: { width: '85%', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 25, paddingVertical: 25, paddingHorizontal: 25, borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1 },
+  scrollContent: { flexGrow: 1, justifyContent: 'flex-start', alignItems: 'center', paddingVertical: 20 },
+  glassCard: { alignSelf: 'center', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 25, paddingVertical: 18, paddingHorizontal: 28, marginVertical: 18, borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1 },
   title: { fontSize: 24, color: '#fff', textAlign: 'center', marginBottom: 15, fontFamily: 'serif', fontWeight: 'bold' },
 });
