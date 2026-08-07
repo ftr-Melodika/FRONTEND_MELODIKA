@@ -15,7 +15,7 @@ export function AccordotionItem({ title, icon, children }) {
           <Text style={styles.icon}>{icon}</Text>
           <Text style={[styles.text, isOpen && styles.openText]}>{title}</Text>
         </View>
-        <Text style={[styles.arrow, isOpen && styles.openText]}>{isOpen ? '▲' : '▼'}</Text>
+        <Text style={[styles.arrow, isOpen && styles.openText]}>{isOpen ? '>' : '▼'}</Text>
       </TouchableOpacity>
       
       {isOpen && (

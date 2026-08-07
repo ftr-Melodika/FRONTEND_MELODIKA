@@ -24,7 +24,8 @@ const styles = StyleSheet.create({
     paddingTop: 15,
     borderBottomWidth: 1, 
     borderBottomColor: 'rgba(255,255,255,0.05)',
-    backgroundColor: '#111122' // Tono sutilmente más claro que el fondo general
+    backgroundColor: '#3E3876' // Tono sutilmente más claro que el fondo general
+    
   },
   avatarImage: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: '#b28cff', backgroundColor: '#333' },
   textWrapper: { marginLeft: 15, flex: 1 },
