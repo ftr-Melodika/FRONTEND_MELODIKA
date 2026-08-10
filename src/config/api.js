@@ -2,7 +2,7 @@
 //const BASE_URL = 'http://192.168.0.232:3000/api'; // IP gasti
 //const BASE_URL = 'https://corroding-confused-polka.ngrok-free.dev/api'; // ngrok gasti
 //const BASE_URL = 'https://compile-upturned-greedily.ngrok-free.dev/api'; // Ngrok Juanma
-const BASE_URL = 'http://192.168.1.23:3000/api' //IP IVO
+const BASE_URL =  'https://national-retake-exquisite.ngrok-free.dev/api' //IP IVO
 export const ENDPOINTS = {
   login: `${BASE_URL}/cuentas/login`,
   register: `${BASE_URL}/cuentas/registrar`,
