@@ -16,14 +16,33 @@ export const perfilesService = {
       throw new Error(getErrorMessage(error));
     }
   },
-
-  // 👇 Nuevo método encargado de la creación
+  
   crearPerfil: async (datosPerfil) => {
     try {
       const response = await axiosClient.post(ENDPOINTS.crearPerfil, datosPerfil);
       return response.data.data;
     } catch (error) {
-      // Usamos tu utility para traducir el error del backend
+      throw new Error(getErrorMessage(error));
+    }
+  },
+
+  // 👇 AGREGAMOS ESTO: Método encargado de editar un perfil
+  editarPerfil: async (id, datosActualizados) => {
+    try {
+      // Concatenamos el ID a la URL base: ej. /perfiles/5
+      const response = await axiosClient.put(`${ENDPOINTS.obtenerPerfiles}/${id}`, datosActualizados);
+      return response.data.data; 
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  },
+
+  // 👇 AGREGAMOS ESTO: Método encargado de eliminar un perfil
+  eliminarPerfil: async (id) => {
+    try {
+      const response = await axiosClient.delete(`${ENDPOINTS.obtenerPerfiles}/${id}`);
+      return response.data; 
+    } catch (error) {
       throw new Error(getErrorMessage(error));
     }
   }
