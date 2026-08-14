@@ -9,6 +9,7 @@ import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
 import { CreateUserScreen } from '../screens/CreateUserScreen';
 import { SelectUserScreen } from '../screens/SelectUserScreen';
+import { EditUserScreen } from '../screens/EditUserScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { LeccionScreen } from '../screens/LeccionScreen';
 import { Background } from '../components/Background';
@@ -39,6 +40,7 @@ export function AppNavigator() {
           <>
             <Stack.Screen name="SelectUser" component={SelectUserScreen} />
             <Stack.Screen name="CreateUser" component={CreateUserScreen} />
+            <Stack.Screen name="EditUser" component={EditUserScreen} />
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Leccion" component={LeccionScreen} />
             <Stack.Screen name="Progreso" component={ProgresoScreen} />

@@ -68,11 +68,11 @@ export function CreateUserScreen({ navigation }) {
 
         <View style={[styles.glassCard, { width: cardWidth }]}>
           <Button 
-            title="⬅ Volver" 
+            title="← Volver" 
             variant="back" 
             onPress={() => navigation.goBack()} 
             style={styles.backButtonInside}
-            textStyle={{ fontSize: 16 }}
+            textStyle={styles.backButtonText}
           />
           <Text style={styles.title}>Crear perfil</Text>
           <InputField placeholder="Nombre completo" value={nombre} onChangeText={setNombre} />
@@ -90,6 +90,7 @@ export function CreateUserScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   backButtonInside: { alignSelf: 'flex-start', marginBottom: 15 },
+  backButtonText: { fontSize: 16, fontWeight: '600' },
   scrollContent: { flexGrow: 1, justifyContent: 'flex-start', alignItems: 'center', paddingVertical: 20 },
   glassCard: { alignSelf: 'center', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 25, paddingVertical: 18, paddingHorizontal: 28, marginVertical: 18, borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1 },
   title: { fontSize: 24, color: '#fff', textAlign: 'center', marginBottom: 15, fontFamily: 'serif', fontWeight: 'bold' },

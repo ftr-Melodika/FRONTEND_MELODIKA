@@ -45,5 +45,23 @@ export const perfilesService = {
     } catch (error) {
       throw new Error(getErrorMessage(error));
     }
+  },
+
+  editarPerfil: async (id, datosActualizados) => {
+    try {
+      const response = await axiosClient.put(ENDPOINTS.perfilPorId(id), datosActualizados);
+      return response.data.data; 
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  },
+
+  eliminarPerfil: async (id) => {
+    try {
+      const response = await axiosClient.delete(ENDPOINTS.perfilPorId(id));
+      return response.data; 
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
   }
 };
