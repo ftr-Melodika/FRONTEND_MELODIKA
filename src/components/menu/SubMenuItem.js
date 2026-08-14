@@ -1,9 +1,10 @@
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 
+
 export function SubMenuItem({ title, icon, isActive, onPress }) {
   return (
-    <TouchableOpacity 
-      style={styles.container} 
+    <TouchableOpacity
+      style={styles.container}
       onPress={onPress}
       activeOpacity={0.7}
     >
@@ -11,6 +12,7 @@ export function SubMenuItem({ title, icon, isActive, onPress }) {
     </TouchableOpacity>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: { paddingVertical: 12, paddingHorizontal: 15, borderRadius: 8 },

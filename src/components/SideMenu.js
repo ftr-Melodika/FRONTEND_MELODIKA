@@ -102,7 +102,7 @@ export function SideMenu({ visible, onClose, perfil, navigation }) {
             <SubMenuItem title="Contacto" icon="📧" onPress={() => handleProximamente('Contacto')} />
           </AccordotionItem>
 
-          <View style={{ height: 10 }}/>
+          <View style={{ height: 10}} />
 
           {/* Mantenemos el Footer inline con su estilo visual */}
           <SideMenuFooter 
@@ -117,12 +117,12 @@ export function SideMenu({ visible, onClose, perfil, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)' },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0, 0, 0, 0.6)' },
   drawer: {
     position: 'absolute', top: 0, bottom: 0, left: DRAWER_LEFT_OFFSET,
     width: DRAWER_WIDTH,
-    backgroundColor: '#0B0B15', // Fondo Deep Dark Figma
-    borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.05)'
+    backgroundColor: '#3E3876', // Fondo Deep Dark Figma
+    borderRightWidth: 1, borderRightColor: 'rgba(230, 0, 0, 0.05)'
   },
   scroll: { flex: 1, paddingTop: 5 },
   leftFill: { position: 'absolute', left: 0, top: 0, bottom: 0, width: DRAWER_LEFT_OFFSET, backgroundColor: '#0B0B15' },
