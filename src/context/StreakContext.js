@@ -1,72 +1,43 @@
-import React, {
-    createContext,
-    useCallback,
-    useContext,
-    useState,
-} from 'react';
-
+// Archivo: src/context/StreakContext.js
+// Contexto global para poder disparar la animación de racha (StreakPopup)
+// desde cualquier pantalla de la app, no solo desde LeccionScreen.
+import React, { createContext, useState, useCallback } from 'react';
 import { StreakPopup } from '../components/StreakPopup';
 
-const StreakContext = createContext(null);
+export const StreakContext = createContext();
 
-export function StreakProvider({ children }) {
+export const StreakProvider = ({ children }) => {
+  const [streakState, setStreakState] = useState({
+    visible: false,
+    rachaAnterior: 0,
+    rachaActual: 0,
+  });
 
-    const [streakData, setStreakData] = useState({
-        visible: false,
-        rachaAnterior: 0,
-        rachaActual: 0,
+  const showStreak = useCallback((rachaAnterior, rachaActual) => {
+    setStreakState({
+      visible: true,
+      rachaAnterior,
+      rachaActual,
     });
+  }, []);
 
-    const showStreak = useCallback((rachaAnterior, rachaActual) => {
+  const hideStreak = useCallback(() => {
+    setStreakState({
+      visible: false,
+      rachaAnterior: 0,
+      rachaActual: 0,
+    });
+  }, []);
 
-        setStreakData({
-            visible: true,
-            rachaAnterior,
-            rachaActual,
-        });
-
-    }, []);
-
-    const hideStreak = useCallback(() => {
-
-        setStreakData({
-            visible: false,
-            rachaAnterior: 0,
-            rachaActual: 0,
-        });
-
-    }, []);
-
-    return (
-        <StreakContext.Provider
-            value={{
-                showStreak,
-                hideStreak,
-            }}
-        >
-
-            {children}
-
-            <StreakPopup
-                visible={streakData.visible}
-                rachaAnterior={streakData.rachaAnterior}
-                rachaActual={streakData.rachaActual}
-                onAnimationFinished={hideStreak}
-            />
-
-        </StreakContext.Provider>
-    );
-}
-
-export function useStreakContext() {
-
-    const context = useContext(StreakContext);
-
-    if (!context) {
-        throw new Error(
-            'useStreakContext debe utilizarse dentro de StreakProvider'
-        );
-    }
-
-    return context;
-}
+  return (
+    <StreakContext.Provider value={{ showStreak, hideStreak }}>
+      {children}
+      <StreakPopup
+        visible={streakState.visible}
+        rachaAnterior={streakState.rachaAnterior}
+        rachaActual={streakState.rachaActual}
+        onAnimationFinished={hideStreak}
+      />
+    </StreakContext.Provider>
+  );
+};

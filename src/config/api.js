@@ -8,6 +8,7 @@ export const ENDPOINTS = {
   register: `${BASE_URL}/cuentas/registrar`,
   crearPerfil: `${BASE_URL}/perfiles`,
   obtenerPerfiles: `${BASE_URL}/perfiles`,
-  lecciones: (perfilId) => `${BASE_URL}/cursos/guitarra/progreso/${perfilId}` // ver cursos segun el perfil
+  lecciones: (perfilId) => `${BASE_URL}/cursos/guitarra/progreso/${perfilId}`, // ver cursos segun el perfil
+  racha: (perfilId) => `${BASE_URL}/perfiles/${perfilId}/racha` // POST: actualiza y devuelve el estado de la racha
 }
   // A medida que hagamos más pantallas, agregaremos las rutas acá

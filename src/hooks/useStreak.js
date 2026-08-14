@@ -1,5 +1,7 @@
-import { useStreakContext } from '../context/StreakContext';
+// Archivo: src/hooks/useStreak.js
+import { useContext } from 'react';
+import { StreakContext } from '../context/StreakContext';
 
 export function useStreak() {
-    return useStreakContext();
+  return useContext(StreakContext);
 }

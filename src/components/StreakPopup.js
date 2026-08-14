@@ -1,323 +1,195 @@
+// Archivo: src/components/StreakPopup.js
+// Popup pequeño, arriba a la derecha, que anima el cambio de racha (ej: 5 -> 6).
+// Este componente NO sabe nada del backend ni del perfil: solo recibe los
+// números y dibuja/anima. Toda la decisión de "cuándo mostrarse" viene de afuera.
+//
+// Las imágenes de la llama viven en la carpeta assets/ de la RAÍZ del proyecto
+// (no en src/assets), por eso subimos dos niveles: src/components -> src -> raíz.
 import React, { useEffect, useRef, useState } from 'react';
-import {
-    Animated,
-    Easing,
-    Image,
-    StyleSheet,
-    Text,
-    View,
-} from 'react-native';
+import { StyleSheet, Animated, Easing } from 'react-native';
 
-export function StreakPopup({
-    visible,
-    rachaAnterior,
-    rachaActual,
-    onAnimationFinished,
-}) {
-    const [numeroVisible, setNumeroVisible] = useState(rachaAnterior);
-    const [llamaPrendida, setLlamaPrendida] = useState(false);
+const flameOff = require('../../assets/flame_off.png');
+const flameOn = require('../../assets/flame_on.png');
 
-    // Animación del popup
-    const opacity = useRef(new Animated.Value(0)).current;
-    const translateY = useRef(new Animated.Value(-25)).current;
+const TIEMPO_VISIBLE_MS = 1800; // cuánto se queda el popup antes de cerrarse solo
 
-    // Animación de la llama
-    const flameScale = useRef(new Animated.Value(0.85)).current;
+export function StreakPopup({ visible, rachaAnterior, rachaActual, onAnimationFinished }) {
+  const [numeroVisible, setNumeroVisible] = useState(rachaAnterior);
+  const [llamaPrendida, setLlamaPrendida] = useState(false);
 
-    // Animación del número
-    const numberTranslate = useRef(new Animated.Value(0)).current;
-    const numberOpacity = useRef(new Animated.Value(1)).current;
+  // Popup: entrada/salida
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(-25)).current;
 
-    useEffect(() => {
-        if (visible) {
-            iniciarAnimacion();
-        }
-    }, [visible]);
+  // Llama: pequeño "golpe" de escala al prenderse
+  const flameScale = useRef(new Animated.Value(0.85)).current;
 
-    const iniciarAnimacion = () => {
-        setNumeroVisible(rachaAnterior);
-        setLlamaPrendida(false);
+  // Número: se va el anterior, entra el nuevo
+  const numberTranslate = useRef(new Animated.Value(0)).current;
+  const numberOpacity = useRef(new Animated.Value(1)).current;
 
-        opacity.setValue(0);
-        translateY.setValue(-25);
+  useEffect(() => {
+    if (!visible) return;
 
-        flameScale.setValue(0.85);
+    // Reset de estados iniciales cada vez que se dispara la animación
+    setNumeroVisible(rachaAnterior);
+    setLlamaPrendida(false);
+    opacity.setValue(0);
+    translateY.setValue(-25);
+    flameScale.setValue(0.85);
+    numberTranslate.setValue(0);
+    numberOpacity.setValue(1);
 
-        numberTranslate.setValue(0);
-        numberOpacity.setValue(1);
+    const timers = [];
 
-        // ==========================================
-        // 1. ENTRADA DEL POPUP
-        // ==========================================
+    // 1. Entrada del popup
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      // 2. Se prende la llama (cambia la imagen + pequeño rebote de escala)
+      setLlamaPrendida(true);
+      Animated.sequence([
+        Animated.timing(flameScale, {
+          toValue: 1.18,
+          duration: 180,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(flameScale, {
+          toValue: 1,
+          duration: 150,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start();
 
+      // 3. Cambio de número: sale el anterior, entra el actual
+      Animated.parallel([
+        Animated.timing(numberTranslate, {
+          toValue: -15,
+          duration: 160,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(numberOpacity, {
+          toValue: 0,
+          duration: 160,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setNumeroVisible(rachaActual);
+        numberTranslate.setValue(15);
         Animated.parallel([
-            Animated.timing(opacity, {
-                toValue: 1,
-                duration: 180,
-                easing: Easing.out(Easing.ease),
-                useNativeDriver: true,
-            }),
+          Animated.timing(numberTranslate, {
+            toValue: 0,
+            duration: 180,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(numberOpacity, {
+            toValue: 1,
+            duration: 180,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
 
-            Animated.timing(translateY, {
-                toValue: 0,
-                duration: 220,
-                easing: Easing.out(Easing.cubic),
-                useNativeDriver: true,
-            }),
+      // 4. Después de un rato, se cierra solo
+      const cierre = setTimeout(() => {
+        Animated.parallel([
+          Animated.timing(opacity, {
+            toValue: 0,
+            duration: 200,
+            easing: Easing.in(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(translateY, {
+            toValue: -10,
+            duration: 200,
+            easing: Easing.in(Easing.ease),
+            useNativeDriver: true,
+          }),
         ]).start(() => {
-
-            // ==========================================
-            // 2. LA LLAMA SE PRENDE
-            // ==========================================
-
-            setTimeout(() => {
-                setLlamaPrendida(true);
-            }, 80);
-
-            Animated.sequence([
-                Animated.timing(flameScale, {
-                    toValue: 1.18,
-                    duration: 130,
-                    easing: Easing.out(Easing.ease),
-                    useNativeDriver: true,
-                }),
-
-                Animated.timing(flameScale, {
-                    toValue: 1,
-                    duration: 100,
-                    easing: Easing.inOut(Easing.ease),
-                    useNativeDriver: true,
-                }),
-            ]).start();
-
-            // ==========================================
-            // 3. CAMBIO DEL NÚMERO
-            // ==========================================
-
-            setTimeout(() => {
-
-                Animated.parallel([
-                    Animated.timing(numberTranslate, {
-                        toValue: -15,
-                        duration: 140,
-                        easing: Easing.in(Easing.ease),
-                        useNativeDriver: true,
-                    }),
-
-                    Animated.timing(numberOpacity, {
-                        toValue: 0,
-                        duration: 120,
-                        useNativeDriver: true,
-                    }),
-                ]).start(() => {
-
-                    setNumeroVisible(rachaActual);
-
-                    numberTranslate.setValue(15);
-                    numberOpacity.setValue(0);
-
-                    Animated.parallel([
-                        Animated.timing(numberTranslate, {
-                            toValue: 0,
-                            duration: 180,
-                            easing: Easing.out(Easing.cubic),
-                            useNativeDriver: true,
-                        }),
-
-                        Animated.timing(numberOpacity, {
-                            toValue: 1,
-                            duration: 150,
-                            useNativeDriver: true,
-                        }),
-                    ]).start();
-                });
-
-            }, 180);
-
-            // ==========================================
-            // 4. DESAPARICIÓN
-            // ==========================================
-
-            setTimeout(() => {
-
-                Animated.parallel([
-                    Animated.timing(opacity, {
-                        toValue: 0,
-                        duration: 220,
-                        easing: Easing.in(Easing.ease),
-                        useNativeDriver: true,
-                    }),
-
-                    Animated.timing(translateY, {
-                        toValue: -10,
-                        duration: 220,
-                        easing: Easing.in(Easing.ease),
-                        useNativeDriver: true,
-                    }),
-                ]).start(() => {
-
-                    if (onAnimationFinished) {
-                        onAnimationFinished();
-                    }
-
-                });
-
-            }, 900);
+          onAnimationFinished && onAnimationFinished();
         });
+      }, TIEMPO_VISIBLE_MS);
+      timers.push(cierre);
+    });
+
+    return () => {
+      timers.forEach(clearTimeout);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, rachaAnterior, rachaActual]);
 
-    if (!visible) {
-        return null;
-    }
+  if (!visible) return null;
 
-    return (
-        <Animated.View
-            pointerEvents="none"
-            style={[
-                styles.container,
-                {
-                    opacity,
-                    transform: [
-                        {
-                            translateY,
-                        },
-                    ],
-                },
-            ]}
-        >
-
-            <Animated.View
-                style={[
-                    styles.flameContainer,
-                    {
-                        transform: [
-                            {
-                                scale: flameScale,
-                            },
-                        ],
-                    },
-                ]}
-            >
-
-                {llamaPrendida ? (
-
-                    // HACER: colocar acá el PNG de la llama prendida.
-                    // Ejemplo:
-                    // source={require('../assets/flame_on.png')}
-
-                    <Image
-                        // HACER: reemplazar null por la ruta real de flame_on.png
-                        source={null}
-                        style={styles.flame}
-                        resizeMode="contain"
-                    />
-
-                ) : (
-
-                    // HACER: colocar acá el PNG de la llama apagada.
-                    // Ejemplo:
-                    // source={require('../assets/flame_off.png')}
-
-                    <Image
-                        // HACER: reemplazar null por la ruta real de flame_off.png
-                        source={null}
-                        style={styles.flame}
-                        resizeMode="contain"
-                    />
-
-                )}
-
-            </Animated.View>
-
-            <Animated.View
-                style={[
-                    styles.numberContainer,
-                    {
-                        opacity: numberOpacity,
-                        transform: [
-                            {
-                                translateY: numberTranslate,
-                            },
-                        ],
-                    },
-                ]}
-            >
-                <Text style={styles.number}>
-                    {numeroVisible}
-                </Text>
-            </Animated.View>
-
-        </Animated.View>
-    );
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.container,
+        {
+          opacity,
+          transform: [{ translateY }],
+        },
+      ]}
+    >
+      <Animated.Image
+        source={llamaPrendida ? flameOn : flameOff}
+        style={[styles.flame, { transform: [{ scale: flameScale }] }]}
+        resizeMode="contain"
+      />
+      <Animated.Text
+        style={[
+          styles.numero,
+          {
+            opacity: numberOpacity,
+            transform: [{ translateY: numberTranslate }],
+          },
+        ]}
+      >
+        {numeroVisible}
+      </Animated.Text>
+    </Animated.View>
+  );
 }
 
 const styles = StyleSheet.create({
-
-    container: {
-        position: 'absolute',
-
-        top: 55,
-        right: 15,
-
-        width: 130,
-        height: 50,
-
-        backgroundColor: 'rgba(40, 40, 40, 0.92)',
-
-        borderRadius: 14,
-
-        flexDirection: 'row',
-
-        alignItems: 'center',
-
-        justifyContent: 'center',
-
-        zIndex: 9999,
-
-        elevation: 10,
-
-        shadowColor: '#000',
-
-        shadowOffset: {
-            width: 0,
-            height: 4,
-        },
-
-        shadowOpacity: 0.25,
-
-        shadowRadius: 8,
-    },
-
-    flameContainer: {
-        width: 32,
-        height: 36,
-
-        alignItems: 'center',
-        justifyContent: 'center',
-
-        marginRight: 10,
-    },
-
-    flame: {
-        width: 32,
-        height: 32,
-    },
-
-    numberContainer: {
-        minWidth: 35,
-
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-
-    number: {
-        color: '#FFFFFF',
-
-        fontSize: 24,
-
-        fontWeight: '700',
-
-        textAlign: 'center',
-    },
-
+  container: {
+    position: 'absolute',
+    top: 50,
+    right: 15,
+    height: 50,
+    minWidth: 70,
+    paddingHorizontal: 14,
+    borderRadius: 25,
+    backgroundColor: 'rgba(30, 30, 34, 0.85)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 999,
+    elevation: 10,
+  },
+  flame: {
+    width: 26,
+    height: 26,
+    marginRight: 8,
+  },
+  numero: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
 });

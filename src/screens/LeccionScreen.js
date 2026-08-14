@@ -1,5 +1,5 @@
 // Archivo: src/screens/LeccionScreen.js
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { Background } from '../components/Background';
 
@@ -7,132 +7,43 @@ import { LeccionSidebar } from '../components/leccion/LeccionSideBar';
 import { VideoStep } from '../components/leccion/VideoStep';
 import { TheoryStep } from '../components/leccion/TheoryStep';
 import { PracticeStep } from '../components/leccion/PracticeStep';
+
+// AGREGADO (animación de racha):
+// - AuthContext: para leer el perfil activo y sacar perfilId.
+// - useStreak: hook del StreakContext, para poder llamar a showStreak().
+// - rachaService: hace el POST /:id/racha contra el backend.
 import { AuthContext } from '../context/AuthContext';
-// NUEVO
 import { useStreak } from '../hooks/useStreak';
+import { rachaService } from '../services/rachaService';
 
 export function LeccionScreen({ route, navigation }) {
-    const leccion = route.params?.leccion || {};
-    const [paso, setPaso] = useState(1);
-    // Obtenemos el perfil activo
-    const { perfil } = useContext(AuthContext);
-    // El perfilId es el id del perfil activo
-    const perfilId = perfil?.id;
-    // Sistema global de racha
-    const { showStreak } = useStreak();
+  const leccion = route.params?.leccion || {};
+  const [paso, setPaso] = useState(1);
 
+  // AGREGADO: sacamos el perfil activo del AuthContext (mismo patrón que usa HomeScreen)
+  // para poder mandarle el perfilId al backend cuando se chequea la racha.
+  const { perfil } = useContext(AuthContext);
+  const perfilId = perfil?.id;
+  const { showStreak } = useStreak();
 
-    const handleTerminar = async () => {
+  // MODIFICADO: handleTerminar pasó de ser sincrónica a async.
+  // Antes solo mostraba el Alert de XP y volvía atrás.
+  // Ahora, antes de eso, le pregunta al backend si la racha subió
+  // (POST /:id/racha) y, si el backend responde mostrarAnimacion: true,
+  // dispara el popup de racha (showStreak) con rachaAnterior y rachaActual.
+  // El frontend NO decide si la racha sube: solo obedece lo que devuelve el backend.
+  const handleTerminar = async () => {
+    if (perfilId) {
+      const resultado = await rachaService.chequearRacha(perfilId);
 
-        try {
+      if (resultado?.mostrarAnimacion) {
+        showStreak(resultado.rachaAnterior, resultado.rachaActual);
+      }
+    }
 
-            // ==========================================
-            // VALIDAR PERFIL
-            // ==========================================
-
-            if (!perfilId) {
-
-                // HACER: revisar cómo maneja Melodika los errores
-                // cuando no existe un perfil activo.
-
-                console.error(
-                    'No se encontró perfilId para actualizar la racha.'
-                );
-
-            } else {
-
-                // ==========================================
-                // ACTUALIZAR RACHA
-                // ==========================================
-
-                // HACER:
-                // Crear/importar el service del frontend que llame:
-                //
-                // POST /:id/racha
-                //
-                // Debe enviar este perfilId:
-                //
-                // perfilId
-                //
-                // La respuesta esperada es:
-                //
-                // {
-                //     exito: true,
-                //     mostrarAnimacion: true,
-                //     rachaAnterior: 5,
-                //     rachaActual: 6,
-                //     mensaje: "..."
-                // }
-
-
-                // HACER:
-                // Reemplazar la siguiente línea por la llamada
-                // real al service.
-                //
-                // Ejemplo:
-                //
-                // const resultado = await rachaService.chequearRacha(perfilId);
-
-
-                // HACER:
-                // Cuando tengas `resultado`, utilizar:
-                //
-                // if (resultado.mostrarAnimacion) {
-                //
-                //     showStreak(
-                //         resultado.rachaAnterior,
-                //         resultado.rachaActual
-                //     );
-                //
-                // }
-
-
-                /*
-                EJEMPLO COMPLETO:
-
-                const resultado =
-                    await rachaService.chequearRacha(perfilId);
-
-                if (resultado.mostrarAnimacion) {
-
-                    showStreak(
-                        resultado.rachaAnterior,
-                        resultado.rachaActual
-                    );
-
-                }
-                */
-
-            }
-
-
-            // ==========================================
-            // FINALIZAR LECCIÓN
-            // ==========================================
-
-            Alert.alert(
-                '¡Lección Completada! 🏆',
-                `Ganaste ${leccion.xp || 100} XP.`
-            );
-
-            navigation.goBack();
-
-
-        } catch (error) {
-
-            console.error(
-                'Error al actualizar la racha:',
-                error
-            );
-
-            Alert.alert(
-                'Error',
-                'No se pudo actualizar la racha.'
-            );
-
-        }
-
-    };
+    Alert.alert('¡Lección Completada! 🏆', `Ganaste ${leccion.xp || 100} XP.`);
+    navigation.goBack();
+  };
 
   return (
     <Background>
