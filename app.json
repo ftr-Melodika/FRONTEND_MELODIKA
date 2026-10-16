@@ -3,10 +3,10 @@
     "name": "Melodika",
     "slug": "Melodika",
     "version": "1.0.0",
+    "sdkVersion": "57.0.0",
     "orientation": "landscape",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",

@@ -1,5 +1,5 @@
 // Archivo: src/screens/LeccionScreen.js
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { Background } from '../components/Background';
 
@@ -8,11 +8,39 @@ import { VideoStep } from '../components/leccion/VideoStep';
 import { TheoryStep } from '../components/leccion/TheoryStep';
 import { PracticeStep } from '../components/leccion/PracticeStep';
 
+// AGREGADO (animación de racha):
+// - AuthContext: para leer el perfil activo y sacar perfilId.
+// - useStreak: hook del StreakContext, para poder llamar a showStreak().
+// - rachaService: hace el POST /:id/racha contra el backend.
+import { AuthContext } from '../context/AuthContext';
+import { useStreak } from '../hooks/useStreak';
+import { rachaService } from '../services/rachaService';
+
 export function LeccionScreen({ route, navigation }) {
   const leccion = route.params?.leccion || {};
   const [paso, setPaso] = useState(1);
 
-  const handleTerminar = () => {
+  // AGREGADO: sacamos el perfil activo del AuthContext (mismo patrón que usa HomeScreen)
+  // para poder mandarle el perfilId al backend cuando se chequea la racha.
+  const { perfil } = useContext(AuthContext);
+  const perfilId = perfil?.id;
+  const { showStreak } = useStreak();
+
+  // MODIFICADO: handleTerminar pasó de ser sincrónica a async.
+  // Antes solo mostraba el Alert de XP y volvía atrás.
+  // Ahora, antes de eso, le pregunta al backend si la racha subió
+  // (POST /:id/racha) y, si el backend responde mostrarAnimacion: true,
+  // dispara el popup de racha (showStreak) con rachaAnterior y rachaActual.
+  // El frontend NO decide si la racha sube: solo obedece lo que devuelve el backend.
+  const handleTerminar = async () => {
+    if (perfilId) {
+      const resultado = await rachaService.chequearRacha(perfilId);
+
+      if (resultado?.mostrarAnimacion) {
+        showStreak(resultado.rachaAnterior, resultado.rachaActual);
+      }
+    }
+
     Alert.alert('¡Lección Completada! 🏆', `Ganaste ${leccion.xp || 100} XP.`);
     navigation.goBack();
   };
