@@ -60,9 +60,8 @@ export function RankingScreen({ navigation }) {
 
   return (
     <Background>
-      <LoadingModal visible={loading} text="Cargando ranking..." />
       <View style={[styles.container, { paddingLeft: Math.max(insets.left, 20) }]}>
-        <ScreenHeader title="Ranking global" onBack={() => navigation.goBack()} />
+        <ScreenHeader title="Ranking global" />
 
         {!!error && <Text style={styles.mensaje}>{error}</Text>}
         {!loading && !error && ranking.length === 0 && (
@@ -76,6 +75,7 @@ export function RankingScreen({ navigation }) {
           contentContainerStyle={{ paddingBottom: 20 }}
         />
       </View>
+      <LoadingModal visible={loading} text="Cargando ranking..." />
     </Background>
   );
 }

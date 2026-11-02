@@ -1,7 +1,7 @@
 // Archivo: src/screens/SelectUserScreen.js
 
 import { useState, useEffect, useContext } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet, Alert, ScrollView } from 'react-native';
 import { Background } from '../components/Background';
 import { AuthContext } from '../context/AuthContext';
 import { perfilesService } from '../services/perfilesService';
@@ -83,130 +83,80 @@ export function SelectUserScreen({ navigation, route }) {
 
   return (
     <Background>
-      <LoadingModal visible={loading} text="Buscando perfiles..." />
-      <View style={styles.container}>
-        <View style={styles.content}>
-          <Text style={styles.title}>
-            {/* Cambiamos el título si estamos editando */}
-            {isEditMode ? 'Administrar perfiles' : '¿Quién va a tocar hoy?'}
-          </Text>
-          
-          {!loading && (
-            <View style={styles.profilesRow}>
-              {perfiles.map((perfil) => (
-                <View key={perfil.id} style={isEditMode ? styles.editWrapper : null}>
-                  <ProfileAvatar 
-                    nombre={perfil.nombre}
-                    foto={perfil.avatarUrl}
-                    // Pasamos el perfil completo a la nueva función
-                    onPress={() => handleActionPerfil(perfil)} 
-                  />
-                  {/* Pequeño indicador visual de que es editable */}
-                  {isEditMode && <Text style={styles.editText}>✏️</Text>}
-                </View>
-              ))}
-              
-              {/* Si estamos editando, ocultamos el botón de agregar */}
-              {!isEditMode && perfiles.length < MAX_PERFILES && (
-                <ProfileAvatar 
-                  isAddButton={true}
-                  onPress={() => navigation.navigate('CreateUser')} 
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>
+          {/* Cambiamos el título si estamos editando */}
+          {isEditMode ? 'Administrar perfiles' : '¿Quién va a tocar hoy?'}
+        </Text>
+        {isEditMode && <Text style={styles.subtitle}>Tocá un perfil para editarlo o eliminarlo</Text>}
+
+        {!loading && (
+          <View style={styles.profilesRow}>
+            {perfiles.map((perfil) => (
+              <View key={perfil.id} style={styles.avatarWrapper}>
+                <ProfileAvatar
+                  nombre={perfil.nombre}
+                  foto={perfil.avatarUrl}
+                  // Pasamos el perfil completo a la nueva función
+                  onPress={() => handleActionPerfil(perfil)}
                 />
-              )}
-            </View>
-          )}
+                {/* Pequeño indicador visual de que es editable */}
+                {isEditMode && (
+                  <View style={styles.editBadge} pointerEvents="none">
+                    <Text style={styles.editBadgeText}>✏️</Text>
+                  </View>
+                )}
+              </View>
+            ))}
 
-          {/* 👇 3. BOTÓN PARA ACTIVAR/DESACTIVAR MODO EDICIÓN */}
-          {!loading && perfiles.length > 0 && (
-            <View style={styles.actionsRow}>
-              <Button 
-                title={isEditMode ? "✓ Listo" : "✏️ Administrar perfiles"} 
-                variant="secondary" 
-                onPress={() => setIsEditMode(!isEditMode)} 
-                style={styles.manageButton}
-                textStyle={styles.manageButtonText}
+            {/* Si estamos editando, ocultamos el botón de agregar */}
+            {!isEditMode && perfiles.length < MAX_PERFILES && (
+              <ProfileAvatar
+                isAddButton={true}
+                onPress={() => navigation.navigate('CreateUser')}
               />
-            </View>
-          )}
+            )}
+          </View>
+        )}
 
-        </View>
-        
-        <View style={styles.footerActions}>
-          <Button 
-            title="Cerrar sesión" 
-            variant="secondary" 
-            onPress={() => logout()}
-            style={styles.logoutButton}
-            textStyle={styles.logoutButtonText}
-          />
-        </View>
-      </View>
+        {/* Acciones: mismos botones que el resto de la app, uno al lado del otro */}
+        {!loading && (
+          <View style={styles.actionsRow}>
+            {perfiles.length > 0 && (
+              <Button
+                title={isEditMode ? '✓ Listo' : '✏️ Administrar perfiles'}
+                variant={isEditMode ? 'primary' : 'secondary'}
+                onPress={() => setIsEditMode(!isEditMode)}
+                style={styles.actionButton}
+              />
+            )}
+            <Button
+              title="Cerrar sesión"
+              variant="danger"
+              onPress={() => logout()}
+              style={styles.actionButton}
+            />
+          </View>
+        )}
+      </ScrollView>
+      <LoadingModal visible={loading} text="Buscando perfiles..." />
     </Background>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'space-between', alignItems: 'center', paddingVertical: 24 },
-  content: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' },
-  title: { fontSize: 32, color: '#fff', fontFamily: 'serif', fontWeight: 'bold', marginBottom: 40 },
-  profilesRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 30 },
-  actionsRow: { marginTop: 34, width: '100%', alignItems: 'center' },
-  footerActions: { width: '100%', alignItems: 'center', paddingTop: 6 },
-  manageButton: {
-    width: 220,
-    paddingVertical: 11,
-    paddingHorizontal: 18,
-    borderRadius: 999,
-    backgroundColor: 'rgba(178, 140, 255, 0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.45)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 3,
-    marginVertical: 0,
-  },
-  manageButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.15,
-    color: '#f5f1ff',
-  },
-  logoutButton: {
-    width: 220,
-    paddingVertical: 11,
-    paddingHorizontal: 18,
-    borderRadius: 999,
-    backgroundColor: 'rgba(226, 85, 106, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 120, 135, 0.8)',
-    marginVertical: 0,
-  },
-  logoutButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#ffd8dd',
-  },
-  // Estilos visuales para el modo edición
-  editWrapper: { position: 'relative', alignItems: 'center', justifyContent: 'center' },
-  editText: {
-    position: 'absolute',
-    right: 6,
-    top: 6,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: '#fff',
-    textAlign: 'center',
-    lineHeight: 24,
-    fontSize: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-    includeFontPadding: false,
-  }
+  scroll: { flex: 1, width: '100%' },
+  container: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 20, paddingHorizontal: 20 },
+  title: { fontSize: 30, color: '#fff', fontFamily: 'serif', fontWeight: 'bold', marginBottom: 6, textAlign: 'center' },
+  subtitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14 },
+  profilesRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start', gap: 30, marginTop: 22 },
+  avatarWrapper: { position: 'relative' },
+  editBadge: { position: 'absolute', right: 0, top: 0, width: 30, height: 30, borderRadius: 15, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 4 },
+  editBadgeText: { fontSize: 14 },
+  actionsRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 15, marginTop: 24 },
+  actionButton: { width: 240 },
 });

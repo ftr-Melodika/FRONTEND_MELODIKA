@@ -39,7 +39,7 @@ export function PreguntasFrecuentesScreen({ navigation }) {
   return (
     <Background>
       <View style={[styles.container, { paddingLeft: Math.max(insets.left, 20) }]}>
-        <ScreenHeader title="Preguntas frecuentes" onBack={() => navigation.goBack()} />
+        <ScreenHeader title="Preguntas frecuentes" />
         <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
           {PREGUNTAS.map((item, i) => {
             const estaAbierta = abierta === i;

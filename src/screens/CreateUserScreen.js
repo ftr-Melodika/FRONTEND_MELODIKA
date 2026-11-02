@@ -7,6 +7,7 @@ import { Button } from '../components/Button';
 import { AuthContext } from '../context/AuthContext';
 import { DatePickerField } from '../components/form/DatePickerField';
 import { DropdownField } from '../components/form/DropdownField';
+import { AvatarPicker } from '../components/form/AvatarPicker';
 
 // 👇 Importamos nuestro servicio especialista
 import { perfilesService } from '../services/perfilesService';
@@ -74,12 +75,12 @@ export function CreateUserScreen({ navigation }) {
             textStyle={styles.backButtonText}
           />
           <Text style={styles.title}>Crear perfil</Text>
+          <AvatarPicker value={fotoUrl} onChange={setFotoUrl} nombre={nombre} />
           <InputField placeholder="Nombre completo" value={nombre} onChangeText={setNombre} />
           <InputField placeholder="Nombre de usuario" value={username} onChangeText={setUsername} />
           <DatePickerField onDateChange={setBirthdayISO} />
           <InputField placeholder="País (opcional)" value={pais} onChangeText={setPais} />
           <DropdownField label="Género" options={GENDER_OPTIONS} value={gender} onSelect={setGender} />
-          <InputField placeholder="Foto (URL opcional)" value={fotoUrl} onChangeText={setFotoUrl} />
           <Button title="Crear perfil" onPress={handleCreateUser} loading={loading} />
         </View>
       </ScrollView>

@@ -1,9 +1,12 @@
 // Archivo: src/components/leccion/VideoStep.js
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, Linking, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Image, Linking, StyleSheet, useWindowDimensions } from 'react-native';
 import { Button } from '../Button'; // Ajustá la ruta si hace falta
 
 export const VideoStep = ({ videoId, title, onNext }) => {
+  const { height } = useWindowDimensions();
+  // La miniatura se achica en pantallas bajas para que el botón de abajo siempre se vea
+  const altoMiniatura = Math.round(Math.min(220, Math.max(120, height * 0.5)));
   const openYouTube = () => {
     Linking.openURL(`https://www.youtube.com/watch?v=${videoId}`);
   };
@@ -15,7 +18,7 @@ export const VideoStep = ({ videoId, title, onNext }) => {
         <TouchableOpacity onPress={openYouTube} style={styles.card}>
           <Image
             source={{ uri: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` }}
-            style={styles.thumbnail}
+            style={[styles.thumbnail, { height: altoMiniatura }]}
           />
           <View style={styles.overlay}>
             <Text style={styles.playText}>▶ Reproducir video</Text>
@@ -38,8 +41,8 @@ const styles = StyleSheet.create({
   content: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' },
   title: { fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: '#fff' },
   card: { borderRadius: 12, overflow: 'hidden', position: 'relative', backgroundColor: '#000', width: '100%', maxWidth: 500 },
-  thumbnail: { width: '100%', height: 200, opacity: 0.8 },
+  thumbnail: { width: '100%', opacity: 0.8 },
   overlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center' },
   playText: { color: '#fff', fontSize: 18, fontWeight: 'bold', backgroundColor: 'rgba(0,0,0,0.5)', padding: 10, borderRadius: 8 },
-  footer: { width: '100%', paddingTop: 15 }
+  footer: { width: '100%', paddingTop: 10 }
 });

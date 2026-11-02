@@ -5,6 +5,8 @@ import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
 import { DatePickerField } from '../components/form/DatePickerField';
 import { DropdownField } from '../components/form/DropdownField';
+import { AvatarPicker } from '../components/form/AvatarPicker';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { perfilesService } from '../services/perfilesService';
 import { AuthContext } from '../context/AuthContext';
 
@@ -118,14 +120,23 @@ export function EditUserScreen({ route, navigation }) {
     <Background>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={[styles.glassCard, { width: cardWidth }]}>
-          <Button 
-            title="← Volver" 
-            variant="back" 
-            onPress={() => navigation.goBack()} 
-            style={styles.backButtonInside}
-            textStyle={styles.backButtonText}
-          />
-          <Text style={styles.title}>Editar perfil</Text>
+          {vieneDeSelectUser ? (
+            <>
+              <Button
+                title="← Volver"
+                variant="back"
+                onPress={() => navigation.goBack()}
+                style={styles.backButtonInside}
+                textStyle={styles.backButtonText}
+              />
+              <Text style={styles.title}>Editar perfil</Text>
+            </>
+          ) : (
+            // Desde el menú (Configuración) el volver es el propio menú
+            <ScreenHeader title="Configuración del perfil" />
+          )}
+          {/* El backend no permite borrar la foto (solo reemplazarla), por eso no mostramos "Quitar" */}
+          <AvatarPicker value={fotoUrl} onChange={setFotoUrl} nombre={nombre} permitirQuitar={false} />
           
           <InputField placeholder="Nombre completo" value={nombre} onChangeText={setNombre} />
           <InputField 
@@ -137,17 +148,15 @@ export function EditUserScreen({ route, navigation }) {
           <DatePickerField onDateChange={setBirthdayISO} initialValue={perfilAEditar?.fechaNacimiento} />
           <InputField placeholder="País (opcional)" value={pais} onChangeText={setPais} />
           <DropdownField label="Género" options={GENDER_OPTIONS} value={gender} onSelect={setGender} />
-          <InputField placeholder="Foto (URL opcional)" value={fotoUrl} onChangeText={setFotoUrl} />
 
           <Button title="Guardar Cambios" onPress={handleUpdate} loading={loading} />
           
           {/* Botón rojo secundario para eliminar */}
           <Button 
             title="Eliminar perfil" 
-            variant="secondary" 
+            variant="danger"
             onPress={handleDelete}
             style={styles.deleteButton}
-            textStyle={styles.deleteText}
           />
         </View>
       </ScrollView>
@@ -161,19 +170,7 @@ const styles = StyleSheet.create({
   scrollContent: { flexGrow: 1, justifyContent: 'flex-start', alignItems: 'center', paddingVertical: 20 },
   glassCard: { alignSelf: 'center', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 25, paddingVertical: 18, paddingHorizontal: 28, marginVertical: 18, borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1 },
   title: { fontSize: 24, color: '#fff', textAlign: 'center', marginBottom: 15, fontFamily: 'serif', fontWeight: 'bold' },
-  deleteButton: {
-    backgroundColor: 'rgba(226, 85, 106, 0.22)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 126, 141, 0.9)',
-    borderRadius: 16,
-    marginTop: 20,
-    shadowColor: '#d64a5d',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.28,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  deleteText: { color: '#fff1f3', fontWeight: '700' },
+  deleteButton: { marginTop: 12 },
   input: {
     width: '100%',
     height: 44,

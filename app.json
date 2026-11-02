@@ -27,6 +27,12 @@
     },
     "plugins": [
       "@react-native-community/datetimepicker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Melodika necesita acceso a tus fotos para elegir tu foto de perfil."
+        }
+      ],
       "expo-status-bar"
     ]
   }

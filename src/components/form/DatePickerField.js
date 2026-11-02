@@ -49,7 +49,7 @@ export function DatePickerField({ onDateChange, initialValue }) {
   };
 
   return (
-    <View style={{ width: '100%', marginBottom: 12, position: 'relative' }}>
+    <View style={{ width: '100%' }}>
       <SelectField
         label={birthdayLabel !== 'Seleccionar fecha de nacimiento' ? birthdayLabel : 'Fecha de nacimiento'}
         value={birthdayLabel !== 'Seleccionar fecha de nacimiento' ? birthdayLabel : ''}

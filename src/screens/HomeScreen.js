@@ -2,6 +2,7 @@
 import { useState, useContext, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Background } from '../components/Background';
 import { SideMenu } from '../components/SideMenu';
 import { AuthContext } from '../context/AuthContext';
@@ -16,6 +17,7 @@ import { leccionesService } from '../services/leccionesService';
 export function HomeScreen({ navigation }) {
   // Nos traemos el perfil inyectado desde el contexto
   const { userData: cuenta, perfil, refrescarPerfil } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
 
   const [mapa, setMapa] = useState({ cursos: [], curso: null, lecciones: [], esMock: false });
   const [loading, setLoading] = useState(true);
@@ -76,9 +78,8 @@ export function HomeScreen({ navigation }) {
 
   return (
     <Background>
-      <LoadingModal visible={loading} text="Cargando tu progreso..." />
 
-      <View style={styles.mainContainer}>
+      <View style={[styles.mainContainer, { paddingLeft: Math.max(insets.left, 15), paddingRight: Math.max(insets.right, 15) }]}>
         <HeaderHome
           perfil={perfil}
           cuenta={cuenta}
@@ -121,9 +122,8 @@ export function HomeScreen({ navigation }) {
       <SideMenu
         visible={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
-        perfil={perfil}
-        navigation={navigation}
       />
+      <LoadingModal visible={loading} text="Cargando tu progreso..." />
     </Background>
   );
 }

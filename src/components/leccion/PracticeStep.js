@@ -38,7 +38,7 @@ export function PracticeStep({ onBack, onFinish, finishing, trasteObjetivo, cuer
 const styles = StyleSheet.create({
   container: { flex: 1, width: '100%', justifyContent: 'space-between' },
   content: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' },
-  consigna: { color: '#a3fba3', fontSize: 16, fontWeight: 'bold', marginBottom: 12 },
-  btnRow: { flexDirection: 'row', width: '100%', justifyContent: 'space-between', gap: 15, paddingTop: 15 },
+  consigna: { color: '#a3fba3', fontSize: 15, fontWeight: 'bold', marginBottom: 8 },
+  btnRow: { flexDirection: 'row', width: '100%', justifyContent: 'space-between', gap: 15, paddingTop: 4 },
   btnHalf: { flex: 1 }
 });

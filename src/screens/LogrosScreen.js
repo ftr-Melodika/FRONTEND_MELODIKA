@@ -57,9 +57,8 @@ export function LogrosScreen({ navigation }) {
 
   return (
     <Background>
-      <LoadingModal visible={loading} text="Buscando tus logros..." />
       <View style={[styles.container, { paddingLeft: Math.max(insets.left, 20) }]}>
-        <ScreenHeader title="Logros y recompensas" onBack={() => navigation.goBack()} />
+        <ScreenHeader title="Logros y recompensas" />
         <Text style={styles.subtitulo}>{desbloqueados} de {LOGROS.length} logros desbloqueados</Text>
 
         <ScrollView contentContainerStyle={styles.grid}>
@@ -81,6 +80,7 @@ export function LogrosScreen({ navigation }) {
           })}
         </ScrollView>
       </View>
+      <LoadingModal visible={loading} text="Buscando tus logros..." />
     </Background>
   );
 }

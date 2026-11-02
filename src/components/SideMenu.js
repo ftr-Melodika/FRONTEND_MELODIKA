@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useContext } from 'react';
-import { View, StyleSheet, Animated, Dimensions, TouchableWithoutFeedback, ScrollView, Alert, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, Animated, Pressable, ScrollView, Alert, Modal } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// 👇 1. VOLVEMOS A IMPORTAR NUESTRO CONTEXTO
 import { AuthContext } from '../context/AuthContext';
 import { SideMenuFooter } from './menu/SideMenuFooter';
 import { SideMenuHeader } from './menu/SideMenuHeader';
@@ -9,127 +10,151 @@ import { MenuItem } from './menu/MenuItem';
 import { AccordotionItem } from './menu/AccordotionItem';
 import { SubMenuItem } from './menu/SubMenuItem';
 
-const { width } = Dimensions.get('window');
-const DRAWER_WIDTH = 320; 
-const DRAWER_LEFT_OFFSET = 48; // separacion para evitar notch/isla dinámica (ajuste final)
+const DRAWER_WIDTH = 300;
 
-// 👇 2. LIMPIAMOS LAS PROPS FANTASMAS (Chau cuenta y token)
-export function SideMenu({ visible, onClose, perfil, navigation }) {
-  // 👇 3. TRAEMOS EL LOGOUT VERDADERO DESDE EL CONTEXTO
-  const { logout } = useContext(AuthContext);
-  
-  const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
+// El menú se dibuja dentro de un Modal: así queda por encima de cualquier pantalla
+// y tocar en cualquier lugar fuera del panel lo cierra.
+export function SideMenu({ visible, onClose }) {
+  const { logout, perfil } = useContext(AuthContext);
+  const navigation = useNavigation();
+  const route = useRoute();
+  const insets = useSafeAreaInsets();
+  const anchoTotal = DRAWER_WIDTH + insets.left;
+
+  const slideAnim = useRef(new Animated.Value(-anchoTotal)).current;
+  const fondoAnim = useRef(new Animated.Value(0)).current;
   const [isRendering, setIsRendering] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setIsRendering(true);
-      Animated.timing(slideAnim, { toValue: 0, duration: 250, useNativeDriver: true }).start();
-    } else {
-      Animated.timing(slideAnim, { toValue: -DRAWER_WIDTH, duration: 250, useNativeDriver: true }).start(() => {
-        setIsRendering(false);
-      });
+      Animated.parallel([
+        Animated.timing(slideAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+        Animated.timing(fondoAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+      ]).start();
+    } else if (isRendering) {
+      Animated.parallel([
+        Animated.timing(slideAnim, { toValue: -anchoTotal, duration: 220, useNativeDriver: true }),
+        Animated.timing(fondoAnim, { toValue: 0, duration: 220, useNativeDriver: true }),
+      ]).start(() => setIsRendering(false));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  if (!isRendering) return null;
+  const pantallaActual = route?.name;
 
   const handleProximamente = (nombreItem) => {
     Alert.alert('Melodika', `${nombreItem} estará disponible próximamente.`);
   };
 
-  const irA = (pantalla) => {
+  // Navega y cierra el menú. Si ya estamos en esa pantalla, solo cierra.
+  const irA = (pantalla, params) => {
     onClose();
-    navigation.navigate(pantalla);
+    if (pantalla !== pantallaActual) navigation.navigate(pantalla, params);
   };
 
   const handleLogout = async () => {
     onClose();
-    // 👇 4. USAMOS EL LOGOUT GLOBAL (Limpia memoria, estado y almacenamiento)
     await logout();
   };
 
   const handleCambiarPerfil = () => {
     onClose();
-    // 👇 5. NAVEGAMOS LIMPIO SIN ROUTE.PARAMS
-    navigation.replace('SelectUser');
+    navigation.reset({ index: 0, routes: [{ name: 'SelectUser' }] });
   };
 
   return (
-    <View style={StyleSheet.absoluteFill}>
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.backdrop} />
-      </TouchableWithoutFeedback>
-      {/* Relleno izquierdo para que el contenido del drawer no quede pegado al borde */}
-      <View style={styles.leftFill} />
-      <Animated.View style={[styles.drawer, { transform: [{ translateX: slideAnim }] }]}>
-        
-        {/* Usamos el header de tu compa, pero sin pasarle la 'cuenta' innecesaria */}
-        <SideMenuHeader perfil={perfil} />
+    <Modal
+      visible={isRendering}
+      transparent
+      animationType="none"
+      onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
+      supportedOrientations={['landscape', 'landscape-left', 'landscape-right', 'portrait']}
+    >
+      <View style={StyleSheet.absoluteFill}>
+        {/* Fondo oscuro: tocarlo cierra el menú */}
+        <Animated.View style={[styles.backdrop, { opacity: fondoAnim }]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Cerrar menú" />
+        </Animated.View>
 
-        <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll}>
-          
-          <AccordotionItem title="Perfil" icon="👤">
-            <SubMenuItem
-              title="Configuración"
-              icon="⚙️"
-              onPress={() => { onClose(); navigation.navigate('EditUser', { perfilAEditar: perfil }); }}
+        <Animated.View
+          style={[
+            styles.drawer,
+            { width: anchoTotal, paddingLeft: insets.left, transform: [{ translateX: slideAnim }] },
+          ]}
+        >
+          <SideMenuHeader perfil={perfil} />
+
+          <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll} contentContainerStyle={{ paddingBottom: insets.bottom + 10 }}>
+
+            <MenuItem
+              title="Cursos"
+              icon="🎸"
+              isActive={pantallaActual === 'Home' || pantallaActual === 'Leccion'}
+              onPress={() => irA('Home')}
             />
 
-            <AccordotionItem title="Seguimiento de usuario" icon="📈">
-              <SubMenuItem title="Logros y recompensas" icon="🏆" onPress={() => irA('Logros')} />
-              <SubMenuItem title="Progreso" icon="📊" onPress={() => irA('Progreso')} />
-              <SubMenuItem title="Ranking" icon="🥇" onPress={() => irA('Ranking')} />
+            <AccordotionItem
+              title="Perfil"
+              icon="👤"
+              defaultOpen={['EditUser', 'Logros', 'Progreso', 'Ranking'].includes(pantallaActual)}
+            >
+              <SubMenuItem
+                title="Configuración"
+                icon="⚙️"
+                isActive={pantallaActual === 'EditUser'}
+                onPress={() => irA('EditUser', { perfilAEditar: perfil })}
+              />
+              <SubMenuItem title="Logros y recompensas" icon="🏆" isActive={pantallaActual === 'Logros'} onPress={() => irA('Logros')} />
+              <SubMenuItem title="Progreso" icon="📊" isActive={pantallaActual === 'Progreso'} onPress={() => irA('Progreso')} />
+              <SubMenuItem title="Ranking" icon="🥇" isActive={pantallaActual === 'Ranking'} onPress={() => irA('Ranking')} />
             </AccordotionItem>
-          </AccordotionItem>
 
-          <MenuItem
-            title="Cursos"
-            icon="🎸"
-            isActive={true}
-            onPress={() => { onClose(); navigation.navigate('Home'); }}
-          />
-          
-          <MenuItem
-            title="Práctica"
-            icon="🎹"
-            onPress={() => handleProximamente('Práctica')}
-          />
+            <MenuItem
+              title="Práctica"
+              icon="🎹"
+              onPress={() => handleProximamente('Práctica')}
+            />
 
-          <AccordotionItem title="Comunidad" icon="👥">
-            <SubMenuItem title="Dar feedback" icon="💬" onPress={() => handleProximamente('Dar feedback')} />
-            <SubMenuItem title="Grupos" icon="🤝" onPress={() => handleProximamente('Grupos')} />
-          </AccordotionItem>
+            <AccordotionItem title="Comunidad" icon="👥">
+              <SubMenuItem title="Dar feedback" icon="💬" onPress={() => handleProximamente('Dar feedback')} />
+              <SubMenuItem title="Grupos" icon="🤝" onPress={() => handleProximamente('Grupos')} />
+            </AccordotionItem>
 
-          <AccordotionItem title="Soporte" icon="🛠️">
-            <SubMenuItem title="Preguntas frecuentes" icon="❓" onPress={() => irA('PreguntasFrecuentes')} />
-            <SubMenuItem title="Reportar errores" icon="🐛" onPress={() => handleProximamente('Reportar errores')} />
-            <SubMenuItem title="Contacto" icon="📧" onPress={() => handleProximamente('Contacto')} />
-          </AccordotionItem>
+            <AccordotionItem title="Soporte" icon="🛠️" defaultOpen={pantallaActual === 'PreguntasFrecuentes'}>
+              <SubMenuItem
+                title="Preguntas frecuentes"
+                icon="❓"
+                isActive={pantallaActual === 'PreguntasFrecuentes'}
+                onPress={() => irA('PreguntasFrecuentes')}
+              />
+              <SubMenuItem title="Reportar errores" icon="🐛" onPress={() => handleProximamente('Reportar errores')} />
+              <SubMenuItem title="Contacto" icon="📧" onPress={() => handleProximamente('Contacto')} />
+            </AccordotionItem>
 
-          <View style={{ height: 10}} />
+            <View style={{ height: 10 }} />
 
-          {/* Mantenemos el Footer inline con su estilo visual */}
-          <SideMenuFooter 
-          onCambiarPerfil={handleCambiarPerfil} 
-          onLogout={handleLogout} 
-          />
+            <SideMenuFooter
+              onCambiarPerfil={handleCambiarPerfil}
+              onLogout={handleLogout}
+            />
 
-        </ScrollView>
-      </Animated.View>
-    </View>
+          </ScrollView>
+        </Animated.View>
+      </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0, 0, 0, 0.6)' },
   drawer: {
-    position: 'absolute', top: 0, bottom: 0, left: DRAWER_LEFT_OFFSET,
-    width: DRAWER_WIDTH,
+    position: 'absolute', top: 0, bottom: 0, left: 0,
     backgroundColor: '#3E3876', // Fondo Deep Dark Figma
-    borderRightWidth: 1, borderRightColor: 'rgba(230, 0, 0, 0.05)'
+    borderRightWidth: 1, borderRightColor: 'rgba(255, 255, 255, 0.08)',
+    shadowColor: '#000', shadowOffset: { width: 4, height: 0 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 16,
   },
   scroll: { flex: 1, paddingTop: 5 },
-  leftFill: { position: 'absolute', left: 0, top: 0, bottom: 0, width: DRAWER_LEFT_OFFSET, backgroundColor: '#0B0B15' },
-  
 });

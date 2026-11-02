@@ -112,7 +112,6 @@ export function LeccionScreen({ route, navigation }) {
           paso={indice + 1}
           totalPasos={pasos.length}
           instruccion={instruccion}
-          onBack={() => navigation.goBack()}
         />
 
         <View style={styles.mainContent}>

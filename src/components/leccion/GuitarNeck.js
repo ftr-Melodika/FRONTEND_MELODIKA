@@ -1,33 +1,37 @@
 // Archivo: src/components/leccion/GuitarNeck.js
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 
-const ALTO_MASTIL = 220;
+// El alto del mástil se adapta a la pantalla (en un celular horizontal no entran 220px + botones)
+const ALTO_MAXIMO = 220;
+const ALTO_MINIMO = 130;
 const PADDING_CUERDAS = 10;
 const CANT_TRASTES = 6;
 const TAMANO_PUNTO = 38;
 
 // Calcula dónde dibujar el punto a partir de la cuerda (1 a 6) y el traste (0 = al aire).
 // Las cuerdas y trastes se reparten con "space-evenly", así que replicamos esa cuenta.
-function calcularPosicion(cuerda, traste) {
+function calcularPosicion(cuerda, traste, altoMastil) {
   const c = Math.min(Math.max(Number(cuerda) || 1, 1), 6);
   const t = Math.min(Math.max(Number(traste) || 0, 0), CANT_TRASTES);
 
   const left = t === 0 ? '3%' : `${(((t - 0.5) / (CANT_TRASTES + 1)) * 100).toFixed(1)}%`;
-  const altoUtil = ALTO_MASTIL - PADDING_CUERDAS * 2;
+  const altoUtil = altoMastil - PADDING_CUERDAS * 2;
   const top = PADDING_CUERDAS + (altoUtil * c) / 7 - TAMANO_PUNTO / 2;
   return { left, top };
 }
 
 export function GuitarNeck({ targetNumber, cuerda, dotLeft, dotBottom }) {
+  const { height } = useWindowDimensions();
+  const altoMastil = Math.round(Math.min(ALTO_MAXIMO, Math.max(ALTO_MINIMO, height * 0.42)));
   const hayObjetivo = targetNumber !== null && targetNumber !== undefined && targetNumber !== '';
 
   // Si la lección trae posiciones manuales (dot_left / dot_bottom) las respetamos
   const posicion = dotLeft && dotBottom
     ? { left: dotLeft, bottom: dotBottom }
-    : calcularPosicion(cuerda, targetNumber);
+    : calcularPosicion(cuerda, targetNumber, altoMastil);
 
   return (
-    <View style={styles.mastilContainer}>
+    <View style={[styles.mastilContainer, { height: altoMastil }]}>
 
       {/* Trastes (Verticales) */}
       <View style={styles.fretsOverlay}>
@@ -55,7 +59,7 @@ export function GuitarNeck({ targetNumber, cuerda, dotLeft, dotBottom }) {
 }
 
 const styles = StyleSheet.create({
-  mastilContainer: { width: '100%', height: ALTO_MASTIL, backgroundColor: '#4A2E1B', borderRadius: 10, borderWidth: 3, borderColor: '#2A180E', overflow: 'hidden', position: 'relative', marginBottom: 20 },
+  mastilContainer: { width: '100%', backgroundColor: '#4A2E1B', borderRadius: 10, borderWidth: 3, borderColor: '#2A180E', overflow: 'hidden', position: 'relative', marginBottom: 8 },
   fretsOverlay: { ...StyleSheet.absoluteFillObject, flexDirection: 'row', justifyContent: 'space-evenly', opacity: 0.8 },
   fretLine: { width: 5, height: '100%', backgroundColor: '#C0C0C0', shadowColor: '#000', shadowOffset: { width: -3, height: 0 }, shadowOpacity: 0.6, shadowRadius: 3 },
   stringsContainer: { flex: 1, justifyContent: 'space-evenly', paddingVertical: PADDING_CUERDAS },

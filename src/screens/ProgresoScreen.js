@@ -1,9 +1,11 @@
 import { useCallback, useContext, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Background } from '../components/Background';
 import { LoadingModal } from '../components/LoadingModal';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { Button } from '../components/Button';
 import { AuthContext } from '../context/AuthContext';
 import { leccionesService } from '../services/leccionesService';
 
@@ -46,16 +48,10 @@ export function ProgresoScreen({ navigation }) {
 
   return (
     <Background>
-      <LoadingModal visible={loading} text="Calculando tu progreso..." />
       <View style={[styles.container, { paddingLeft: Math.max(insets.left, 20) }]}>
 
         {/* HEADER */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Text style={styles.backText}>← Volver</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Tu Progreso</Text>
-        </View>
+        <ScreenHeader title="Tu Progreso" />
 
         {!!error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -133,15 +129,14 @@ export function ProgresoScreen({ navigation }) {
                 </View>
               ))}
 
-              <TouchableOpacity style={styles.continueBtn} onPress={() => navigation.navigate('Home')}>
-                <Text style={styles.continueBtnText}>Continuar aprendiendo  ▶</Text>
-              </TouchableOpacity>
+              <Button title="Continuar aprendiendo  ▶" onPress={() => navigation.navigate('Home')} style={styles.continueBtn} />
             </ScrollView>
           </View>
 
         </View>
 
       </View>
+      <LoadingModal visible={loading} text="Calculando tu progreso..." />
     </Background>
   );
 }
@@ -149,11 +144,6 @@ export function ProgresoScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, width: '100%' },
 
-  // Header
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 25 },
-  backBtn: { paddingVertical: 5, paddingRight: 15 },
-  backText: { color: '#b28cff', fontSize: 16, fontWeight: 'bold' },
-  title: { fontSize: 24, color: '#fff', fontFamily: 'serif', fontWeight: 'bold', marginLeft: 10 },
   errorText: { color: '#ffb3bd', marginBottom: 10 },
 
   // Layout principal
@@ -170,9 +160,9 @@ const styles = StyleSheet.create({
   statValue: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
 
   // Tarjeta de Curso (Derecha)
-  courseCard: { flex: 1, backgroundColor: '#111122', padding: 25, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(178, 140, 255, 0.2)' },
+  courseCard: { flex: 1, backgroundColor: '#111122', padding: 20, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(178, 140, 255, 0.2)' },
   courseOverline: { color: '#b28cff', fontSize: 12, fontWeight: 'bold', letterSpacing: 1.5, marginBottom: 8 },
-  courseTitle: { fontSize: 28, color: '#fff', fontFamily: 'serif', fontWeight: 'bold', marginBottom: 30 },
+  courseTitle: { fontSize: 24, color: '#fff', fontFamily: 'serif', fontWeight: 'bold', marginBottom: 20 },
 
   progressContainer: { marginBottom: 25 },
   progressHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
@@ -185,6 +175,5 @@ const styles = StyleSheet.create({
   otroCurso: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
   otroCursoNombre: { color: 'rgba(255,255,255,0.8)', fontSize: 14, flex: 1 },
   otroCursoPct: { color: '#a3fba3', fontSize: 14, fontWeight: 'bold', marginLeft: 10 },
-  continueBtn: { backgroundColor: '#4c52d9', paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginTop: 20 },
-  continueBtnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' }
+  continueBtn: { marginTop: 16 },
 });

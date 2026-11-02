@@ -1,21 +1,25 @@
 // Archivo: src/components/ScreenHeader.js
-// Encabezado simple con "← Volver" y título, para las pantallas secundarias del menú.
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+// Encabezado de las pantallas internas: botón de menú (☰) + título.
+// El propio header maneja el menú lateral, así cada pantalla no tiene que hacerlo.
+import { useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { MenuButton } from './MenuButton';
+import { SideMenu } from './SideMenu';
 
-export function ScreenHeader({ title, onBack }) {
+export function ScreenHeader({ title, right }) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   return (
     <View style={styles.header}>
-      <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-        <Text style={styles.backText}>← Volver</Text>
-      </TouchableOpacity>
-      <Text style={styles.title}>{title}</Text>
+      <MenuButton onPress={() => setIsMenuOpen(true)} />
+      <Text style={styles.title} numberOfLines={1}>{title}</Text>
+      {right}
+      <SideMenu visible={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  backBtn: { paddingVertical: 5, paddingRight: 15 },
-  backText: { color: '#b28cff', fontSize: 16, fontWeight: 'bold' },
-  title: { fontSize: 24, color: '#fff', fontFamily: 'serif', fontWeight: 'bold', marginLeft: 10 },
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 15 },
+  title: { flex: 1, fontSize: 24, color: '#fff', fontFamily: 'serif', fontWeight: 'bold' },
 });
