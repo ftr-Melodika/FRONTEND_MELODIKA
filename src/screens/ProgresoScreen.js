@@ -1,27 +1,54 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Background } from '../components/Background';
+import { useCallback, useContext, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Background } from '../components/Background';
+import { LoadingModal } from '../components/LoadingModal';
+import { AuthContext } from '../context/AuthContext';
+import { leccionesService } from '../services/leccionesService';
 
 export function ProgresoScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const { perfil } = useContext(AuthContext);
 
-  // 💡 DATOS MOCKEADOS: En el futuro esto vendrá de tu AuthContext o backend
+  const [resumen, setResumen] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelado = false;
+      async function cargar() {
+        if (!perfil?.id) return;
+        setLoading(true);
+        setError(null);
+        try {
+          const datos = await leccionesService.obtenerResumen(perfil.id);
+          if (!cancelado) setResumen(datos);
+        } catch (e) {
+          if (!cancelado) setError(e.message);
+        } finally {
+          if (!cancelado) setLoading(false);
+        }
+      }
+      cargar();
+      return () => { cancelado = true; };
+    }, [perfil?.id])
+  );
+
   const stats = {
-    xp: 1250,
-    racha: 3,
-    leccionesCompletadas: 5
+    xp: resumen?.xp ?? perfil?.xp ?? 0,
+    racha: resumen?.racha ?? perfil?.racha ?? 0,
+    leccionesCompletadas: resumen?.leccionesCompletadas ?? 0,
+    totalLecciones: resumen?.totalLecciones ?? 0,
   };
-
-  const cursoActual = {
-    nombre: "Guitarra Inicial",
-    porcentaje: 25, // 25%
-    proximaLeccion: "Primeros Acordes"
-  };
+  const cursoActual = resumen?.cursoActual;
 
   return (
     <Background>
-      <View style={[styles.container, { paddingLeft: Math.max(insets.left, 20) }]}> 
-        
+      <LoadingModal visible={loading} text="Calculando tu progreso..." />
+      <View style={[styles.container, { paddingLeft: Math.max(insets.left, 20) }]}>
+
         {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -30,12 +57,14 @@ export function ProgresoScreen({ navigation }) {
           <Text style={styles.title}>Tu Progreso</Text>
         </View>
 
+        {!!error && <Text style={styles.errorText}>{error}</Text>}
+
         {/* CONTENIDO A DOS COLUMNAS (Ideal para formato horizontal) */}
         <View style={styles.contentRow}>
-          
+
           {/* COLUMNA IZQUIERDA: Estadísticas Globales */}
           <View style={styles.statsColumn}>
-            
+
             <View style={styles.statCard}>
               <View style={[styles.iconCircle, { backgroundColor: 'rgba(178, 140, 255, 0.15)' }]}>
                 <Text style={styles.icon}>⚡</Text>
@@ -52,7 +81,7 @@ export function ProgresoScreen({ navigation }) {
               </View>
               <View style={styles.statTextWrapper}>
                 <Text style={styles.statLabel}>Racha Actual</Text>
-                <Text style={styles.statValue}>{stats.racha} Días</Text>
+                <Text style={styles.statValue}>{stats.racha} {stats.racha === 1 ? 'Día' : 'Días'}</Text>
               </View>
             </View>
 
@@ -62,7 +91,7 @@ export function ProgresoScreen({ navigation }) {
               </View>
               <View style={styles.statTextWrapper}>
                 <Text style={styles.statLabel}>Lecciones Completadas</Text>
-                <Text style={styles.statValue}>{stats.leccionesCompletadas}</Text>
+                <Text style={styles.statValue}>{stats.leccionesCompletadas} / {stats.totalLecciones}</Text>
               </View>
             </View>
 
@@ -70,28 +99,44 @@ export function ProgresoScreen({ navigation }) {
 
           {/* COLUMNA DERECHA: Curso Actual y Barra de Progreso */}
           <View style={styles.courseColumn}>
-            <View style={styles.courseCard}>
+            <ScrollView style={styles.courseCard} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
               <Text style={styles.courseOverline}>CURSO ACTIVO</Text>
-              <Text style={styles.courseTitle}>🎸 {cursoActual.nombre}</Text>
+              <Text style={styles.courseTitle}>🎸 {cursoActual?.nombre || 'Sin cursos todavía'}</Text>
 
               {/* Barra de progreso */}
               <View style={styles.progressContainer}>
                 <View style={styles.progressHeaderRow}>
                   <Text style={styles.progressLabel}>Progreso del curso</Text>
-                  <Text style={styles.progressPercentage}>{cursoActual.porcentaje}%</Text>
+                  <Text style={styles.progressPercentage}>{cursoActual?.porcentaje ?? 0}%</Text>
                 </View>
                 <View style={styles.progressBarBg}>
                   {/* El ancho se llena dinámicamente según el porcentaje */}
-                  <View style={[styles.progressBarFill, { width: `${cursoActual.porcentaje}%` }]} />
+                  <View style={[styles.progressBarFill, { width: `${cursoActual?.porcentaje ?? 0}%` }]} />
                 </View>
               </View>
 
-              <Text style={styles.nextLessonInfo}>Próxima lección: <Text style={{fontWeight:'bold', color: '#fff'}}>{cursoActual.proximaLeccion}</Text></Text>
+              {cursoActual?.proximaLeccion ? (
+                <Text style={styles.nextLessonInfo}>
+                  Próxima lección: <Text style={{ fontWeight: 'bold', color: '#fff' }}>{cursoActual.proximaLeccion}</Text>
+                </Text>
+              ) : cursoActual?.completado ? (
+                <Text style={styles.nextLessonInfo}>¡Terminaste este curso! 🏆</Text>
+              ) : null}
+
+              {/* Resto de los cursos */}
+              {(resumen?.cursos || []).filter((c) => c.id !== cursoActual?.id).map((c) => (
+                <View key={c.id} style={styles.otroCurso}>
+                  <Text style={styles.otroCursoNombre} numberOfLines={1}>
+                    {c.completado ? '✔️' : c.desbloqueado ? '🎸' : '🔒'}  {c.nombre}
+                  </Text>
+                  <Text style={styles.otroCursoPct}>{c.porcentaje ?? 0}%</Text>
+                </View>
+              ))}
 
               <TouchableOpacity style={styles.continueBtn} onPress={() => navigation.navigate('Home')}>
                 <Text style={styles.continueBtnText}>Continuar aprendiendo  ▶</Text>
               </TouchableOpacity>
-            </View>
+            </ScrollView>
           </View>
 
         </View>
@@ -103,12 +148,13 @@ export function ProgresoScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, width: '100%' },
-  
+
   // Header
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 25 },
   backBtn: { paddingVertical: 5, paddingRight: 15 },
   backText: { color: '#b28cff', fontSize: 16, fontWeight: 'bold' },
   title: { fontSize: 24, color: '#fff', fontFamily: 'serif', fontWeight: 'bold', marginLeft: 10 },
+  errorText: { color: '#ffb3bd', marginBottom: 10 },
 
   // Layout principal
   contentRow: { flex: 1, flexDirection: 'row', gap: 20 },
@@ -124,10 +170,10 @@ const styles = StyleSheet.create({
   statValue: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
 
   // Tarjeta de Curso (Derecha)
-  courseCard: { flex: 1, backgroundColor: '#111122', padding: 25, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(178, 140, 255, 0.2)', justifyContent: 'center' },
+  courseCard: { flex: 1, backgroundColor: '#111122', padding: 25, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(178, 140, 255, 0.2)' },
   courseOverline: { color: '#b28cff', fontSize: 12, fontWeight: 'bold', letterSpacing: 1.5, marginBottom: 8 },
   courseTitle: { fontSize: 28, color: '#fff', fontFamily: 'serif', fontWeight: 'bold', marginBottom: 30 },
-  
+
   progressContainer: { marginBottom: 25 },
   progressHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
   progressLabel: { color: 'rgba(255, 255, 255, 0.8)', fontSize: 14, fontWeight: '600' },
@@ -136,6 +182,9 @@ const styles = StyleSheet.create({
   progressBarFill: { height: '100%', backgroundColor: '#b28cff', borderRadius: 6 },
 
   nextLessonInfo: { color: 'rgba(255, 255, 255, 0.6)', fontSize: 14, marginBottom: 20 },
-  continueBtn: { backgroundColor: '#4c52d9', paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  otroCurso: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
+  otroCursoNombre: { color: 'rgba(255,255,255,0.8)', fontSize: 14, flex: 1 },
+  otroCursoPct: { color: '#a3fba3', fontSize: 14, fontWeight: 'bold', marginLeft: 10 },
+  continueBtn: { backgroundColor: '#4c52d9', paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginTop: 20 },
   continueBtnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' }
 });

@@ -38,6 +38,11 @@ export function SideMenu({ visible, onClose, perfil, navigation }) {
     Alert.alert('Melodika', `${nombreItem} estará disponible próximamente.`);
   };
 
+  const irA = (pantalla) => {
+    onClose();
+    navigation.navigate(pantalla);
+  };
+
   const handleLogout = async () => {
     onClose();
     // 👇 4. USAMOS EL LOGOUT GLOBAL (Limpia memoria, estado y almacenamiento)
@@ -65,16 +70,16 @@ export function SideMenu({ visible, onClose, perfil, navigation }) {
         <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll}>
           
           <AccordotionItem title="Perfil" icon="👤">
-            <SubMenuItem title="Configuración" icon="⚙️" onPress={() => handleProximamente('Configuración')} />
-            
+            <SubMenuItem
+              title="Configuración"
+              icon="⚙️"
+              onPress={() => { onClose(); navigation.navigate('EditUser', { perfilAEditar: perfil }); }}
+            />
+
             <AccordotionItem title="Seguimiento de usuario" icon="📈">
-              <SubMenuItem title="Logros y recompensas" icon="🏆" onPress={() => handleProximamente('Logros y recompensas')} />
-              <SubMenuItem
-                title="Progreso"
-                icon="📊"
-                onPress={() => { onClose(); navigation.navigate('Progreso'); }}
-              />
-              <SubMenuItem title="Ranking" icon="🥇" onPress={() => handleProximamente('Ranking')} />
+              <SubMenuItem title="Logros y recompensas" icon="🏆" onPress={() => irA('Logros')} />
+              <SubMenuItem title="Progreso" icon="📊" onPress={() => irA('Progreso')} />
+              <SubMenuItem title="Ranking" icon="🥇" onPress={() => irA('Ranking')} />
             </AccordotionItem>
           </AccordotionItem>
 
@@ -97,7 +102,7 @@ export function SideMenu({ visible, onClose, perfil, navigation }) {
           </AccordotionItem>
 
           <AccordotionItem title="Soporte" icon="🛠️">
-            <SubMenuItem title="Preguntas frecuentes" icon="❓" onPress={() => handleProximamente('Preguntas frecuentes')} />
+            <SubMenuItem title="Preguntas frecuentes" icon="❓" onPress={() => irA('PreguntasFrecuentes')} />
             <SubMenuItem title="Reportar errores" icon="🐛" onPress={() => handleProximamente('Reportar errores')} />
             <SubMenuItem title="Contacto" icon="📧" onPress={() => handleProximamente('Contacto')} />
           </AccordotionItem>

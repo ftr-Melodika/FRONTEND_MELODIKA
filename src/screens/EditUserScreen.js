@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { View, Text, StyleSheet, Alert, ScrollView, Dimensions } from 'react-native';
 import { Background } from '../components/Background';
 import { InputField } from '../components/InputField';
@@ -6,6 +6,7 @@ import { Button } from '../components/Button';
 import { DatePickerField } from '../components/form/DatePickerField';
 import { DropdownField } from '../components/form/DropdownField';
 import { perfilesService } from '../services/perfilesService';
+import { AuthContext } from '../context/AuthContext';
 
 const GENDER_OPTIONS = [
   { label: 'Masculino', value: 'Masculino' },
@@ -16,15 +17,19 @@ const GENDER_OPTIONS = [
 export function EditUserScreen({ route, navigation }) {
   // Recibimos el perfil desde la navegación
   const { perfilAEditar } = route.params;
+  const { perfil: perfilActivo, actualizarPerfil, quitarPerfil } = useContext(AuthContext);
+  const esPerfilActivo = perfilActivo?.id === perfilAEditar?.id;
+  // Si venimos desde el menú (Configuración) volvemos al Home; si no, a la selección de perfiles
+  const vieneDeSelectUser = navigation.getState()?.routes?.some((r) => r.name === 'SelectUser');
 
   const [nombre, setNombre] = useState(perfilAEditar?.nombre || '');
   const [username] = useState(perfilAEditar?.username || ''); // Readonly
   const [pais, setPais] = useState(perfilAEditar?.pais || '');
-  const [fotoUrl, setFotoUrl] = useState(perfilAEditar?.foto || '');
+  const [fotoUrl, setFotoUrl] = useState(perfilAEditar?.avatarUrl || '');
   const [gender, setGender] = useState(perfilAEditar?.genero || '');
   
   // Guardamos la fecha original si existe
-  const [birthdayISO, setBirthdayISO] = useState(perfilAEditar?.fecha_nacimiento || '');
+  const [birthdayISO, setBirthdayISO] = useState(perfilAEditar?.fechaNacimiento || '');
   
   const [loading, setLoading] = useState(false);
 
@@ -41,14 +46,22 @@ export function EditUserScreen({ route, navigation }) {
         nombre: nombre.trim(),
         fecha_nacimiento: birthdayISO,
         pais: pais.trim() || null,
-        foto: fotoUrl.trim() || null,
+        avatarUrl: fotoUrl.trim() || null,
         genero: gender || null
       };
 
       const perfilActualizado = await perfilesService.editarPerfil(perfilAEditar.id, datosActualizados);
       
       Alert.alert('¡Excelente!', 'Perfil actualizado correctamente.');
-      
+
+      // Si es el perfil que está en uso, actualizamos también la sesión
+      if (esPerfilActivo && perfilActualizado) await actualizarPerfil(perfilActualizado);
+
+      if (!vieneDeSelectUser) {
+        navigation.goBack();
+        return;
+      }
+
       // Volvemos a SelectUserScreen pasándole el perfil actualizado para optimizar el estado local
       navigation.navigate({
         name: 'SelectUser',
@@ -76,7 +89,14 @@ export function EditUserScreen({ route, navigation }) {
             try {
               await perfilesService.eliminarPerfil(perfilAEditar.id);
               Alert.alert('Perfil eliminado', 'El perfil se eliminó correctamente.');
-              
+
+              // Si borramos el perfil en uso, lo sacamos de la sesión y volvemos a elegir perfil
+              if (esPerfilActivo) await quitarPerfil();
+              if (!vieneDeSelectUser) {
+                navigation.reset({ index: 0, routes: [{ name: 'SelectUser' }] });
+                return;
+              }
+
               // Volvemos pasándole el ID eliminado para quitarlo del estado local
               navigation.navigate({
                 name: 'SelectUser',
@@ -114,7 +134,7 @@ export function EditUserScreen({ route, navigation }) {
             editable={false} 
             style={[styles.input, { opacity: 0.6 }]} 
           />
-          <DatePickerField onDateChange={setBirthdayISO} />
+          <DatePickerField onDateChange={setBirthdayISO} initialValue={perfilAEditar?.fechaNacimiento} />
           <InputField placeholder="País (opcional)" value={pais} onChangeText={setPais} />
           <DropdownField label="Género" options={GENDER_OPTIONS} value={gender} onSelect={setGender} />
           <InputField placeholder="Foto (URL opcional)" value={fotoUrl} onChangeText={setFotoUrl} />
@@ -125,8 +145,7 @@ export function EditUserScreen({ route, navigation }) {
           <Button 
             title="Eliminar perfil" 
             variant="secondary" 
-            onPress={handleDelete} 
-            disabled={loading}
+            onPress={handleDelete}
             style={styles.deleteButton}
             textStyle={styles.deleteText}
           />

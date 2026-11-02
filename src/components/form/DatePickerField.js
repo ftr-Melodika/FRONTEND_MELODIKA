@@ -4,10 +4,22 @@ import { View, Platform, TouchableOpacity, Text, StyleSheet } from 'react-native
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SelectField } from '../SelectField';
 
-export function DatePickerField({ onDateChange }) {
-  const [date, setDate] = useState(new Date(2008, 0, 1));
+// initialValue (opcional): fecha inicial en formato AAAA-MM-DD, para pantallas de edición
+function parsearISO(iso) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
+  if (!match) return null;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+export function DatePickerField({ onDateChange, initialValue }) {
+  const fechaInicial = parsearISO(initialValue);
+  const [date, setDate] = useState(fechaInicial || new Date(2008, 0, 1));
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [birthdayLabel, setBirthdayLabel] = useState('Seleccionar fecha de nacimiento');
+  const [birthdayLabel, setBirthdayLabel] = useState(
+    fechaInicial
+      ? `${String(fechaInicial.getDate()).padStart(2, '0')}/${String(fechaInicial.getMonth() + 1).padStart(2, '0')}/${fechaInicial.getFullYear()}`
+      : 'Seleccionar fecha de nacimiento'
+  );
   
   const onChangeDate = (event, selectedDate) => {
     // Android: el diálogo cierra automáticamente, manejamos setShowDatePicker aquí

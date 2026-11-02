@@ -17,14 +17,15 @@ export function RegisterScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!nombre || !apellido || !email || !password || !confirmPassword) return Alert.alert('Error', 'Faltan campos.');
+    if (!nombre || !apellido || !telefono || !email || !password || !confirmPassword) return Alert.alert('Error', 'Faltan campos.');
+    if (!/^\+?\d{10,15}$/.test(telefono.trim())) return Alert.alert('Error', 'El teléfono debe tener entre 10 y 15 números (sin espacios ni guiones).');
     // Comparamos versiones recortadas para evitar espacios accidentales
     if (String(password).trim() !== String(confirmPassword).trim()) return Alert.alert('Error', 'Las contraseñas no coinciden.');
     if (!acceptTerms) return Alert.alert('Error', 'Debes aceptar los términos y condiciones.');
 
     setLoading(true);
     try {
-      await authService.registrar(nombre.trim(), apellido.trim(), telefono.trim() || null, email.trim(), password);
+      await authService.registrar(nombre.trim(), apellido.trim(), telefono.trim(), email.trim(), password);
       Alert.alert('¡Éxito!', 'Cuenta creada correctamente. Ya podés iniciar sesión.');
       navigation.navigate('Login');
     } catch (error) {
@@ -48,7 +49,7 @@ export function RegisterScreen({ navigation }) {
           <Text style={styles.title}>Crear cuenta</Text>
           <InputField placeholder="Nombre" value={nombre} onChangeText={setNombre} />
           <InputField placeholder="Apellido" value={apellido} onChangeText={setApellido} />
-          <InputField placeholder="Teléfono" value={telefono} onChangeText={setTelefono} />
+          <InputField placeholder="Teléfono (ej: 1123456789)" value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" />
           <InputField placeholder="Correo electrónico" value={email} onChangeText={setEmail} keyboardType="email-address" />
           <InputField placeholder="Contraseña" secureTextEntry={true} value={password} onChangeText={setPassword} />
           <InputField placeholder="Confirmar contraseña" secureTextEntry={true} value={confirmPassword} onChangeText={setConfirmPassword} />

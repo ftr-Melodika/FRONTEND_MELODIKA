@@ -8,6 +8,10 @@ import { BASE_URL } from '../config/api'; // 👈 importás la variable, no ENDP
 const axiosClient = axios.create({
   baseURL: BASE_URL,
   timeout: 10000,
+  headers: {
+    // Evita la página de advertencia de ngrok (si no, devuelve HTML en vez de JSON)
+    'ngrok-skip-browser-warning': 'true',
+  },
 });
 // Interceptor de Salida (Queda igual)
 axiosClient.interceptors.request.use(
@@ -28,7 +32,8 @@ axiosClient.interceptors.response.use(
   },
   async (error) => {
     // Si el backend nos devuelve un error 401
-    if (error.response && error.response.status === 401) {
+    // (Solo si la request iba con token: un 401 en el login es "contraseña incorrecta", no sesión expirada)
+    if (error.response && error.response.status === 401 && error.config?.headers?.Authorization) {
       console.log('Sesión expirada detectada. Limpiando datos y memoria...');
       
       // NUEVO: Llamamos a la función global. 

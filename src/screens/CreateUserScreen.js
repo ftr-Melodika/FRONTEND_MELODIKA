@@ -18,7 +18,7 @@ const GENDER_OPTIONS = [
 ];
 
 export function CreateUserScreen({ navigation }) {
-  const { userData: cuenta, actualizarPerfil } = useContext(AuthContext); 
+  const { actualizarPerfil } = useContext(AuthContext);
 
   const [nombre, setNombre] = useState('');
   const [username, setUsername] = useState('');
@@ -39,12 +39,11 @@ export function CreateUserScreen({ navigation }) {
     try {
       // 👇 Usamos el servicio, la pantalla ya no sabe qué es un Endpoint
       const nuevoPerfil = await perfilesService.crearPerfil({
-        cuenta_id: cuenta.id, 
         nombre: nombre.trim(), 
         username: username.trim(), 
         fecha_nacimiento: birthdayISO, 
         pais: pais.trim() || null, 
-        foto: fotoUrl.trim() || null, 
+        avatarUrl: fotoUrl.trim() || null, 
         genero: gender || null
       });
       

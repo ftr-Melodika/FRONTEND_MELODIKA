@@ -18,6 +18,8 @@
     "and": "^0.0.3",
     "axios": "^1.18.1",
     "expo": "~57.0.30",
+    "expo-image-manipulator": "~57.0.21",
+    "expo-image-picker": "~57.0.20",
     "expo-linear-gradient": "~57.0.2",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",

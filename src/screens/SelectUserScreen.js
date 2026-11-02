@@ -9,6 +9,9 @@ import { ProfileAvatar } from '../components/ProfileAvatar';
 import { Button } from '../components/Button';
 import { LoadingModal } from '../components/LoadingModal';
 
+// Mismo límite que valida el backend (perfilService.MAX_PERFILES)
+const MAX_PERFILES = 4;
+
 export function SelectUserScreen({ navigation, route }) {
   const { logout, actualizarPerfil } = useContext(AuthContext);
   const [perfiles, setPerfiles] = useState([]);
@@ -94,6 +97,7 @@ export function SelectUserScreen({ navigation, route }) {
                 <View key={perfil.id} style={isEditMode ? styles.editWrapper : null}>
                   <ProfileAvatar 
                     nombre={perfil.nombre}
+                    foto={perfil.avatarUrl}
                     // Pasamos el perfil completo a la nueva función
                     onPress={() => handleActionPerfil(perfil)} 
                   />
@@ -103,7 +107,7 @@ export function SelectUserScreen({ navigation, route }) {
               ))}
               
               {/* Si estamos editando, ocultamos el botón de agregar */}
-              {!isEditMode && perfiles.length < 3 && (
+              {!isEditMode && perfiles.length < MAX_PERFILES && (
                 <ProfileAvatar 
                   isAddButton={true}
                   onPress={() => navigation.navigate('CreateUser')} 

@@ -4,6 +4,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthContext } from '../context/AuthContext';
 import { LoadingModal } from '../components/LoadingModal'; // 👈 El nuevo modal
 import { ProgresoScreen } from '../screens/ProgresoScreen';
+import { RankingScreen } from '../screens/RankingScreen';
+import { LogrosScreen } from '../screens/LogrosScreen';
+import { PreguntasFrecuentesScreen } from '../screens/PreguntasFrecuentesScreen';
 
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
@@ -44,6 +47,9 @@ export function AppNavigator() {
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Leccion" component={LeccionScreen} />
             <Stack.Screen name="Progreso" component={ProgresoScreen} />
+            <Stack.Screen name="Ranking" component={RankingScreen} />
+            <Stack.Screen name="Logros" component={LogrosScreen} />
+            <Stack.Screen name="PreguntasFrecuentes" component={PreguntasFrecuentesScreen} />
           </>
         )}
       </Stack.Navigator>

@@ -1,34 +1,43 @@
 import { View, Text, StyleSheet, Image } from 'react-native';
 
-export function SideMenuHeader({ perfil, cuenta }) {
+export function SideMenuHeader({ perfil }) {
   const nombreMostrar = perfil?.nombre || 'Usuario';
   const usernameMostrar = perfil?.username ? `@${perfil.username}` : '@usuario_melodika';
-  const fotoPerfilUri = perfil?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80';
+  const inicial = nombreMostrar.charAt(0).toUpperCase();
 
   return (
     <View style={styles.container}>
-      <Image source={{ uri: fotoPerfilUri }} style={styles.avatarImage} />
+      {perfil?.avatarUrl ? (
+        <Image source={{ uri: perfil.avatarUrl }} style={styles.avatarImage} />
+      ) : (
+        <View style={[styles.avatarImage, styles.avatarInicial]}>
+          <Text style={styles.inicial}>{inicial}</Text>
+        </View>
+      )}
       <View style={styles.textWrapper}>
         <Text style={styles.name} numberOfLines={1}>{nombreMostrar}</Text>
         <Text style={styles.username} numberOfLines={1}>{usernameMostrar}</Text>
+        <Text style={styles.stats}>⚡ {perfil?.xp ?? 0} XP   🔥 {perfil?.racha ?? 0}</Text>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    padding: 10, 
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
     paddingTop: 15,
-    borderBottomWidth: 1, 
+    borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.05)',
-    backgroundColor: '#3E3876' 
-    
+    backgroundColor: '#3E3876'
   },
   avatarImage: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: '#b28cff', backgroundColor: '#333' },
+  avatarInicial: { backgroundColor: '#b28cff', justifyContent: 'center', alignItems: 'center' },
+  inicial: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
   textWrapper: { marginLeft: 15, flex: 1 },
   name: { fontSize: 18, color: '#fff', fontWeight: 'bold', fontFamily: 'serif' },
   username: { fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 2 },
+  stats: { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 4, fontWeight: '600' },
 });

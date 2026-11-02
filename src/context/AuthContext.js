@@ -1,6 +1,7 @@
 // Archivo: src/context/AuthContext.js
 import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { perfilesService, normalizarPerfil } from '../services/perfilesService';
 
 export const AuthContext = createContext();
 
@@ -27,7 +28,7 @@ export const AuthProvider = ({ children }) => {
           setUserData(JSON.parse(cuenta));
           
           if (perfilGuardado) {
-            setPerfil(JSON.parse(perfilGuardado)); // Restauramos el perfil si existía
+            setPerfil(normalizarPerfil(JSON.parse(perfilGuardado))); // Restauramos el perfil si existía
           }
         }
       } catch (error) {
@@ -83,6 +84,31 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Actualiza solo algunos campos del perfil activo (ej: xp y racha después de una lección)
+  const parchearPerfil = async (cambios) => {
+    if (!perfil) return;
+    await actualizarPerfil({ ...perfil, ...cambios });
+  };
+
+  // Vuelve a pedir el perfil activo al backend para tener xp/racha al día
+  const refrescarPerfil = async () => {
+    if (!perfil?.id) return null;
+    try {
+      const perfilNuevo = await perfilesService.obtenerPerfil(perfil.id);
+      if (perfilNuevo) await actualizarPerfil(perfilNuevo);
+      return perfilNuevo;
+    } catch (error) {
+      console.log('Error refrescando perfil:', error.message);
+      return null;
+    }
+  };
+
+  // Si se borra el perfil que estaba en uso, lo sacamos de la sesión
+  const quitarPerfil = async () => {
+    await AsyncStorage.removeItem('userPerfil');
+    setPerfil(null);
+  };
+
   useEffect(() => {
     globalLogout = logout;
   }, []);
@@ -92,6 +118,9 @@ export const AuthProvider = ({ children }) => {
         login, 
         logout, 
         actualizarPerfil, // La exponemos para usarla en SelectUser y CreateUser
+        parchearPerfil,
+        refrescarPerfil,
+        quitarPerfil,
         isLoading, 
         userToken, 
         userData,

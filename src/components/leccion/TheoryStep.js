@@ -3,19 +3,27 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Button } from '../Button';
 
-export const TheoryStep = ({ textoPrincipal, textoDestacado, onBack, onNext }) => {
+// Si es el último paso de la lección, en vez de "Siguiente" mostramos "Terminar Lección"
+export const TheoryStep = ({ textoPrincipal, textoDestacado, onBack, onNext, esUltimo, finishing }) => {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.textoPrincipal}>{textoPrincipal}</Text>
-        <View style={styles.destacadoBox}>
-          <Text style={styles.textoDestacado}>{textoDestacado}</Text>
-        </View>
+        {!!textoDestacado && (
+          <View style={styles.destacadoBox}>
+            <Text style={styles.textoDestacado}>{textoDestacado}</Text>
+          </View>
+        )}
       </View>
-      
+
       <View style={styles.btnRow}>
-        <Button title="⬅ Atrás" variant="secondary" onPress={onBack} style={styles.btnHalf} />
-        <Button title="Siguiente 👉" onPress={onNext} style={styles.btnHalf} />
+        {onBack ? <Button title="⬅ Atrás" variant="secondary" onPress={onBack} style={styles.btnHalf} /> : null}
+        <Button
+          title={esUltimo ? 'Terminar Lección' : 'Siguiente 👉'}
+          onPress={onNext}
+          loading={finishing}
+          style={[styles.btnHalf, esUltimo && { backgroundColor: '#4c52d9' }]}
+        />
       </View>
     </View>
   );
