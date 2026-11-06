@@ -25,6 +25,8 @@ export const ENDPOINTS = {
   solicitud: (id, amistadId) => `${BASE_URL}/perfiles/${id}/solicitudes/${amistadId}`,
   amistad: (id, amistadId) => `${BASE_URL}/perfiles/${id}/amistades/${amistadId}`,
   amigos: (id) => `${BASE_URL}/perfiles/${id}/amigos`,
+  grupos: (id) => `${BASE_URL}/perfiles/${id}/grupos`,
+  grupo: (id, grupoId) => `${BASE_URL}/perfiles/${id}/grupos/${grupoId}`,
 
   // Cursos
   cursos: (perfilId) => `${BASE_URL}/cursos/perfil/${perfilId}`,

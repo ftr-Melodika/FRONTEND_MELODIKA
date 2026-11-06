@@ -12,6 +12,7 @@ import { PerfilPublicoScreen } from '../screens/PerfilPublicoScreen';
 import { SolicitudesScreen } from '../screens/SolicitudesScreen';
 import { FeedbackScreen } from '../screens/FeedbackScreen';
 import { GruposScreen } from '../screens/GruposScreen';
+import { GrupoChatScreen } from '../screens/GrupoChatScreen';
 import { ReportarErrorScreen } from '../screens/ReportarErrorScreen';
 import { ContactoScreen } from '../screens/ContactoScreen';
 
@@ -62,6 +63,7 @@ export function AppNavigator() {
             <Stack.Screen name="Solicitudes" component={SolicitudesScreen} />
             <Stack.Screen name="Feedback" component={FeedbackScreen} />
             <Stack.Screen name="Grupos" component={GruposScreen} />
+            <Stack.Screen name="GrupoChat" component={GrupoChatScreen} />
             <Stack.Screen name="ReportarError" component={ReportarErrorScreen} />
             <Stack.Screen name="Contacto" component={ContactoScreen} />
           </>

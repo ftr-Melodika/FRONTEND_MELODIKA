@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Alert, ScrollView, Dimensions, Switch } from 'react-native';
 import { Background } from '../components/Background';
 import { InputField } from '../components/InputField';
@@ -35,6 +35,34 @@ export function EditUserScreen({ route, navigation }) {
   const [birthdayISO, setBirthdayISO] = useState(perfilAEditar?.fechaNacimiento || '');
   
   const [loading, setLoading] = useState(false);
+  const [errorGuardado, setErrorGuardado] = useState(null);
+
+  // perfilAEditar puede ser una copia vieja guardada en la sesión, así que pedimos el valor real.
+  // Si el usuario ya tocó el interruptor, su elección manda sobre lo que llegue.
+  const privacidadTocadaRef = useRef(false);
+  const privacidadConfirmadaRef = useRef(false);
+  const perfilId = perfilAEditar?.id;
+
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      try {
+        const perfilReal = await perfilesService.obtenerPerfil(perfilId);
+        if (cancelado || typeof perfilReal?.esPublico !== 'boolean') return;
+        privacidadConfirmadaRef.current = true;
+        if (!privacidadTocadaRef.current) setEsPublico(perfilReal.esPublico);
+      } catch (error) {
+        console.log('Error leyendo la privacidad del perfil:', error.message);
+      }
+    })();
+    return () => { cancelado = true; };
+  }, [perfilId]);
+
+  const handleCambioPrivacidad = (valor) => {
+    privacidadTocadaRef.current = true;
+    setErrorGuardado(null);
+    setEsPublico(valor);
+  };
 
   const SCREEN_WIDTH = Dimensions.get('window').width;
   const cardWidth = Math.round(SCREEN_WIDTH * 0.94);
@@ -43,6 +71,7 @@ export function EditUserScreen({ route, navigation }) {
     if (!nombre || !birthdayISO) return Alert.alert('Error', 'El nombre y la fecha de nacimiento son obligatorios.');
     
     setLoading(true);
+    setErrorGuardado(null);
     try {
       // Mandamos solo los campos permitidos por el backend
       const datosActualizados = {
@@ -52,11 +81,17 @@ export function EditUserScreen({ route, navigation }) {
         avatarUrl: fotoUrl.trim() || null,
         genero: gender || null,
       };
-      // La privacidad solo viaja si el usuario la cambió
-      if (esPublico !== (perfilAEditar?.esPublico ?? true)) datosActualizados.esPublico = esPublico;
+      // No mandamos un valor que no sabemos si es real: podría pisar la privacidad con una copia vieja
+      const enviaPrivacidad = privacidadTocadaRef.current || privacidadConfirmadaRef.current;
+      if (enviaPrivacidad) datosActualizados.esPublico = esPublico;
 
       const perfilActualizado = await perfilesService.editarPerfil(perfilAEditar.id, datosActualizados);
-      
+
+      // Nunca mostramos éxito si la privacidad guardada no es la que eligió el usuario
+      if (enviaPrivacidad && perfilActualizado?.esPublico !== esPublico) {
+        throw new Error('No pudimos guardar la privacidad de tu perfil. Probá de nuevo.');
+      }
+
       Alert.alert('¡Excelente!', 'Perfil actualizado correctamente.');
 
       // Si es el perfil que está en uso, actualizamos también la sesión
@@ -74,6 +109,8 @@ export function EditUserScreen({ route, navigation }) {
         merge: true,
       });
     } catch (error) {
+      // También queda escrito en la pantalla: el Alert no se ve en todas las plataformas
+      setErrorGuardado(error.message);
       Alert.alert('Error al actualizar', error.message);
     } finally {
       setLoading(false);
@@ -163,12 +200,14 @@ export function EditUserScreen({ route, navigation }) {
             </View>
             <Switch
               value={esPublico}
-              onValueChange={setEsPublico}
+              onValueChange={handleCambioPrivacidad}
               trackColor={{ false: 'rgba(255,255,255,0.3)', true: '#b28cff' }}
               thumbColor="#fff"
               accessibilityLabel="Perfil público"
             />
           </View>
+
+          {!!errorGuardado && <Text style={styles.errorGuardado}>{errorGuardado}</Text>}
 
           <Button title="Guardar Cambios" onPress={handleUpdate} loading={loading} />
           
@@ -196,6 +235,7 @@ const styles = StyleSheet.create({
   privacidadTextos: { flex: 1 },
   privacidadTitulo: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
   privacidadDetalle: { color: 'rgba(255,255,255,0.75)', fontSize: 13, marginTop: 2 },
+  errorGuardado: { color: '#ffb3bd', fontSize: 14, fontWeight: '600', textAlign: 'center', marginTop: 4 },
   input: {
     width: '100%',
     height: 44,

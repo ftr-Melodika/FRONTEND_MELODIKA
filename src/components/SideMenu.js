@@ -115,10 +115,10 @@ export function SideMenu({ visible, onClose }) {
               onPress={() => irA('Practica')}
             />
 
-            <AccordotionItem title="Comunidad" icon="👥" defaultOpen={['Solicitudes', 'Feedback', 'Grupos'].includes(pantallaActual)}>
+            <AccordotionItem title="Comunidad" icon="👥" defaultOpen={['Solicitudes', 'Feedback', 'Grupos', 'GrupoChat'].includes(pantallaActual)}>
               <SubMenuItem title="Solicitudes y amigos" icon="👋" isActive={pantallaActual === 'Solicitudes'} onPress={() => irA('Solicitudes')} />
               <SubMenuItem title="Dar feedback" icon="💬" isActive={pantallaActual === 'Feedback'} onPress={() => irA('Feedback')} />
-              <SubMenuItem title="Grupos" icon="🤝" isActive={pantallaActual === 'Grupos'} onPress={() => irA('Grupos')} />
+              <SubMenuItem title="Grupos" icon="🤝" isActive={pantallaActual === 'Grupos' || pantallaActual === 'GrupoChat'} onPress={() => irA('Grupos')} />
             </AccordotionItem>
 
             <AccordotionItem title="Soporte" icon="🛠️" defaultOpen={['PreguntasFrecuentes', 'ReportarError', 'Contacto'].includes(pantallaActual)}>
