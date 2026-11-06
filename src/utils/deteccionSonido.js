@@ -8,7 +8,7 @@ const NOTAS = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La',
 const CUERDAS_AL_AIRE = { 1: 64, 2: 59, 3: 55, 4: 50, 5: 45, 6: 40 };
 const TRASTE_MAXIMO = 24;
 
-const NIVEL_MINIMO = 0.003; // Por debajo de este volumen lo tomamos como silencio
+export const NIVEL_MINIMO = 0.003; // Por debajo de este volumen lo tomamos como silencio
 
 // Separar notas graves requiere unos 3 Hz de resolución: por eso la ventana es larga
 const FRECUENCIA_TRABAJO = 12000;
@@ -100,7 +100,7 @@ export function calcularVolumen(muestras) {
 
 // Baja la frecuencia de muestreo para no sobrecargar el hilo de JS.
 // Promediar además funciona como un filtro simple de agudos.
-function reducir(muestras, factor) {
+export function reducir(muestras, factor) {
   if (factor === 1) return muestras;
   const reducidas = new Float32Array(Math.floor(muestras.length / factor));
   for (let i = 0; i < reducidas.length; i++) {

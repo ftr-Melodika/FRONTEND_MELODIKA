@@ -81,6 +81,11 @@ export function EstadoDeteccion({ objetivo, estado, lectura, aprobado }) {
     );
   }
 
+  return <AvisoMicrofono estado={estado} />;
+}
+
+// Lo que se muestra cuando el micrófono no está escuchando
+export function AvisoMicrofono({ estado }) {
   return (
     <View style={[styles.caja, styles.fila]} accessibilityLiveRegion="polite">
       <Text style={styles.textoSuave} numberOfLines={2}>{AVISOS[estado]}</Text>

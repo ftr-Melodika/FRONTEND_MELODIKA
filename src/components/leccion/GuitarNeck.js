@@ -122,7 +122,7 @@ export function GuitarNeck({ targetNumber, cuerda, dotLeft, dotBottom, posicione
 const styles = StyleSheet.create({
   mastil: { width: '100%', backgroundColor: '#4A2E1B', borderRadius: 10, borderWidth: BORDE, borderColor: '#2A180E', overflow: 'hidden', position: 'relative', marginBottom: 8 },
   tituloAlAire: { position: 'absolute', top: 2, left: ANCHO_ETIQUETA_CUERDA, width: ANCHO_AL_AIRE, color: '#a3fba3', fontSize: 10, fontWeight: 'bold', textAlign: 'center' },
-  zonaTrastes: { ...StyleSheet.absoluteFillObject, left: INICIO_TRASTES, flexDirection: 'row' },
+  zonaTrastes: { position: 'absolute', top: 0, bottom: 0, right: 0, left: INICIO_TRASTES, flexDirection: 'row' },
   cejuela: { borderLeftWidth: ANCHO_CEJUELA, borderLeftColor: '#EDE6D6' },
   traste: { flex: 1, borderRightWidth: 4, borderRightColor: 'rgba(192,192,192,0.8)' },
   trasteNumero: { marginTop: 2, color: '#a3fba3', fontSize: 10, fontWeight: 'bold', textAlign: 'center' },
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
   cuerdaNumeroActiva: { color: '#fff', backgroundColor: '#32CD32', borderRadius: 10, overflow: 'hidden' },
   cuerdaLinea: { flex: 1, height: 2, backgroundColor: '#E8E8E8', shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.8, shadowRadius: 2 },
   cuerdaGruesa: { height: 3, backgroundColor: '#D3D3D3' },
-  capaPuntos: { ...StyleSheet.absoluteFillObject, left: INICIO_TRASTES },
+  capaPuntos: { position: 'absolute', top: 0, bottom: 0, right: 0, left: INICIO_TRASTES },
   punto: { position: 'absolute', backgroundColor: '#32CD32', borderWidth: 2, borderColor: '#fff', justifyContent: 'center', alignItems: 'center', zIndex: 10, shadowColor: '#32CD32', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 10, elevation: 8 },
   // La cuerda se ve a través del anillo: indica que no se pisa nada
   puntoAlAire: { backgroundColor: 'transparent', borderWidth: 4, borderColor: '#32CD32', elevation: 0 },

@@ -115,6 +115,8 @@ export function SideMenu({ visible, onClose }) {
               onPress={() => irA('Practica')}
             />
 
+            <MenuItem title="Afinador" icon="notas" isActive={pantallaActual === 'Afinador'} onPress={() => irA('Afinador')} />
+
             <AccordotionItem title="Comunidad" icon="amigos" defaultOpen={['Solicitudes', 'Feedback', 'Grupos', 'GrupoChat'].includes(pantallaActual)}>
               <SubMenuItem title="Solicitudes y amigos" icon="saludo" isActive={pantallaActual === 'Solicitudes'} onPress={() => irA('Solicitudes')} />
               <SubMenuItem title="Dar feedback" icon="chat" isActive={pantallaActual === 'Feedback'} onPress={() => irA('Feedback')} />
@@ -131,10 +133,6 @@ export function SideMenu({ visible, onClose }) {
               <SubMenuItem title="Reportar errores" icon="insecto" isActive={pantallaActual === 'ReportarError'} onPress={() => irA('ReportarError')} />
               <SubMenuItem title="Contacto" icon="sobre" isActive={pantallaActual === 'Contacto'} onPress={() => irA('Contacto')} />
             </AccordotionItem>
-
-            {__DEV__ && (
-              <MenuItem title="Probar micrófono" icon="notas" isActive={pantallaActual === 'PruebaSonido'} onPress={() => irA('PruebaSonido')} />
-            )}
 
             <View style={{ height: 10 }} />
 

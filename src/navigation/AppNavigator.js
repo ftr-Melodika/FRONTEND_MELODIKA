@@ -24,7 +24,7 @@ import { SelectUserScreen } from '../screens/SelectUserScreen';
 import { EditUserScreen } from '../screens/EditUserScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { LeccionScreen } from '../screens/LeccionScreen';
-import { PruebaSonidoScreen } from '../screens/PruebaSonidoScreen';
+import { AfinadorScreen } from '../screens/AfinadorScreen';
 import { Background } from '../components/Background';
 
 const Stack = createNativeStackNavigator();
@@ -93,7 +93,7 @@ export function AppNavigator() {
             <Stack.Screen name="GrupoChat" component={GrupoChatScreen} />
             <Stack.Screen name="ReportarError" component={ReportarErrorScreen} />
             <Stack.Screen name="Contacto" component={ContactoScreen} />
-            {__DEV__ && <Stack.Screen name="PruebaSonido" component={PruebaSonidoScreen} />}
+            <Stack.Screen name="Afinador" component={AfinadorScreen} />
           </>
         )}
       </Stack.Navigator>
