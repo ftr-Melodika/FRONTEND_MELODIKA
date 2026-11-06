@@ -71,7 +71,7 @@ export function SideMenu({ visible, onClose }) {
     >
       <View style={StyleSheet.absoluteFill}>
         {/* Fondo oscuro: tocarlo cierra el menú */}
-        <Animated.View style={[styles.backdrop, { opacity: fondoAnim }]}>
+        <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: fondoAnim }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Cerrar menú" />
         </Animated.View>
 
@@ -115,7 +115,8 @@ export function SideMenu({ visible, onClose }) {
               onPress={() => irA('Practica')}
             />
 
-            <AccordotionItem title="Comunidad" icon="👥" defaultOpen={['Feedback', 'Grupos'].includes(pantallaActual)}>
+            <AccordotionItem title="Comunidad" icon="👥" defaultOpen={['Solicitudes', 'Feedback', 'Grupos'].includes(pantallaActual)}>
+              <SubMenuItem title="Solicitudes y amigos" icon="👋" isActive={pantallaActual === 'Solicitudes'} onPress={() => irA('Solicitudes')} />
               <SubMenuItem title="Dar feedback" icon="💬" isActive={pantallaActual === 'Feedback'} onPress={() => irA('Feedback')} />
               <SubMenuItem title="Grupos" icon="🤝" isActive={pantallaActual === 'Grupos'} onPress={() => irA('Grupos')} />
             </AccordotionItem>
@@ -146,7 +147,7 @@ export function SideMenu({ visible, onClose }) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0, 0, 0, 0.6)' },
+  backdrop: { backgroundColor: 'rgba(0, 0, 0, 0.6)' },
   drawer: {
     position: 'absolute', top: 0, bottom: 0, left: 0,
     backgroundColor: '#3E3876', // Fondo Deep Dark Figma

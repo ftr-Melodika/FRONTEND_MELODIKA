@@ -8,6 +8,8 @@ import { RankingScreen } from '../screens/RankingScreen';
 import { LogrosScreen } from '../screens/LogrosScreen';
 import { PreguntasFrecuentesScreen } from '../screens/PreguntasFrecuentesScreen';
 import { PracticaScreen } from '../screens/PracticaScreen';
+import { PerfilPublicoScreen } from '../screens/PerfilPublicoScreen';
+import { SolicitudesScreen } from '../screens/SolicitudesScreen';
 import { FeedbackScreen } from '../screens/FeedbackScreen';
 import { GruposScreen } from '../screens/GruposScreen';
 import { ReportarErrorScreen } from '../screens/ReportarErrorScreen';
@@ -56,6 +58,8 @@ export function AppNavigator() {
             <Stack.Screen name="Logros" component={LogrosScreen} />
             <Stack.Screen name="PreguntasFrecuentes" component={PreguntasFrecuentesScreen} />
             <Stack.Screen name="Practica" component={PracticaScreen} />
+            <Stack.Screen name="PerfilPublico" component={PerfilPublicoScreen} />
+            <Stack.Screen name="Solicitudes" component={SolicitudesScreen} />
             <Stack.Screen name="Feedback" component={FeedbackScreen} />
             <Stack.Screen name="Grupos" component={GruposScreen} />
             <Stack.Screen name="ReportarError" component={ReportarErrorScreen} />

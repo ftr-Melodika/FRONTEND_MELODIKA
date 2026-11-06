@@ -19,6 +19,13 @@ export const ENDPOINTS = {
   ranking: `${BASE_URL}/perfiles/ranking`,
   mensajes: (id) => `${BASE_URL}/perfiles/${id}/mensajes`,
 
+  // Social (id = perfil activo)
+  perfilSocial: (id, otroId) => `${BASE_URL}/perfiles/${id}/social/${otroId}`,
+  solicitudes: (id) => `${BASE_URL}/perfiles/${id}/solicitudes`,
+  solicitud: (id, amistadId) => `${BASE_URL}/perfiles/${id}/solicitudes/${amistadId}`,
+  amistad: (id, amistadId) => `${BASE_URL}/perfiles/${id}/amistades/${amistadId}`,
+  amigos: (id) => `${BASE_URL}/perfiles/${id}/amigos`,
+
   // Cursos
   cursos: (perfilId) => `${BASE_URL}/cursos/perfil/${perfilId}`,
   progreso: (perfilId) => `${BASE_URL}/cursos/perfil/${perfilId}/progreso`,

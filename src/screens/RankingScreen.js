@@ -1,6 +1,6 @@
 // Archivo: src/screens/RankingScreen.js
 import { useCallback, useContext, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Background } from '../components/Background';
@@ -42,7 +42,11 @@ export function RankingScreen({ navigation }) {
     const esYo = (item.id && item.id === perfil?.id) || item.username === perfil?.username;
     const nombre = item.username || item.nombre || 'Jugador';
     return (
-      <View style={[styles.row, esYo && styles.rowYo]}>
+      <TouchableOpacity
+        style={[styles.row, esYo && styles.rowYo]}
+        onPress={() => navigation.navigate('PerfilPublico', { perfilId: item.id })}
+        activeOpacity={0.7}
+      >
         <Text style={styles.posicion}>{MEDALLAS[posicion - 1] || `#${posicion}`}</Text>
         {item.avatar_url ? (
           <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
@@ -54,7 +58,7 @@ export function RankingScreen({ navigation }) {
         <Text style={styles.nombre} numberOfLines={1}>@{nombre}{esYo ? '  (vos)' : ''}</Text>
         <Text style={styles.racha}>🔥 {item.racha ?? 0}</Text>
         <Text style={styles.xp}>{item.xp ?? 0} XP</Text>
-      </View>
+      </TouchableOpacity>
     );
   };
 
