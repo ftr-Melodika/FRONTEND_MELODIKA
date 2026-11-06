@@ -134,6 +134,10 @@ export function SideMenu({ visible, onClose }) {
               <SubMenuItem title="Contacto" icon="📧" onPress={() => handleProximamente('Contacto')} />
             </AccordotionItem>
 
+            {__DEV__ && (
+              <MenuItem title="Probar micrófono" icon="🎤" isActive={pantallaActual === 'PruebaSonido'} onPress={() => irA('PruebaSonido')} />
+            )}
+
             <View style={{ height: 10 }} />
 
             <SideMenuFooter

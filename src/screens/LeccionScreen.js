@@ -1,6 +1,7 @@
 // Archivo: src/screens/LeccionScreen.js
 import { useState, useContext, useMemo } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Background } from '../components/Background';
 
 import { LeccionSidebar } from '../components/leccion/LeccionSideBar';
@@ -12,6 +13,7 @@ import { AuthContext } from '../context/AuthContext';
 import { useStreak } from '../hooks/useStreak';
 import { rachaService } from '../services/rachaService';
 import { leccionesService } from '../services/leccionesService';
+import { obtenerObjetivo } from '../utils/deteccionSonido';
 
 // Texto por defecto de la barra lateral según el tipo de paso
 const INSTRUCCION_POR_DEFECTO = {
@@ -25,7 +27,8 @@ function armarPasos(leccion) {
   const pasos = [];
   if (leccion.videoId) pasos.push('video');
   pasos.push('teoria');
-  if (leccion.trasteObjetivo !== null && leccion.trasteObjetivo !== undefined) pasos.push('practica');
+  const hayTraste = leccion.trasteObjetivo !== null && leccion.trasteObjetivo !== undefined;
+  if (hayTraste || obtenerObjetivo(leccion)) pasos.push('practica');
   return pasos;
 }
 
@@ -40,6 +43,8 @@ export function LeccionScreen({ route, navigation }) {
   const { perfil, parchearPerfil } = useContext(AuthContext);
   const perfilId = perfil?.id;
   const { showStreak } = useStreak();
+  // La app dibuja hasta el borde: a la derecha pueden estar la cámara o la barra de navegación
+  const insets = useSafeAreaInsets();
 
   const pasoActual = pasos[indice];
   const esUltimo = indice === pasos.length - 1;
@@ -53,21 +58,27 @@ export function LeccionScreen({ route, navigation }) {
   // Al terminar: 1) registramos la lección (XP) en el backend, 2) chequeamos la racha,
   // 3) actualizamos el perfil en memoria y 4) volvemos al mapa.
   // El frontend NO decide si la racha sube: solo obedece lo que devuelve el backend.
-  const handleTerminar = async () => {
+  // Si el alumno salteó la detección (omitida) no suma XP ni sostiene la racha.
+  const handleTerminar = async ({ omitida = false } = {}) => {
     if (finishing) return;
     setFinishing(true);
 
     let xpGanada = 0;
     let yaCompletada = false;
     let cursoCompletado = false;
+    let quedoOmitida = omitida;
     const cambiosPerfil = {};
 
     try {
       if (perfilId && !leccion.esMock) {
-        const resultado = await leccionesService.completarLeccion(perfilId, cursoId, leccion.id);
+        const resultado = await leccionesService.completarLeccion(perfilId, cursoId, leccion.id, { omitida });
         xpGanada = resultado.xpGanada || 0;
         yaCompletada = resultado.yaCompletada;
-        cursoCompletado = !!resultado.cursoCompletado;
+        // El backend avisa si el curso está terminado, aunque ya lo estuviera antes de esta lección
+        cursoCompletado = !!resultado.cursoCompletado && !route.params?.cursoYaCompletado;
+        quedoOmitida = resultado.omitida === true;
+        // Pidió saltear una lección ya completada: el backend no cambia nada
+        if (omitida && resultado.omitida === false && xpGanada === 0) yaCompletada = true;
         if (resultado.xpTotal !== null && resultado.xpTotal !== undefined) {
           cambiosPerfil.xp = Number(resultado.xpTotal);
         }
@@ -78,7 +89,7 @@ export function LeccionScreen({ route, navigation }) {
       return;
     }
 
-    if (perfilId) {
+    if (perfilId && !omitida) {
       const racha = await rachaService.chequearRacha(perfilId);
       if (racha?.exito !== false && racha?.rachaActual !== undefined) {
         cambiosPerfil.racha = racha.rachaActual;
@@ -93,7 +104,10 @@ export function LeccionScreen({ route, navigation }) {
 
     setFinishing(false);
 
-    if (yaCompletada) {
+    if (quedoOmitida) {
+      const siguiente = cursoCompletado ? 'Terminaste el curso.' : 'Podés seguir con la siguiente.';
+      Alert.alert('Lección salteada', `${siguiente} No sumó XP, pero si volvés y la tocás bien lo ganás.`);
+    } else if (yaCompletada) {
       Alert.alert('¡Bien repasado! 🎸', 'Ya habías completado esta lección, así que no suma XP de nuevo.');
     } else if (cursoCompletado) {
       Alert.alert('¡Curso completado! 🏆', `Ganaste ${xpGanada} XP y terminaste el curso. ¡Se desbloqueó el siguiente!`);
@@ -105,7 +119,7 @@ export function LeccionScreen({ route, navigation }) {
 
   return (
     <Background>
-      <View style={styles.horizontalContainer}>
+      <View style={[styles.horizontalContainer, { paddingRight: Math.max(insets.right, 15) }]}>
 
         <LeccionSidebar
           leccion={leccion}
@@ -135,11 +149,7 @@ export function LeccionScreen({ route, navigation }) {
 
           {pasoActual === 'practica' && (
             <PracticeStep
-              trasteObjetivo={leccion.trasteObjetivo}
-              cuerda={leccion.cuerda}
-              notaEsperada={leccion.notaEsperada}
-              dotLeft={leccion.dotLeft}
-              dotBottom={leccion.dotBottom}
+              leccion={leccion}
               onBack={irAtras}
               onFinish={handleTerminar}
               finishing={finishing}

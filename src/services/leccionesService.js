@@ -67,6 +67,8 @@ function mapearLeccion(ejercicio) {
     instrucciones: parsearInstrucciones(ejercicio.instrucciones),
     cuerda: ejercicio.cuerda ?? null,
     trasteObjetivo: ejercicio.trasteObjetivo ?? null,
+    practica: ejercicio.practica ?? null,
+    omitida: !!ejercicio.omitida,
     notaEsperada: ejercicio.notaEsperada ?? null,
     dotLeft: ejercicio.dotLeft || null,
     dotBottom: ejercicio.dotBottom || null,
@@ -148,9 +150,11 @@ export const leccionesService = {
     };
   },
 
-  completarLeccion: async (perfilId, cursoId, leccionId) => {
+  // Con omitida, el alumno salteó la detección: desbloquea la siguiente lección pero no suma XP
+  completarLeccion: async (perfilId, cursoId, leccionId, { omitida = false } = {}) => {
     try {
-      const response = await axiosClient.post(ENDPOINTS.completarLeccion(perfilId, cursoId, leccionId));
+      const cuerpo = omitida ? { omitida: true } : undefined;
+      const response = await axiosClient.post(ENDPOINTS.completarLeccion(perfilId, cursoId, leccionId), cuerpo);
       return { ...response.data?.data, yaCompletada: false };
     } catch (error) {
       const mensaje = getErrorMessage(error);

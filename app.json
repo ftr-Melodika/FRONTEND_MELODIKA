@@ -33,7 +33,14 @@
           "photosPermission": "Melodika necesita acceso a tus fotos para elegir tu foto de perfil."
         }
       ],
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Melodika usa el micrófono para escuchar las notas y acordes que tocás. El audio no se guarda ni se envía."
+        }
+      ],
+      "expo-asset"
     ]
   }
 }

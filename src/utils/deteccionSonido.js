@@ -1,0 +1,387 @@
+// Archivo: src/utils/deteccionSonido.js
+// Detección de notas y acordes. Es lógica pura: no depende de React ni del micrófono,
+// así se puede probar con audio sintético (ver deteccionSonido.test.js).
+
+const NOTAS = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'];
+
+// Afinación estándar, con la numeración de GuitarNeck: cuerda -> nota MIDI al aire
+const CUERDAS_AL_AIRE = { 1: 64, 2: 59, 3: 55, 4: 50, 5: 45, 6: 40 };
+const TRASTE_MAXIMO = 24;
+
+const NIVEL_MINIMO = 0.003; // Por debajo de este volumen lo tomamos como silencio
+
+// Separar notas graves requiere unos 3 Hz de resolución: por eso la ventana es larga
+const FRECUENCIA_TRABAJO = 12000;
+const VENTANA = 4096;
+const MS_ENTRE_ANALISIS = 150;
+const FRECUENCIA_MIN = 70;
+const FRECUENCIA_MAX = 1400;
+
+const UMBRAL_PICO = 0.01; // Potencia mínima de un pico, relativa al más fuerte
+const UMBRAL_PRESENTE = 0.03; // Desde acá una nota esperada cuenta como presente
+const UMBRAL_SOBRANTE = 0.25; // Una nota ajena solo molesta si suena fuerte
+const TOLERANCIA_ARMONICO_CENTS = 35;
+const ARMONICO_MAXIMO = 6;
+// Más arriba ya no hay notas de un acorde abierto, pero una cuerda grave sigue dando armónicos.
+// Solo cuentan si son más débiles que la nota grave: una nota aguda fuerte no es un armónico.
+const ARMONICO_MAXIMO_DEBIL = 16;
+
+// Ruido ambiente: se mide por frecuencia y un pico debe superarlo por este factor (unos 12 dB)
+const MARGEN_SOBRE_RUIDO = 16;
+const BINS_SUAVIZADO_RUIDO = 5; // El ruido fluctúa mucho en cada frecuencia: se promedia con sus vecinas
+const LECTURAS_CALIBRACION = 8; // Alrededor de 1,5 segundos al abrir la práctica
+// Se adapta lento en los dos sentidos: una nota sostenida no debe tomarse por ruido,
+// y en una pausa del murmullo no hay que olvidar que el murmullo va a volver.
+const ADAPTACION_SUBE = 0.08;
+const ADAPTACION_BAJA = 0.05;
+// Solo baja rápido si la frecuencia quedó muy por debajo: alguien tocó mientras se medía el ruido
+const ADAPTACION_BAJA_RAPIDA = 0.3;
+const CAIDA_BRUSCA = 16;
+const LIMITE_SUBIDA = 3;
+
+// Una nota debe mantenerse para contar: una voz o un ruido cambian de frecuencia enseguida
+const LECTURAS_ESTABLES = 3;
+const MS_PARA_APROBAR = 300;
+const LECTURAS_PARA_APROBAR = 3;
+const MS_DE_GRACIA = 300; // Una lectura mala suelta (el golpe de la púa) no corta el acierto
+// En un rasgueo con ruido alguna cuerda se hunde por momentos: cuenta si se oyó hace poco (unos 600 ms)
+const LECTURAS_MEMORIA_ACORDE = 4;
+
+const claseDeMidi = (midi) => ((Math.round(midi) % 12) + 12) % 12;
+export const nombreDeMidi = (midi) => NOTAS[claseDeMidi(midi)];
+export const midiAFrecuencia = (midi) => 440 * 2 ** ((midi - 69) / 12);
+const frecuenciaAMidi = (frecuencia) => 69 + 12 * Math.log2(frecuencia / 440);
+
+export function midiDePosicion(cuerda, traste) {
+  const alAire = CUERDAS_AL_AIRE[Number(cuerda)];
+  const numeroTraste = Number(traste);
+  if (alAire === undefined || !Number.isInteger(numeroTraste) || numeroTraste < 0 || numeroTraste > TRASTE_MAXIMO) return null;
+  return alAire + numeroTraste;
+}
+
+function posicionesValidas(posiciones) {
+  if (!Array.isArray(posiciones) || posiciones.length === 0) return false;
+  const cuerdas = posiciones.map((p) => Number(p?.cuerda));
+  if (new Set(cuerdas).size !== cuerdas.length) return false;
+  return posiciones.every((p) => midiDePosicion(p?.cuerda, p?.traste) !== null);
+}
+
+// Qué tiene que sonar en una lección. Usa `practica` si es válida y, si no, cuerda + trasteObjetivo.
+// Nadie valida estos datos en el backend, así que un dato inválido se trata como si no existiera.
+// Devuelve { tipo, nombre, posiciones, midis } o null si la lección no permite detectar nada.
+export function obtenerObjetivo(leccion) {
+  const practica = leccion?.practica;
+  if (posicionesValidas(practica?.posiciones)) {
+    const cantidad = practica.posiciones.length;
+    if ((practica.tipo === 'nota' && cantidad === 1) || (practica.tipo === 'acorde' && cantidad >= 2)) {
+      const posiciones = practica.posiciones.map((p) => ({ ...p, cuerda: Number(p.cuerda), traste: Number(p.traste) }));
+      const midis = posiciones.map((p) => midiDePosicion(p.cuerda, p.traste));
+      return { tipo: practica.tipo, nombre: practica.nombre || nombreDeMidi(midis[0]), posiciones, midis };
+    }
+  }
+
+  if (leccion?.cuerda === null || leccion?.cuerda === undefined) return null;
+  if (leccion?.trasteObjetivo === null || leccion?.trasteObjetivo === undefined) return null;
+  const midi = midiDePosicion(leccion.cuerda, leccion.trasteObjetivo);
+  if (midi === null) return null;
+  return {
+    tipo: 'nota',
+    nombre: nombreDeMidi(midi),
+    posiciones: [{ cuerda: Number(leccion.cuerda), traste: Number(leccion.trasteObjetivo) }],
+    midis: [midi],
+  };
+}
+
+export function calcularVolumen(muestras) {
+  let suma = 0;
+  for (let i = 0; i < muestras.length; i++) suma += muestras[i] * muestras[i];
+  return muestras.length ? Math.sqrt(suma / muestras.length) : 0;
+}
+
+// Baja la frecuencia de muestreo para no sobrecargar el hilo de JS.
+// Promediar además funciona como un filtro simple de agudos.
+function reducir(muestras, factor) {
+  if (factor === 1) return muestras;
+  const reducidas = new Float32Array(Math.floor(muestras.length / factor));
+  for (let i = 0; i < reducidas.length; i++) {
+    let suma = 0;
+    for (let j = 0; j < factor; j++) suma += muestras[i * factor + j];
+    reducidas[i] = suma / factor;
+  }
+  return reducidas;
+}
+
+// ---- Análisis del espectro ----
+
+// FFT en el lugar, para tamaños que son potencia de 2
+function fft(re, im) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) {
+      [re[i], re[j]] = [re[j], re[i]];
+      [im[i], im[j]] = [im[j], im[i]];
+    }
+  }
+  for (let largo = 2; largo <= n; largo <<= 1) {
+    const angulo = (-2 * Math.PI) / largo;
+    const paso = largo >> 1;
+    for (let inicio = 0; inicio < n; inicio += largo) {
+      for (let k = 0; k < paso; k++) {
+        const wr = Math.cos(angulo * k);
+        const wi = Math.sin(angulo * k);
+        const a = inicio + k;
+        const b = a + paso;
+        const tr = re[b] * wr - im[b] * wi;
+        const ti = re[b] * wi + im[b] * wr;
+        re[b] = re[a] - tr;
+        im[b] = im[a] - ti;
+        re[a] += tr;
+        im[a] += ti;
+      }
+    }
+  }
+}
+
+// Potencia de cada frecuencia en un bloque de audio
+export function calcularPotencias(muestras) {
+  const n = muestras.length;
+  const re = new Float64Array(n);
+  const im = new Float64Array(n);
+  for (let i = 0; i < n; i++) re[i] = muestras[i] * (0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (n - 1)));
+  fft(re, im);
+  const potencias = new Float64Array(n / 2 + 1);
+  for (let i = 0; i <= n / 2; i++) potencias[i] = re[i] * re[i] + im[i] * im[i];
+  return potencias;
+}
+
+// Aprende cuánto ruido hay en cada frecuencia y se adapta si el ambiente cambia.
+// Un ventilador o una música de fondo constante dejan de molestar; una nota recién tocada no.
+function crearPerfilRuido() {
+  let perfil = null;
+  let lecturas = 0;
+  return {
+    listo: () => lecturas >= LECTURAS_CALIBRACION,
+    // Promedio con las frecuencias vecinas, sin bajar de lo medido: un tono constante sigue tapado
+    potencias() {
+      const suavizado = new Float64Array(perfil.length);
+      let suma = 0;
+      for (let i = 0; i < perfil.length; i++) {
+        suma += perfil[i];
+        if (i > 2 * BINS_SUAVIZADO_RUIDO) suma -= perfil[i - 2 * BINS_SUAVIZADO_RUIDO - 1];
+        const centro = i - BINS_SUAVIZADO_RUIDO;
+        if (centro >= 0) suavizado[centro] = Math.max(perfil[centro], suma / (2 * BINS_SUAVIZADO_RUIDO + 1));
+      }
+      for (let i = Math.max(0, perfil.length - BINS_SUAVIZADO_RUIDO); i < perfil.length; i++) suavizado[i] = perfil[i];
+      return suavizado;
+    },
+    agregar(potencias) {
+      if (!perfil || perfil.length !== potencias.length) {
+        perfil = new Float64Array(potencias.length);
+        lecturas = 0;
+      }
+      const calibrando = lecturas < LECTURAS_CALIBRACION;
+      for (let i = 0; i < perfil.length; i++) {
+        if (calibrando) {
+          perfil[i] += (potencias[i] - perfil[i]) / (lecturas + 1);
+        } else if (potencias[i] < perfil[i]) {
+          const adaptacion = potencias[i] * CAIDA_BRUSCA < perfil[i] ? ADAPTACION_BAJA_RAPIDA : ADAPTACION_BAJA;
+          perfil[i] += (potencias[i] - perfil[i]) * adaptacion;
+        } else {
+          perfil[i] += (Math.min(potencias[i], perfil[i] * LIMITE_SUBIDA) - perfil[i]) * ADAPTACION_SUBE;
+        }
+      }
+      lecturas += 1;
+    },
+  };
+}
+
+function esArmonicoDe(pico, grave) {
+  const multiplo = Math.round(pico.frecuencia / grave.frecuencia);
+  if (multiplo < 2 || multiplo > ARMONICO_MAXIMO_DEBIL) return false;
+  if (multiplo > ARMONICO_MAXIMO && pico.potencia > grave.potencia) return false;
+  const cents = 1200 * Math.log2(pico.frecuencia / (grave.frecuencia * multiplo));
+  return Math.abs(cents) <= TOLERANCIA_ARMONICO_CENTS;
+}
+
+// Notas que suenan por encima del ruido, cada una como { frecuencia, midi, potencia },
+// con la potencia relativa a la más fuerte. Resta el ruido medido y descarta los armónicos,
+// porque el armónico de una cuerda no prueba que suene otra: el Do grave también
+// produce un Sol aunque la cuerda de Sol esté apagada.
+export function encontrarFundamentales(potencias, hzPorBin, ruido = null) {
+  const binMin = Math.max(1, Math.floor(FRECUENCIA_MIN / hzPorBin));
+  const binMax = Math.min(potencias.length - 2, Math.ceil(FRECUENCIA_MAX / hzPorBin));
+
+  const limpias = new Float64Array(binMax + 2);
+  let maxima = 0;
+  for (let i = binMin - 1; i <= binMax + 1; i++) {
+    const nivelRuido = ruido ? ruido[i] : 0;
+    if (potencias[i] <= nivelRuido * MARGEN_SOBRE_RUIDO) continue;
+    limpias[i] = potencias[i] - nivelRuido;
+    if (limpias[i] > maxima) maxima = limpias[i];
+  }
+  if (maxima === 0) return [];
+
+  const picos = [];
+  for (let i = binMin; i <= binMax; i++) {
+    const p = limpias[i];
+    if (p < maxima * UMBRAL_PICO || p <= limpias[i - 1] || p < limpias[i + 1]) continue;
+    // Interpolación sobre el logaritmo: da la frecuencia real entre dos bins
+    const a = Math.log(potencias[i - 1] + 1e-12);
+    const b = Math.log(potencias[i] + 1e-12);
+    const c = Math.log(potencias[i + 1] + 1e-12);
+    const divisor = a - 2 * b + c;
+    const ajuste = divisor !== 0 ? (0.5 * (a - c)) / divisor : 0;
+    picos.push({ frecuencia: (i + ajuste) * hzPorBin, potencia: p });
+  }
+
+  const fundamentales = picos.filter((pico) => !picos.some((grave) => grave.frecuencia < pico.frecuencia && esArmonicoDe(pico, grave)));
+  const mayor = fundamentales.reduce((max, p) => Math.max(max, p.potencia), 0);
+  return fundamentales.map((p) => ({ frecuencia: p.frecuencia, midi: frecuenciaAMidi(p.frecuencia), potencia: p.potencia / mayor }));
+}
+
+// Compara con la nota pedida. Acepta la exacta o una octava arriba o abajo, porque el micrófono
+// del celular capta poco la fundamental de las cuerdas graves. Mi2 y Mi4 siguen siendo distintas.
+// Otra nota más fuerte no la invalida: puede ser ruido del ambiente.
+export function compararNota(fundamentales, midiEsperado) {
+  if (fundamentales.length === 0) return { correcta: false, notaDetectada: null, registro: null };
+  const octavasDe = (f) => Math.round((f.midi - midiEsperado) / 12);
+  const esLaMismaNota = (f) => claseDeMidi(f.midi) === claseDeMidi(midiEsperado);
+
+  const correcta = fundamentales.some((f) => esLaMismaNota(f) && Math.abs(octavasDe(f)) <= 1 && f.potencia >= UMBRAL_PRESENTE);
+  const principal = fundamentales.reduce((a, b) => (b.potencia > a.potencia ? b : a));
+  const octavaEquivocada = !correcta && esLaMismaNota(principal);
+  return {
+    correcta,
+    notaDetectada: nombreDeMidi(principal.midi),
+    frecuencia: principal.frecuencia,
+    cents: Math.round((principal.midi - Math.round(principal.midi)) * 100),
+    registro: octavaEquivocada ? (octavasDe(principal) < 0 ? 'grave' : 'aguda') : null,
+  };
+}
+
+// Compara con las notas del acorde, en cualquier octava. Lo que sobra se mira en lo que suena ahora;
+// lo que falta, en lo que sonó recién (`recientes`).
+export function compararAcorde(fundamentales, midis, recientes = fundamentales) {
+  const potenciasPorNota = (lista) => {
+    const potencias = new Array(12).fill(0);
+    lista.forEach((f) => {
+      const clase = claseDeMidi(f.midi);
+      potencias[clase] = Math.max(potencias[clase], f.potencia);
+    });
+    return potencias;
+  };
+  const actuales = potenciasPorNota(fundamentales);
+  const oidas = potenciasPorNota(recientes);
+
+  const esperadas = [...new Set(midis.map(claseDeMidi))];
+  const faltantes = esperadas.filter((clase) => oidas[clase] < UMBRAL_PRESENTE).map((clase) => NOTAS[clase]);
+  const sobrantes = NOTAS.filter((_, clase) => !esperadas.includes(clase) && actuales[clase] >= UMBRAL_SOBRANTE);
+  return { correcta: fundamentales.length > 0 && faltantes.length === 0 && sobrantes.length === 0, faltantes, sobrantes };
+}
+
+// ---- Seguimiento en el tiempo ----
+
+// La nota debe sostenerse un rato para aprobar, así un ruido suelto no la da por buena
+export function crearVerificador(msParaAprobar = MS_PARA_APROBAR, msDeGracia = MS_DE_GRACIA, lecturasMinimas = LECTURAS_PARA_APROBAR) {
+  let inicio = null;
+  let ultimaCorrecta = null;
+  let correctas = 0;
+  return {
+    agregar(correcta, ahora) {
+      if (correcta) {
+        if (inicio === null) inicio = ahora;
+        ultimaCorrecta = ahora;
+        correctas += 1;
+        return ahora - inicio >= msParaAprobar && correctas >= lecturasMinimas;
+      }
+      if (ultimaCorrecta !== null && ahora - ultimaCorrecta > msDeGracia) {
+        inicio = null;
+        ultimaCorrecta = null;
+        correctas = 0;
+      }
+      return false;
+    },
+  };
+}
+
+// Recibe los buffers del micrófono a medida que llegan y evalúa cada cierto tiempo.
+// agregarBuffer devuelve null si todavía no toca analizar, o la lectura:
+// { calibrando, hayNota, correcta, aprobado, nivel, oidas, ...detalle }
+export function crearDetector(objetivo) {
+  const esAcorde = objetivo.tipo === 'acorde';
+  const verificador = crearVerificador();
+  const perfilRuido = crearPerfilRuido();
+  let anillo = null;
+  let factor = 1;
+  let posicion = 0;
+  let llenas = 0;
+  let ultimoAnalisis = -Infinity;
+  let aprobado = false;
+  let ultimaClave = null;
+  let repeticiones = 0;
+  const recientes = [];
+
+  return {
+    agregarBuffer(entrada, canales, sampleRate, ahora) {
+      const nuevoFactor = Math.max(1, Math.floor(sampleRate / FRECUENCIA_TRABAJO));
+      const tamano = VENTANA * nuevoFactor;
+      if (!anillo || anillo.length !== tamano) {
+        anillo = new Float32Array(tamano);
+        factor = nuevoFactor;
+        posicion = 0;
+        llenas = 0;
+      }
+
+      const cantidad = Math.floor(entrada.length / canales);
+      for (let i = 0; i < cantidad; i++) {
+        anillo[posicion] = entrada[i * canales];
+        posicion = (posicion + 1) % tamano;
+      }
+      llenas = Math.min(tamano, llenas + cantidad);
+      if (llenas < tamano || ahora - ultimoAnalisis < MS_ENTRE_ANALISIS) return null;
+      ultimoAnalisis = ahora;
+
+      // Ordenamos el anillo: lo más viejo primero
+      const muestras = new Float32Array(tamano);
+      muestras.set(anillo.subarray(posicion));
+      muestras.set(anillo.subarray(0, posicion), tamano - posicion);
+
+      const nivel = calcularVolumen(muestras);
+      const potencias = calcularPotencias(reducir(muestras, factor));
+
+      if (!perfilRuido.listo()) {
+        perfilRuido.agregar(potencias);
+        return { calibrando: true, hayNota: false, correcta: false, aprobado, nivel, oidas: [] };
+      }
+
+      const hzPorBin = sampleRate / factor / VENTANA;
+      const fundamentales = nivel >= NIVEL_MINIMO ? encontrarFundamentales(potencias, hzPorBin, perfilRuido.potencias()) : [];
+      perfilRuido.agregar(potencias); // Después de analizar: la nota actual no debe contar como ruido
+
+      recientes.push(fundamentales);
+      if (recientes.length > LECTURAS_MEMORIA_ACORDE) recientes.shift();
+
+      const comparacion = esAcorde
+        ? compararAcorde(fundamentales, objetivo.midis, recientes.flat())
+        : compararNota(fundamentales, objetivo.midis[0]);
+      if (verificador.agregar(comparacion.correcta, ahora)) aprobado = true;
+
+      // Solo se informa lo que se mantiene: un sonido suelto del ambiente no debe aparecer en pantalla
+      const clave = esAcorde ? (fundamentales.length > 0 ? 'sonido' : null) : comparacion.notaDetectada;
+      repeticiones = clave !== null && clave === ultimaClave ? repeticiones + 1 : 1;
+      ultimaClave = clave;
+
+      return {
+        ...comparacion,
+        calibrando: false,
+        hayNota: clave !== null && repeticiones >= LECTURAS_ESTABLES,
+        aprobado,
+        nivel,
+        oidas: fundamentales.map((f) => nombreDeMidi(f.midi)),
+      };
+    },
+  };
+}

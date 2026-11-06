@@ -60,7 +60,7 @@ export function HomeScreen({ navigation }) {
       Alert.alert('Lección Bloqueada 🔒', 'Completá las lecciones anteriores para avanzar.');
     } else {
       const leccionesDelCurso = mapa.lecciones;
-      navigation.navigate('Leccion', { leccion, cursoId: mapa.curso?.id, totalLecciones: leccionesDelCurso.length });
+      navigation.navigate('Leccion', { leccion, cursoId: mapa.curso?.id, cursoYaCompletado: !!mapa.curso?.completado, totalLecciones: leccionesDelCurso.length });
     }
   }, [navigation, mapa]);
 

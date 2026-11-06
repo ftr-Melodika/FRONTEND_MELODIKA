@@ -46,7 +46,7 @@ export function CourseMap({ lecciones, onLeccionPress }) {
                 activeOpacity={0.8}
               >
                 <Text style={styles.nodeIcon}>
-                  {leccion.estado === 'completada' ? '✔️' : leccion.estado === 'disponible' ? '🎸' : '🔒'}
+                  {leccion.omitida ? '⏭️' : leccion.estado === 'completada' ? '✔️' : leccion.estado === 'disponible' ? '🎸' : '🔒'}
                 </Text>
               </TouchableOpacity>
 

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Melodika · Detección de sonido</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; padding: 16px; font-family: system-ui, sans-serif; color: #fff; background: #23266e; }
+  main { max-width: 860px; margin: 0 auto; display: grid; gap: 14px; grid-template-columns: 3fr 2fr; }
+  h1 { grid-column: 1 / -1; margin: 0; font-size: 20px; }
+  section { background: #2f3390; border-radius: 12px; padding: 16px; }
+  h2 { margin: 0 0 10px; font-size: 15px; color: #a3fba3; }
+  button { width: 100%; min-height: 44px; border: 0; border-radius: 8px; font-size: 16px; font-weight: 700; color: #fff; background: #4c52d9; cursor: pointer; }
+  button.activo { background: #b23a48; }
+  #nota { font-size: 76px; font-weight: 800; line-height: 1.1; text-align: center; }
+  #detalle { min-height: 22px; text-align: center; color: #d5d7ff; }
+  .aguja-pista { position: relative; height: 26px; margin: 16px 0 4px; border-radius: 6px; background: linear-gradient(90deg, #6d2f62, #2f3390 40%, #32cd32 50%, #2f3390 60%, #6d2f62); }
+  #aguja { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 4px; margin-left: -2px; background: #fff; border-radius: 2px; transition: left .08s linear; visibility: hidden; }
+  .escala { display: flex; justify-content: space-between; font-size: 12px; color: #d5d7ff; }
+  .medidor { position: relative; height: 12px; margin-top: 6px; border-radius: 6px; overflow: hidden; background: #191b52; }
+  #nivel { height: 100%; width: 0; background: #32cd32; }
+  #marca { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; }
+  label { display: block; margin-top: 12px; font-size: 14px; }
+  select, input[type=range] { display: block; width: 100%; margin-top: 4px; }
+  select { min-height: 40px; padding: 0 8px; border-radius: 8px; font-size: 15px; }
+  #objetivo { margin: 12px 0 0; font-size: 18px; font-weight: 700; }
+  #resultado { min-height: 48px; margin-top: 10px; padding: 12px; border-radius: 8px; background: #191b52; }
+  #resultado.bien { color: #10300f; font-weight: 700; background: #a3fba3; }
+  #mensaje { grid-column: 1 / -1; margin: 0; color: #ffc9c9; }
+  #mensaje:empty { display: none; }
+  @media (max-width: 620px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Melodika · Detección de sonido</h1>
+  <p id="mensaje" role="alert"></p>
+
+  <section>
+    <button id="boton" type="button">Activar micrófono</button>
+    <div id="nota">—</div>
+    <div id="detalle">Activa el micrófono y toca una cuerda</div>
+    <div class="aguja-pista" aria-hidden="true"><div id="aguja"></div></div>
+    <div class="escala" aria-hidden="true"><span>♭ grave</span><span>afinada</span><span>aguda ♯</span></div>
+    <label for="sensibilidad">Ignorar sonidos por debajo de <span id="sensibilidad-valor"></span></label>
+    <input id="sensibilidad" type="range" min="-70" max="0" step="1" value="-45">
+    <div class="medidor" aria-hidden="true"><div id="nivel"></div><div id="marca"></div></div>
+  </section>
+
+  <section>
+    <h2>Probar una práctica</h2>
+    <label for="cuerda">Cuerda</label>
+    <select id="cuerda"></select>
+    <label for="traste">Traste</label>
+    <select id="traste"></select>
+    <p id="objetivo"></p>
+    <div id="resultado" role="status"></div>
+  </section>
+</main>
+
+<script src="detector.js"></script>
+<script>
+  const TAMANO_BLOQUE = 4096;   // Unos 85 ms: alcanza para la 6ª cuerda (82 Hz)
+  const MS_ENTRE_LECTURAS = 50;
+  const MS_PARA_ACERTAR = 300;  // La nota debe sostenerse para contar como acierto
+  const DB_MINIMO = -70;
+  const DB_MAXIMO = 0;
+
+  const $ = (id) => document.getElementById(id);
+  const estabilizador = Detector.crearEstabilizador(5);
+
+  let contexto = null;
+  let microfono = null;
+  let analizador = null;
+  let bloque = null;
+  let animacion = null;
+  let ultimaLectura = 0;
+  let inicioCorrecta = null;
+  let acierto = false;
+
+  // ---- Selectores de la práctica ----
+  [1, 2, 3, 4, 5, 6].forEach((c) => $('cuerda').add(new Option(`${c} (${Detector.notaDeCuerdaYTraste(c, 0).nombre})`, c)));
+  for (let t = 0; t <= 12; t++) $('traste').add(new Option(t === 0 ? 'Al aire' : t, t));
+  $('cuerda').value = '5';
+
+  function notaEsperada() {
+    return Detector.notaDeCuerdaYTraste($('cuerda').value, $('traste').value);
+  }
+
+  function mostrarResultado(texto, bien) {
+    $('resultado').textContent = texto;
+    $('resultado').classList.toggle('bien', bien);
+  }
+
+  function reiniciarPractica() {
+    const nota = notaEsperada();
+    $('objetivo').textContent = `Objetivo: ${nota.nombre} (${nota.cifrado})`;
+    inicioCorrecta = null;
+    acierto = false;
+    mostrarResultado('Toca la nota para comprobarla', false);
+  }
+
+  // ---- Sensibilidad ----
+  function aplicarSensibilidad() {
+    const db = Number($('sensibilidad').value);
+    $('sensibilidad-valor').textContent = `${db} dB`;
+    $('marca').style.left = `${((db - DB_MINIMO) / (DB_MAXIMO - DB_MINIMO)) * 100}%`;
+  }
+
+  // ---- Micrófono ----
+  function explicarError(error) {
+    if (!navigator.mediaDevices) return 'Este navegador bloquea el micrófono aquí: abre la página desde localhost o https.';
+    if (error.name === 'NotAllowedError') return 'No hay permiso para usar el micrófono. Actívalo en el candado de la barra de direcciones y vuelve a intentarlo.';
+    if (error.name === 'NotFoundError') return 'No se encontró ningún micrófono conectado.';
+    if (error.name === 'NotReadableError') return 'El micrófono está ocupado por otra aplicación. Ciérrala y vuelve a intentarlo.';
+    return `No se pudo activar el micrófono: ${error.message}`;
+  }
+
+  async function iniciar() {
+    $('mensaje').textContent = '';
+    $('boton').disabled = true; // Evita abrir el micrófono dos veces mientras se espera el permiso
+    try {
+      if (!navigator.mediaDevices) throw new Error('sin mediaDevices');
+      // Los filtros pensados para voz eliminan las notas sostenidas, por eso se apagan
+      microfono = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+      });
+      contexto = new AudioContext();
+      await contexto.resume();
+      analizador = contexto.createAnalyser();
+      analizador.fftSize = TAMANO_BLOQUE;
+      contexto.createMediaStreamSource(microfono).connect(analizador);
+      bloque = new Float32Array(analizador.fftSize);
+      $('boton').textContent = 'Detener micrófono';
+      $('boton').classList.add('activo');
+      $('detalle').textContent = 'Escuchando…';
+      animacion = requestAnimationFrame(ciclo);
+    } catch (error) {
+      detener();
+      $('mensaje').textContent = explicarError(error);
+    } finally {
+      $('boton').disabled = false;
+    }
+  }
+
+  function detener() {
+    cancelAnimationFrame(animacion);
+    animacion = null;
+    if (microfono) microfono.getTracks().forEach((pista) => pista.stop());
+    if (contexto) contexto.close();
+    microfono = contexto = analizador = null;
+    estabilizador.reiniciar();
+    inicioCorrecta = null;
+    mostrarLectura(null);
+    $('nivel').style.width = '0';
+    $('detalle').textContent = 'Activa el micrófono y toca una cuerda';
+    $('boton').textContent = 'Activar micrófono';
+    $('boton').classList.remove('activo');
+  }
+
+  // ---- Detección en cada lectura ----
+  function ciclo(ahora) {
+    animacion = requestAnimationFrame(ciclo);
+    if (ahora - ultimaLectura < MS_ENTRE_LECTURAS) return;
+    ultimaLectura = ahora;
+
+    analizador.getFloatTimeDomainData(bloque);
+    const db = Detector.volumenADecibeles(Detector.calcularVolumen(bloque));
+    const porcentaje = ((Math.max(db, DB_MINIMO) - DB_MINIMO) / (DB_MAXIMO - DB_MINIMO)) * 100;
+    $('nivel').style.width = `${porcentaje}%`;
+
+    const suficiente = db >= Number($('sensibilidad').value);
+    const lectura = suficiente ? Detector.detectarFrecuencia(bloque, contexto.sampleRate) : null;
+    const frecuencia = estabilizador.agregar(lectura ? lectura.frecuencia : null);
+
+    mostrarLectura(frecuencia);
+    evaluarPractica(frecuencia, ahora);
+  }
+
+  function mostrarLectura(frecuencia) {
+    if (frecuencia === null) {
+      $('nota').textContent = '—';
+      $('detalle').textContent = 'Escuchando…';
+      $('aguja').style.visibility = 'hidden';
+      return;
+    }
+    const nota = Detector.frecuenciaANota(frecuencia);
+    $('nota').textContent = nota.nombre;
+    const signo = nota.cents > 0 ? '+' : '';
+    $('detalle').textContent = `${nota.cifrado} · ${frecuencia.toFixed(1)} Hz · ${signo}${nota.cents} cents`;
+    $('aguja').style.visibility = 'visible';
+    $('aguja').style.left = `${50 + nota.cents}%`;
+  }
+
+  function evaluarPractica(frecuencia, ahora) {
+    if (acierto) return;
+    if (frecuencia === null) {
+      inicioCorrecta = null;
+      return;
+    }
+    const esperada = notaEsperada();
+    if (!Detector.evaluarNota(frecuencia, esperada.midi).correcta) {
+      inicioCorrecta = null;
+      const suena = Detector.frecuenciaANota(frecuencia);
+      mostrarResultado(`Suena ${suena.nombre} (${suena.cifrado}). Se espera ${esperada.nombre} (${esperada.cifrado}).`, false);
+      return;
+    }
+    if (inicioCorrecta === null) inicioCorrecta = ahora;
+    if (ahora - inicioCorrecta >= MS_PARA_ACERTAR) {
+      acierto = true;
+      mostrarResultado(`¡Correcto! Es ${esperada.nombre}.`, true);
+    }
+  }
+
+  $('boton').addEventListener('click', () => (animacion === null ? iniciar() : detener()));
+  $('cuerda').addEventListener('change', reiniciarPractica);
+  $('traste').addEventListener('change', reiniciarPractica);
+  $('sensibilidad').addEventListener('input', aplicarSensibilidad);
+  aplicarSensibilidad();
+  reiniciarPractica();
+</script>
+</body>
+</html>
