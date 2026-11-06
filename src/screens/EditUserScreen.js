@@ -36,7 +36,7 @@ export function EditUserScreen({ route, navigation }) {
   const [loading, setLoading] = useState(false);
 
   const SCREEN_WIDTH = Dimensions.get('window').width;
-  const cardWidth = Math.min(Math.round(SCREEN_WIDTH * 0.9), 720);
+  const cardWidth = Math.round(SCREEN_WIDTH * 0.94);
 
   const handleUpdate = async () => {
     if (!nombre || !birthdayISO) return Alert.alert('Error', 'El nombre y la fecha de nacimiento son obligatorios.');

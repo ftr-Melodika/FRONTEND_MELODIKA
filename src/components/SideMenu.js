@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useContext } from 'react';
-import { View, StyleSheet, Animated, Pressable, ScrollView, Alert, Modal } from 'react-native';
+import { View, StyleSheet, Animated, Pressable, ScrollView, Modal } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -42,10 +42,6 @@ export function SideMenu({ visible, onClose }) {
   }, [visible]);
 
   const pantallaActual = route?.name;
-
-  const handleProximamente = (nombreItem) => {
-    Alert.alert('Melodika', `${nombreItem} estará disponible próximamente.`);
-  };
 
   // Navega y cierra el menú. Si ya estamos en esa pantalla, solo cierra.
   const irA = (pantalla, params) => {
@@ -115,23 +111,24 @@ export function SideMenu({ visible, onClose }) {
             <MenuItem
               title="Práctica"
               icon="🎹"
-              onPress={() => handleProximamente('Práctica')}
+              isActive={pantallaActual === 'Practica'}
+              onPress={() => irA('Practica')}
             />
 
-            <AccordotionItem title="Comunidad" icon="👥">
-              <SubMenuItem title="Dar feedback" icon="💬" onPress={() => handleProximamente('Dar feedback')} />
-              <SubMenuItem title="Grupos" icon="🤝" onPress={() => handleProximamente('Grupos')} />
+            <AccordotionItem title="Comunidad" icon="👥" defaultOpen={['Feedback', 'Grupos'].includes(pantallaActual)}>
+              <SubMenuItem title="Dar feedback" icon="💬" isActive={pantallaActual === 'Feedback'} onPress={() => irA('Feedback')} />
+              <SubMenuItem title="Grupos" icon="🤝" isActive={pantallaActual === 'Grupos'} onPress={() => irA('Grupos')} />
             </AccordotionItem>
 
-            <AccordotionItem title="Soporte" icon="🛠️" defaultOpen={pantallaActual === 'PreguntasFrecuentes'}>
+            <AccordotionItem title="Soporte" icon="🛠️" defaultOpen={['PreguntasFrecuentes', 'ReportarError', 'Contacto'].includes(pantallaActual)}>
               <SubMenuItem
                 title="Preguntas frecuentes"
                 icon="❓"
                 isActive={pantallaActual === 'PreguntasFrecuentes'}
                 onPress={() => irA('PreguntasFrecuentes')}
               />
-              <SubMenuItem title="Reportar errores" icon="🐛" onPress={() => handleProximamente('Reportar errores')} />
-              <SubMenuItem title="Contacto" icon="📧" onPress={() => handleProximamente('Contacto')} />
+              <SubMenuItem title="Reportar errores" icon="🐛" isActive={pantallaActual === 'ReportarError'} onPress={() => irA('ReportarError')} />
+              <SubMenuItem title="Contacto" icon="📧" isActive={pantallaActual === 'Contacto'} onPress={() => irA('Contacto')} />
             </AccordotionItem>
 
             <View style={{ height: 10 }} />

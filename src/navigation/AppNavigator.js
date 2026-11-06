@@ -7,6 +7,11 @@ import { ProgresoScreen } from '../screens/ProgresoScreen';
 import { RankingScreen } from '../screens/RankingScreen';
 import { LogrosScreen } from '../screens/LogrosScreen';
 import { PreguntasFrecuentesScreen } from '../screens/PreguntasFrecuentesScreen';
+import { PracticaScreen } from '../screens/PracticaScreen';
+import { FeedbackScreen } from '../screens/FeedbackScreen';
+import { GruposScreen } from '../screens/GruposScreen';
+import { ReportarErrorScreen } from '../screens/ReportarErrorScreen';
+import { ContactoScreen } from '../screens/ContactoScreen';
 
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
@@ -50,6 +55,11 @@ export function AppNavigator() {
             <Stack.Screen name="Ranking" component={RankingScreen} />
             <Stack.Screen name="Logros" component={LogrosScreen} />
             <Stack.Screen name="PreguntasFrecuentes" component={PreguntasFrecuentesScreen} />
+            <Stack.Screen name="Practica" component={PracticaScreen} />
+            <Stack.Screen name="Feedback" component={FeedbackScreen} />
+            <Stack.Screen name="Grupos" component={GruposScreen} />
+            <Stack.Screen name="ReportarError" component={ReportarErrorScreen} />
+            <Stack.Screen name="Contacto" component={ContactoScreen} />
           </>
         )}
       </Stack.Navigator>

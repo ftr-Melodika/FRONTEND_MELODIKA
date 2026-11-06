@@ -35,9 +35,9 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     width: '100%',
-    // Centramos el contenido por defecto para que formularios queden centrados
-    // en pantallas como Login / Register sin tocar cada pantalla individualmente.
-    alignItems: 'center',
+    // Las pantallas ocupan todo el ancho. Las que quieren una tarjeta centrada
+    // (Login, Register...) lo piden ellas mismas con alignSelf: 'center'.
+    alignItems: 'stretch',
     justifyContent: 'center'
   },
 });

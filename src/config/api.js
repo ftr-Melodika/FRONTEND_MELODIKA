@@ -17,6 +17,7 @@ export const ENDPOINTS = {
   perfilPorId: (id) => `${BASE_URL}/perfiles/${id}`,
   racha: (id) => `${BASE_URL}/perfiles/${id}/racha`,
   ranking: `${BASE_URL}/perfiles/ranking`,
+  mensajes: (id) => `${BASE_URL}/perfiles/${id}/mensajes`,
 
   // Cursos
   cursos: (perfilId) => `${BASE_URL}/cursos/perfil/${perfilId}`,

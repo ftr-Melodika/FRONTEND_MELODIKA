@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, width: '100%' },
   subtitulo: { color: 'rgba(255,255,255,0.75)', fontSize: 14, marginBottom: 12, fontWeight: '600' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingBottom: 20 },
-  card: { width: 170, backgroundColor: 'rgba(178,140,255,0.15)', borderRadius: 16, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#b28cff' },
+  card: { flexGrow: 1, flexBasis: 170, backgroundColor: 'rgba(178,140,255,0.15)', borderRadius: 16, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#b28cff' },
   cardBloqueada: { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.12)' },
   icono: { fontSize: 32, marginBottom: 6 },
   titulo: { color: '#fff', fontSize: 15, fontWeight: 'bold', textAlign: 'center' },
