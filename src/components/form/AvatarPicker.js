@@ -2,6 +2,7 @@
 // Elegir la foto de perfil desde la galería del teléfono.
 // La imagen se recorta cuadrada, se achica a 256px y se manda al backend como data URI (base64)
 // en el mismo campo avatarUrl, así no hace falta un servidor de archivos aparte.
+import { Icono } from '../icono/Icono';
 import { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, ActivityIndicator, Alert, StyleSheet } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -11,7 +12,7 @@ const TAMANO_FINAL = 256;
 
 export function AvatarPicker({ value, onChange, nombre, permitirQuitar = true }) {
   const [procesando, setProcesando] = useState(false);
-  const inicial = nombre ? nombre.trim().charAt(0).toUpperCase() : '🙂';
+  const inicial = nombre ? nombre.trim().charAt(0).toUpperCase() : null;
 
   const elegirFoto = async () => {
     const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -52,10 +53,10 @@ export function AvatarPicker({ value, onChange, nombre, permitirQuitar = true })
         ) : value ? (
           <Image source={{ uri: value }} style={styles.imagen} />
         ) : (
-          <Text style={styles.inicial}>{inicial}</Text>
+          inicial ? <Text style={styles.inicial}>{inicial}</Text> : <Icono nombre="sonrisa" tamano={46} />
         )}
         <View style={styles.camara}>
-          <Text style={styles.camaraIcono}>📷</Text>
+          <Icono nombre="camara" tamano={18} />
         </View>
       </TouchableOpacity>
 
@@ -79,7 +80,6 @@ const styles = StyleSheet.create({
   imagen: { width: '100%', height: '100%', borderRadius: 45 },
   inicial: { color: '#fff', fontSize: 38, fontWeight: 'bold' },
   camara: { position: 'absolute', right: -4, bottom: -4, width: 32, height: 32, borderRadius: 16, backgroundColor: '#3E3876', borderWidth: 2, borderColor: '#fff', justifyContent: 'center', alignItems: 'center' },
-  camaraIcono: { fontSize: 14 },
   acciones: { flexDirection: 'row', gap: 18, marginTop: 8 },
   link: { color: '#fff', fontSize: 14, textDecorationLine: 'underline' },
   quitar: { color: '#ff9eaa' },

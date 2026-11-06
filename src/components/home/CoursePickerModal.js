@@ -1,4 +1,5 @@
 // Archivo: src/components/home/CoursePickerModal.js
+import { Icono, COLORES_ICONO } from '../icono/Icono';
 import { Modal, View, Text, TouchableOpacity, ScrollView, StyleSheet, TouchableWithoutFeedback } from 'react-native';
 import { capitalizar } from '../../services/leccionesService';
 
@@ -21,7 +22,7 @@ export function CoursePickerModal({ visible, cursos, cursoActualId, onSelect, on
                       onPress={() => onSelect(curso)}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.itemIcon}>{curso.completado ? '✔️' : bloqueado ? '🔒' : '🎸'}</Text>
+                      <Icono nombre={curso.completado ? 'completado' : bloqueado ? 'candado' : 'guitarra'} tamano={26} acento={curso.completado ? COLORES_ICONO.verde : undefined} style={styles.itemIcon} />
                       <View style={{ flex: 1 }}>
                         <Text style={styles.itemTitle}>{curso.nombre}</Text>
                         {!!curso.nivel && <Text style={styles.itemSub}>{capitalizar(curso.nivel)}</Text>}
@@ -45,7 +46,7 @@ const styles = StyleSheet.create({
   item: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 12, marginBottom: 8, backgroundColor: 'rgba(255,255,255,0.06)' },
   itemActivo: { borderWidth: 1, borderColor: '#b28cff', backgroundColor: 'rgba(178,140,255,0.15)' },
   itemBloqueado: { opacity: 0.5 },
-  itemIcon: { fontSize: 20, marginRight: 12 },
+  itemIcon: { marginRight: 12 },
   itemTitle: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
   itemSub: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 2 },
 });

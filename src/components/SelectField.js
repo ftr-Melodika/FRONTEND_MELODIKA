@@ -1,3 +1,4 @@
+import { Icono } from './icono/Icono';
 import { Pressable, Text, StyleSheet } from 'react-native';
 
 export function SelectField({ label, value, onPress, isOpen }) {
@@ -6,7 +7,7 @@ export function SelectField({ label, value, onPress, isOpen }) {
       <Text style={[styles.label, !value && styles.placeholder]}>
         {value || label}
       </Text>
-      <Text style={styles.icon}>{isOpen ? '▲' : '▼'}</Text>
+      <Icono nombre={isOpen ? 'arriba' : 'abajo'} tamano={14} color="rgba(255,255,255,0.6)" />
     </Pressable>
   );
 }
@@ -31,10 +32,5 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     color: 'rgba(255, 255, 255, 0.7)',
-  },
-  icon: {
-    color: '#fff',
-    fontSize: 14,
-    opacity: 0.87,
   },
 });

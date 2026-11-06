@@ -1,5 +1,6 @@
 // Archivo: src/screens/SelectUserScreen.js
 
+import { Icono } from '../components/icono/Icono';
 import { useState, useEffect, useContext } from 'react';
 import { View, Text, StyleSheet, Alert, ScrollView } from 'react-native';
 import { Background } from '../components/Background';
@@ -107,7 +108,7 @@ export function SelectUserScreen({ navigation, route }) {
                 {/* Pequeño indicador visual de que es editable */}
                 {isEditMode && (
                   <View style={styles.editBadge} pointerEvents="none">
-                    <Text style={styles.editBadgeText}>✏️</Text>
+                    <Icono nombre="lapiz" tamano={18} color="#3E3876" />
                   </View>
                 )}
               </View>
@@ -128,7 +129,8 @@ export function SelectUserScreen({ navigation, route }) {
           <View style={styles.actionsRow}>
             {perfiles.length > 0 && (
               <Button
-                title={isEditMode ? '✓ Listo' : '✏️ Administrar perfiles'}
+                title={isEditMode ? 'Listo' : 'Administrar perfiles'}
+                icono={isEditMode ? 'check' : 'lapiz'}
                 variant={isEditMode ? 'primary' : 'secondary'}
                 onPress={() => setIsEditMode(!isEditMode)}
                 style={styles.actionButton}
@@ -156,7 +158,6 @@ const styles = StyleSheet.create({
   profilesRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start', gap: 30, marginTop: 22 },
   avatarWrapper: { position: 'relative' },
   editBadge: { position: 'absolute', right: 0, top: 0, width: 30, height: 30, borderRadius: 15, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 4 },
-  editBadgeText: { fontSize: 14 },
   actionsRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 15, marginTop: 24 },
   actionButton: { width: 240 },
 });

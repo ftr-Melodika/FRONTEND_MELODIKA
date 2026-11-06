@@ -24,7 +24,7 @@ function PracticaLibre({ onBack, onFinish, finishing, leccion }) {
         <GuitarNeck targetNumber={leccion.trasteObjetivo} cuerda={leccion.cuerda} dotLeft={leccion.dotLeft} dotBottom={leccion.dotBottom} />
       </View>
       <View style={styles.btnRow}>
-        {onBack ? <Button title="⬅ Atrás" variant="secondary" onPress={onBack} style={styles.btnHalf} /> : null}
+        {onBack ? <Button title="Atrás" icono="volver" variant="secondary" onPress={onBack} style={styles.btnHalf} /> : null}
         <Button title="Terminar Lección" onPress={() => onFinish()} loading={finishing} style={[styles.btnHalf, styles.btnTerminar]} />
       </View>
     </View>
@@ -56,7 +56,7 @@ function PracticaConDeteccion({ onBack, onFinish, finishing, objetivo }) {
       </View>
 
       <View style={styles.btnRow}>
-        {onBack ? <Button title="⬅ Atrás" variant="secondary" onPress={onBack} style={styles.btnHalf} /> : null}
+        {onBack ? <Button title="Atrás" icono="volver" variant="secondary" onPress={onBack} style={styles.btnHalf} /> : null}
         {/* En una fila no entran tres botones, y "Terminar" no sirve hasta aprobar */}
         {!aprobado && (puedeSaltear || sinMicrofono) ? (
           <Button

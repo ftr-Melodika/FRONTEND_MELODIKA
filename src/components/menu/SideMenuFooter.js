@@ -1,13 +1,14 @@
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { TextoConIcono, COLORES_ICONO } from '../icono/Icono';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
 
 export function SideMenuFooter({ onCambiarPerfil, onLogout }) {
   return (
     <View style={styles.footerContainer}>
       <TouchableOpacity style={styles.footerBtn} onPress={onCambiarPerfil}>
-        <Text style={styles.footerBtnText}>🔄 Cambiar Perfil</Text>
+        <TextoConIcono nombre="cambiar" tamano={17} centrado style={styles.footerBtnText}>Cambiar Perfil</TextoConIcono>
       </TouchableOpacity>
       <TouchableOpacity style={[styles.footerBtn, styles.footerLogoutBtn]} onPress={onLogout}>
-        <Text style={styles.footerLogoutText}>🚪 Cerrar Sesión</Text>
+        <TextoConIcono nombre="salir" tamano={17} color="#E2556A" acento={COLORES_ICONO.rojo} centrado style={styles.footerLogoutText}>Cerrar Sesión</TextoConIcono>
       </TouchableOpacity>
     </View>
   );

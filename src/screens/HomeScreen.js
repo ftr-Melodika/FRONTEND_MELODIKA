@@ -13,6 +13,9 @@ import { CoursePickerModal } from '../components/home/CoursePickerModal';
 import { LoadingModal } from '../components/LoadingModal';
 
 import { leccionesService } from '../services/leccionesService';
+import { amistadesService } from '../services/amistadesService';
+
+const INTERVALO_NOTIFICACIONES_MS = 30000;
 
 export function HomeScreen({ navigation }) {
   // Nos traemos el perfil inyectado desde el contexto
@@ -23,6 +26,7 @@ export function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [solicitudesPendientes, setSolicitudesPendientes] = useState(0);
 
   // Recordamos el curso que eligió el usuario para no perderlo al volver de una lección
   const cursoElegidoRef = useRef(null);
@@ -55,9 +59,32 @@ export function HomeScreen({ navigation }) {
     }, [cargarMapa])
   );
 
+  // La campanita se actualiza al volver a esta pantalla y cada 30 segundos mientras está visible.
+  // Si la consulta falla, mantenemos el último número: no es motivo para interrumpir al usuario.
+  useFocusEffect(
+    useCallback(() => {
+      if (!perfilId) return undefined;
+      let cancelado = false;
+      const actualizar = async () => {
+        try {
+          const { recibidas } = await amistadesService.obtenerSolicitudes(perfilId);
+          if (!cancelado) setSolicitudesPendientes(recibidas.length);
+        } catch (error) {
+          console.log('Error buscando solicitudes:', error.message);
+        }
+      };
+      actualizar();
+      const intervalo = setInterval(actualizar, INTERVALO_NOTIFICACIONES_MS);
+      return () => {
+        cancelado = true;
+        clearInterval(intervalo);
+      };
+    }, [perfilId])
+  );
+
   const handleLeccionPress = useCallback((leccion) => {
     if (leccion.estado === 'bloqueada') {
-      Alert.alert('Lección Bloqueada 🔒', 'Completá las lecciones anteriores para avanzar.');
+      Alert.alert('Lección bloqueada', 'Completá las lecciones anteriores para avanzar.');
     } else {
       const leccionesDelCurso = mapa.lecciones;
       navigation.navigate('Leccion', { leccion, cursoId: mapa.curso?.id, cursoYaCompletado: !!mapa.curso?.completado, totalLecciones: leccionesDelCurso.length });
@@ -66,7 +93,7 @@ export function HomeScreen({ navigation }) {
 
   const handleSelectCurso = (curso) => {
     if (!curso.desbloqueado) {
-      Alert.alert('Curso Bloqueado 🔒', 'Terminá el curso anterior para desbloquear este.');
+      Alert.alert('Curso bloqueado', 'Terminá el curso anterior para desbloquear este.');
       return;
     }
     setIsPickerOpen(false);
@@ -87,12 +114,14 @@ export function HomeScreen({ navigation }) {
           puedeCambiarCurso={mapa.cursos.length > 1}
           onCambiarCurso={() => setIsPickerOpen(true)}
           onOpenMenu={() => setIsMenuOpen(true)}
+          solicitudesPendientes={solicitudesPendientes}
+          onOpenNotificaciones={() => navigation.navigate('Solicitudes')}
         />
 
         {!loading && mapa.lecciones.length > 0 && (
           <Text style={styles.progressText}>
             {completadas} de {mapa.lecciones.length} lecciones completadas
-            {mapa.curso?.completado ? '  •  ¡Curso terminado! 🏆' : ''}
+            {mapa.curso?.completado ? '  •  ¡Curso terminado!' : ''}
             {mapa.esMock ? '  •  (modo sin conexión)' : ''}
           </Text>
         )}

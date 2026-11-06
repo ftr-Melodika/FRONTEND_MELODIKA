@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useContext } from 'react';
-import { View, StyleSheet, Animated, Pressable, ScrollView, Alert, Modal } from 'react-native';
+import { View, StyleSheet, Animated, Pressable, ScrollView, Modal } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -43,10 +43,6 @@ export function SideMenu({ visible, onClose }) {
 
   const pantallaActual = route?.name;
 
-  const handleProximamente = (nombreItem) => {
-    Alert.alert('Melodika', `${nombreItem} estará disponible próximamente.`);
-  };
-
   // Navega y cierra el menú. Si ya estamos en esa pantalla, solo cierra.
   const irA = (pantalla, params) => {
     onClose();
@@ -75,7 +71,7 @@ export function SideMenu({ visible, onClose }) {
     >
       <View style={StyleSheet.absoluteFill}>
         {/* Fondo oscuro: tocarlo cierra el menú */}
-        <Animated.View style={[styles.backdrop, { opacity: fondoAnim }]}>
+        <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: fondoAnim }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Cerrar menú" />
         </Animated.View>
 
@@ -91,51 +87,53 @@ export function SideMenu({ visible, onClose }) {
 
             <MenuItem
               title="Cursos"
-              icon="🎸"
+              icon="guitarra"
               isActive={pantallaActual === 'Home' || pantallaActual === 'Leccion'}
               onPress={() => irA('Home')}
             />
 
             <AccordotionItem
               title="Perfil"
-              icon="👤"
+              icon="usuario"
               defaultOpen={['EditUser', 'Logros', 'Progreso', 'Ranking'].includes(pantallaActual)}
             >
               <SubMenuItem
                 title="Configuración"
-                icon="⚙️"
+                icon="ajustes"
                 isActive={pantallaActual === 'EditUser'}
                 onPress={() => irA('EditUser', { perfilAEditar: perfil })}
               />
-              <SubMenuItem title="Logros y recompensas" icon="🏆" isActive={pantallaActual === 'Logros'} onPress={() => irA('Logros')} />
-              <SubMenuItem title="Progreso" icon="📊" isActive={pantallaActual === 'Progreso'} onPress={() => irA('Progreso')} />
-              <SubMenuItem title="Ranking" icon="🥇" isActive={pantallaActual === 'Ranking'} onPress={() => irA('Ranking')} />
+              <SubMenuItem title="Logros y recompensas" icon="trofeo" isActive={pantallaActual === 'Logros'} onPress={() => irA('Logros')} />
+              <SubMenuItem title="Progreso" icon="barras" isActive={pantallaActual === 'Progreso'} onPress={() => irA('Progreso')} />
+              <SubMenuItem title="Ranking" icon="medalla1" isActive={pantallaActual === 'Ranking'} onPress={() => irA('Ranking')} />
             </AccordotionItem>
 
             <MenuItem
               title="Práctica"
-              icon="🎹"
-              onPress={() => handleProximamente('Práctica')}
+              icon="pua"
+              isActive={pantallaActual === 'Practica'}
+              onPress={() => irA('Practica')}
             />
 
-            <AccordotionItem title="Comunidad" icon="👥">
-              <SubMenuItem title="Dar feedback" icon="💬" onPress={() => handleProximamente('Dar feedback')} />
-              <SubMenuItem title="Grupos" icon="🤝" onPress={() => handleProximamente('Grupos')} />
+            <AccordotionItem title="Comunidad" icon="amigos" defaultOpen={['Solicitudes', 'Feedback', 'Grupos', 'GrupoChat'].includes(pantallaActual)}>
+              <SubMenuItem title="Solicitudes y amigos" icon="saludo" isActive={pantallaActual === 'Solicitudes'} onPress={() => irA('Solicitudes')} />
+              <SubMenuItem title="Dar feedback" icon="chat" isActive={pantallaActual === 'Feedback'} onPress={() => irA('Feedback')} />
+              <SubMenuItem title="Grupos" icon="union" isActive={pantallaActual === 'Grupos' || pantallaActual === 'GrupoChat'} onPress={() => irA('Grupos')} />
             </AccordotionItem>
 
-            <AccordotionItem title="Soporte" icon="🛠️" defaultOpen={pantallaActual === 'PreguntasFrecuentes'}>
+            <AccordotionItem title="Soporte" icon="soporte" defaultOpen={['PreguntasFrecuentes', 'ReportarError', 'Contacto'].includes(pantallaActual)}>
               <SubMenuItem
                 title="Preguntas frecuentes"
-                icon="❓"
+                icon="pregunta"
                 isActive={pantallaActual === 'PreguntasFrecuentes'}
                 onPress={() => irA('PreguntasFrecuentes')}
               />
-              <SubMenuItem title="Reportar errores" icon="🐛" onPress={() => handleProximamente('Reportar errores')} />
-              <SubMenuItem title="Contacto" icon="📧" onPress={() => handleProximamente('Contacto')} />
+              <SubMenuItem title="Reportar errores" icon="insecto" isActive={pantallaActual === 'ReportarError'} onPress={() => irA('ReportarError')} />
+              <SubMenuItem title="Contacto" icon="sobre" isActive={pantallaActual === 'Contacto'} onPress={() => irA('Contacto')} />
             </AccordotionItem>
 
             {__DEV__ && (
-              <MenuItem title="Probar micrófono" icon="🎤" isActive={pantallaActual === 'PruebaSonido'} onPress={() => irA('PruebaSonido')} />
+              <MenuItem title="Probar micrófono" icon="notas" isActive={pantallaActual === 'PruebaSonido'} onPress={() => irA('PruebaSonido')} />
             )}
 
             <View style={{ height: 10 }} />
@@ -153,7 +151,7 @@ export function SideMenu({ visible, onClose }) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0, 0, 0, 0.6)' },
+  backdrop: { backgroundColor: 'rgba(0, 0, 0, 0.6)' },
   drawer: {
     position: 'absolute', top: 0, bottom: 0, left: 0,
     backgroundColor: '#3E3876', // Fondo Deep Dark Figma

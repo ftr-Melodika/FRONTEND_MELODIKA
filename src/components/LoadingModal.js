@@ -42,14 +42,16 @@ export function LoadingModal({ visible, text = 'Cargando...' }) {
   if (!montado) return null;
 
   return (
-    <Animated.View style={[styles.overlay, { opacity: opacidad }]} pointerEvents={visible ? 'auto' : 'none'}>
+    <Animated.View style={[StyleSheet.absoluteFill, styles.overlay, { opacity: opacidad }]} pointerEvents={visible ? 'auto' : 'none'}>
       <Background>
-        <View style={styles.barras}>
-          {[...Array(CANT_BARRAS)].map((_, i) => (
-            <Barra key={i} delay={i * 110} />
-          ))}
+        <View style={styles.centro}>
+          <View style={styles.barras}>
+            {[...Array(CANT_BARRAS)].map((_, i) => (
+              <Barra key={i} delay={i * 110} />
+            ))}
+          </View>
+          {!!text && <Text style={styles.texto}>{text}</Text>}
         </View>
-        {!!text && <Text style={styles.texto}>{text}</Text>}
       </Background>
     </Animated.View>
   );
@@ -57,11 +59,11 @@ export function LoadingModal({ visible, text = 'Cargando...' }) {
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
     zIndex: 999,
     elevation: 50,
   },
+  centro: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   barras: { flexDirection: 'row', alignItems: 'center', height: ALTO_BARRA, gap: 7 },
   barra: { width: 8, height: ALTO_BARRA, borderRadius: 4, backgroundColor: '#b28cff' },
-  texto: { color: '#fff', marginTop: 18, fontSize: 16, fontWeight: '600', letterSpacing: 0.5, fontFamily: 'serif' },
+  texto: { color: '#fff', marginTop: 18, fontSize: 16, fontWeight: '600', letterSpacing: 0.5, fontFamily: 'serif', textAlign: 'center' },
 });

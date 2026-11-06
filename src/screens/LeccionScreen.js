@@ -108,11 +108,11 @@ export function LeccionScreen({ route, navigation }) {
       const siguiente = cursoCompletado ? 'Terminaste el curso.' : 'Podés seguir con la siguiente.';
       Alert.alert('Lección salteada', `${siguiente} No sumó XP, pero si volvés y la tocás bien lo ganás.`);
     } else if (yaCompletada) {
-      Alert.alert('¡Bien repasado! 🎸', 'Ya habías completado esta lección, así que no suma XP de nuevo.');
+      Alert.alert('¡Bien repasado!', 'Ya habías completado esta lección, así que no suma XP de nuevo.');
     } else if (cursoCompletado) {
-      Alert.alert('¡Curso completado! 🏆', `Ganaste ${xpGanada} XP y terminaste el curso. ¡Se desbloqueó el siguiente!`);
+      Alert.alert('¡Curso completado!', `Ganaste ${xpGanada} XP y terminaste el curso. ¡Se desbloqueó el siguiente!`);
     } else {
-      Alert.alert('¡Lección Completada! 🏆', `Ganaste ${xpGanada || leccion.xp || 0} XP.`);
+      Alert.alert('¡Lección completada!', `Ganaste ${xpGanada || leccion.xp || 0} XP.`);
     }
     navigation.goBack();
   };

@@ -40,7 +40,7 @@ export function RegisterScreen({ navigation }) {
       <View style={styles.glassCard}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           <Button 
-            title="← Volver" 
+            title="Volver" icono="volver" 
             variant="back" 
             onPress={() => navigation.goBack()} 
             style={[styles.backButtonInside]}

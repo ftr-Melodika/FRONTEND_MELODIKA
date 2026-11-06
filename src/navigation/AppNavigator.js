@@ -1,5 +1,6 @@
-import React, { useContext } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useContext, useEffect, useRef, useState } from 'react';
+import { View } from 'react-native';
+import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthContext } from '../context/AuthContext';
 import { LoadingModal } from '../components/LoadingModal'; // 👈 El nuevo modal
@@ -7,6 +8,14 @@ import { ProgresoScreen } from '../screens/ProgresoScreen';
 import { RankingScreen } from '../screens/RankingScreen';
 import { LogrosScreen } from '../screens/LogrosScreen';
 import { PreguntasFrecuentesScreen } from '../screens/PreguntasFrecuentesScreen';
+import { PracticaScreen } from '../screens/PracticaScreen';
+import { PerfilPublicoScreen } from '../screens/PerfilPublicoScreen';
+import { SolicitudesScreen } from '../screens/SolicitudesScreen';
+import { FeedbackScreen } from '../screens/FeedbackScreen';
+import { GruposScreen } from '../screens/GruposScreen';
+import { GrupoChatScreen } from '../screens/GrupoChatScreen';
+import { ReportarErrorScreen } from '../screens/ReportarErrorScreen';
+import { ContactoScreen } from '../screens/ContactoScreen';
 
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
@@ -20,8 +29,32 @@ import { Background } from '../components/Background';
 
 const Stack = createNativeStackNavigator();
 
+// Cuánto se mantiene la pantalla de carga al cambiar de lugar en la app
+const DURACION_TRANSICION_MS = 500;
+
 export function AppNavigator() {
   const { isLoading, userToken } = useContext(AuthContext);
+  const navigationRef = useNavigationContainerRef();
+  const [enTransicion, setEnTransicion] = useState(false);
+  const rutaActualRef = useRef(null);
+  const temporizadorRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(temporizadorRef.current), []);
+
+  const recordarRuta = () => {
+    rutaActualRef.current = navigationRef.getCurrentRoute()?.key ?? null;
+  };
+
+  // Comparamos la ruta porque el estado también cambia con cosas que no son moverse de pantalla
+  const handleCambioDeEstado = () => {
+    const rutaNueva = navigationRef.getCurrentRoute()?.key ?? null;
+    if (rutaNueva === rutaActualRef.current) return;
+    rutaActualRef.current = rutaNueva;
+
+    setEnTransicion(true);
+    clearTimeout(temporizadorRef.current);
+    temporizadorRef.current = setTimeout(() => setEnTransicion(false), DURACION_TRANSICION_MS);
+  };
 
   if (isLoading) {
     return (
@@ -33,7 +66,8 @@ export function AppNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <View style={{ flex: 1 }}>
+    <NavigationContainer ref={navigationRef} onReady={recordarRuta} onStateChange={handleCambioDeEstado}>
       <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
         {userToken === null ? (
           <>
@@ -51,10 +85,20 @@ export function AppNavigator() {
             <Stack.Screen name="Ranking" component={RankingScreen} />
             <Stack.Screen name="Logros" component={LogrosScreen} />
             <Stack.Screen name="PreguntasFrecuentes" component={PreguntasFrecuentesScreen} />
+            <Stack.Screen name="Practica" component={PracticaScreen} />
+            <Stack.Screen name="PerfilPublico" component={PerfilPublicoScreen} />
+            <Stack.Screen name="Solicitudes" component={SolicitudesScreen} />
+            <Stack.Screen name="Feedback" component={FeedbackScreen} />
+            <Stack.Screen name="Grupos" component={GruposScreen} />
+            <Stack.Screen name="GrupoChat" component={GrupoChatScreen} />
+            <Stack.Screen name="ReportarError" component={ReportarErrorScreen} />
+            <Stack.Screen name="Contacto" component={ContactoScreen} />
             {__DEV__ && <Stack.Screen name="PruebaSonido" component={PruebaSonidoScreen} />}
           </>
         )}
       </Stack.Navigator>
     </NavigationContainer>
+    <LoadingModal visible={enTransicion} />
+    </View>
   );
 }

@@ -31,7 +31,7 @@ export function CreateUserScreen({ navigation }) {
 
   // Calcular ancho responsivo para la tarjeta para que nunca supere el ancho de pantalla
   const SCREEN_WIDTH = Dimensions.get('window').width;
-  const cardWidth = Math.min(Math.round(SCREEN_WIDTH * 0.9), 720); // 90% hasta 720px (más angosto)
+  const cardWidth = Math.round(SCREEN_WIDTH * 0.94);
 
   const handleCreateUser = async () => {
     if (!nombre || !username || !birthdayISO) return Alert.alert('Error', 'Por favor completá los campos clave.');
@@ -68,7 +68,7 @@ export function CreateUserScreen({ navigation }) {
 
         <View style={[styles.glassCard, { width: cardWidth }]}>
           <Button 
-            title="← Volver" 
+            title="Volver" icono="volver" 
             variant="back" 
             onPress={() => navigation.goBack()} 
             style={styles.backButtonInside}
