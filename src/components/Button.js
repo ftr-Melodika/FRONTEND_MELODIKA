@@ -1,8 +1,9 @@
+import { Icono } from './icono/Icono';
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
 
 // Variantes: primary (violeta lleno), secondary (borde blanco), danger (borde rojo), link, back
-export function Button({ title, onPress, variant = 'primary', style, textStyle, loading = false, disabled = false }) {
+export function Button({ title, onPress, variant = 'primary', style, textStyle, loading = false, disabled = false, icono, iconoDerecha }) {
   const isSecondary = variant === 'secondary';
   const isDanger = variant === 'danger';
   const isLink = variant === 'link';
@@ -27,7 +28,9 @@ export function Button({ title, onPress, variant = 'primary', style, textStyle, 
       {loading ? (
         <ActivityIndicator color={isSecondary || isLink ? "#b28cff" : "#fff"} />
       ) : (
-        <Text
+        <View style={styles.contenido}>
+          {!!icono && <Icono nombre={icono} tamano={20} color={isDanger ? '#ff9eaa' : '#fff'} />}
+          <Text
           style={[
             styles.text,
             isSecondary && styles.textSecondary,
@@ -40,6 +43,8 @@ export function Button({ title, onPress, variant = 'primary', style, textStyle, 
         >
           {title}
         </Text>
+          {!!iconoDerecha && <Icono nombre={iconoDerecha} tamano={20} color={isDanger ? '#ff9eaa' : '#fff'} />}
+        </View>
       )}
     </TouchableOpacity>
   );
@@ -52,7 +57,8 @@ const styles = StyleSheet.create({
   buttonDanger: { backgroundColor: 'transparent', borderColor: '#ff7e8d', borderWidth: 1 },
   buttonLink: { backgroundColor: 'transparent', paddingVertical: 0, paddingHorizontal: 0, marginVertical: 0, width: 'auto', minHeight: 0 },
   buttonDisabled: { opacity: 0.5 },
-  text: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  contenido: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  text: { flexShrink: 1, color: '#fff', fontSize: 16, fontWeight: 'bold' },
   textBack: { color: '#fff', fontSize: 14, fontWeight: '500' },
   textSecondary: { color: '#fff' },
   textDanger: { color: '#ff9eaa' },

@@ -1,3 +1,4 @@
+import { Icono, COLORES_ICONO } from '../icono/Icono';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MenuButton } from '../MenuButton';
 
@@ -12,8 +13,9 @@ export function HeaderHome({ perfil, cuenta, curso, puedeCambiarCurso, solicitud
       <View style={styles.left}>
         <MenuButton onPress={onOpenMenu} />
         <Text style={styles.welcomeText} numberOfLines={1}>
-          Hola, {nombreMostrar} 👋
+          Hola, {nombreMostrar}
         </Text>
+        <Icono nombre="saludo" tamano={20} acento={COLORES_ICONO.rayo} />
       </View>
 
       {/* Centro: curso actual (se achica la letra antes de cortarse) */}
@@ -23,10 +25,13 @@ export function HeaderHome({ perfil, cuenta, curso, puedeCambiarCurso, solicitud
         disabled={!puedeCambiarCurso}
         activeOpacity={0.7}
       >
-        <Text style={styles.courseTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-          🎸 {curso?.nombre || 'Guitarra'}
-        </Text>
-        {puedeCambiarCurso && <Text style={styles.cambiar}>Cambiar curso ▾</Text>}
+        <View style={styles.cursoFila}>
+          <Icono nombre="guitarra" tamano={24} />
+          <Text style={styles.courseTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+            {curso?.nombre || 'Guitarra'}
+          </Text>
+        </View>
+        {puedeCambiarCurso && <View style={styles.cursoFila}><Text style={styles.cambiar}>Cambiar curso</Text><Icono nombre="abajo" tamano={12} color="rgba(255,255,255,0.6)" /></View>}
       </TouchableOpacity>
 
       {/* Derecha: estadísticas (nunca se achican) */}
@@ -38,7 +43,7 @@ export function HeaderHome({ perfil, cuenta, curso, puedeCambiarCurso, solicitud
           accessibilityRole="button"
           accessibilityLabel={solicitudesPendientes > 0 ? `Notificaciones: ${solicitudesPendientes} solicitudes pendientes` : 'Notificaciones'}
         >
-          <Text style={styles.statEmoji}>🔔</Text>
+          <Icono nombre="campana" tamano={20} />
           {solicitudesPendientes > 0 && (
             <View style={styles.badge}>
               <Text style={styles.badgeTexto}>{solicitudesPendientes > 9 ? '9+' : solicitudesPendientes}</Text>
@@ -46,11 +51,11 @@ export function HeaderHome({ perfil, cuenta, curso, puedeCambiarCurso, solicitud
           )}
         </TouchableOpacity>
         <View style={styles.statChip}>
-          <Text style={styles.statEmoji}>⚡</Text>
+          <Icono nombre="rayo" tamano={17} acento={COLORES_ICONO.rayo} />
           <Text style={styles.statText}>{perfil?.xp ?? 0} XP</Text>
         </View>
         <View style={styles.statChip}>
-          <Text style={styles.statEmoji}>🔥</Text>
+          <Icono nombre="llama" tamano={17} acento={COLORES_ICONO.llama} />
           <Text style={styles.statText}>{racha} {racha === 1 ? 'día' : 'días'}</Text>
         </View>
       </View>
@@ -63,13 +68,13 @@ const styles = StyleSheet.create({
   left: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, minWidth: 0 },
   welcomeText: { color: '#fff', fontSize: 16, fontFamily: 'serif', fontWeight: 'bold', flexShrink: 1 },
   center: { flex: 1.3, alignItems: 'center', minWidth: 0 },
-  courseTitle: { color: '#b28cff', fontSize: 20, fontWeight: 'bold', fontFamily: 'serif', textAlign: 'center' },
+  cursoFila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, maxWidth: '100%' },
+  courseTitle: { flexShrink: 1, color: '#b28cff', fontSize: 20, fontWeight: 'bold', fontFamily: 'serif', textAlign: 'center' },
   cambiar: { color: 'rgba(255,255,255,0.6)', fontSize: 11, marginTop: 1 },
   right: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexShrink: 0 },
   statChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6, gap: 5 },
   campana: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
   badge: { position: 'absolute', top: -5, right: -5, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: '#ff4d67', borderWidth: 1, borderColor: '#fff' },
   badgeTexto: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
-  statEmoji: { fontSize: 14 },
   statText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
 });

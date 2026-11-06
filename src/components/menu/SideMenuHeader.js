@@ -1,3 +1,4 @@
+import { TextoConIcono, COLORES_ICONO } from '../icono/Icono';
 import { View, Text, StyleSheet, Image } from 'react-native';
 
 export function SideMenuHeader({ perfil }) {
@@ -17,7 +18,10 @@ export function SideMenuHeader({ perfil }) {
       <View style={styles.textWrapper}>
         <Text style={styles.name} numberOfLines={1}>{nombreMostrar}</Text>
         <Text style={styles.username} numberOfLines={1}>{usernameMostrar}</Text>
-        <Text style={styles.stats}>⚡ {perfil?.xp ?? 0} XP   🔥 {perfil?.racha ?? 0}</Text>
+        <View style={styles.statsFila}>
+          <TextoConIcono nombre="rayo" tamano={14} acento={COLORES_ICONO.rayo} style={styles.stats}>{perfil?.xp ?? 0} XP</TextoConIcono>
+          <TextoConIcono nombre="llama" tamano={14} acento={COLORES_ICONO.llama} style={styles.stats}>{perfil?.racha ?? 0}</TextoConIcono>
+        </View>
       </View>
     </View>
   );
@@ -39,5 +43,6 @@ const styles = StyleSheet.create({
   textWrapper: { marginLeft: 15, flex: 1 },
   name: { fontSize: 18, color: '#fff', fontWeight: 'bold', fontFamily: 'serif' },
   username: { fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 2 },
-  stats: { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 4, fontWeight: '600' },
+  statsFila: { flexDirection: 'row', gap: 12, marginTop: 4 },
+  stats: { fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: '600' },
 });

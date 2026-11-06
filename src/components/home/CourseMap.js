@@ -1,4 +1,5 @@
 // Archivo: src/components/home/CourseMap.js
+import { Icono } from '../icono/Icono';
 import { useRef, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 
@@ -52,9 +53,7 @@ export function CourseMap({ lecciones, onLeccionPress }) {
                 onPress={() => onLeccionPress(leccion)}
                 activeOpacity={0.8}
               >
-                <Text style={styles.nodeIcon}>
-                  {leccion.estado === 'completada' ? '✔️' : leccion.estado === 'disponible' ? '🎸' : '🔒'}
-                </Text>
+                <Icono nombre={leccion.estado === 'completada' ? 'check' : leccion.estado === 'disponible' ? 'guitarra' : 'candado'} tamano={36} />
               </TouchableOpacity>
 
               <View style={[styles.nodeCard, esActual && styles.nodeCardActual]}>
@@ -81,7 +80,6 @@ const styles = StyleSheet.create({
   nodeDisponible: { backgroundColor: '#4c52d9', borderColor: '#b28cff' },
   nodeBloqueado: { backgroundColor: '#5b5294', borderColor: 'rgba(255, 255, 255, 0.3)' },
   nodeActual: { borderColor: '#fff', borderWidth: 4, shadowColor: '#b28cff', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.9, shadowRadius: 12, elevation: 10 },
-  nodeIcon: { fontSize: 26, color: '#fff' },
   nodeCard: { marginTop: 12, width: 160, minHeight: 58, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 12, paddingVertical: 8, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.2)' },
   nodeCardActual: { borderColor: '#b28cff', backgroundColor: 'rgba(178, 140, 255, 0.18)' },
   nodeTitle: { color: '#fff', fontSize: 13, fontWeight: 'bold', textAlign: 'center' },

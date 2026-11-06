@@ -94,11 +94,11 @@ export function LeccionScreen({ route, navigation }) {
     setFinishing(false);
 
     if (yaCompletada) {
-      Alert.alert('¡Bien repasado! 🎸', 'Ya habías completado esta lección, así que no suma XP de nuevo.');
+      Alert.alert('¡Bien repasado!', 'Ya habías completado esta lección, así que no suma XP de nuevo.');
     } else if (cursoCompletado) {
-      Alert.alert('¡Curso completado! 🏆', `Ganaste ${xpGanada} XP y terminaste el curso. ¡Se desbloqueó el siguiente!`);
+      Alert.alert('¡Curso completado!', `Ganaste ${xpGanada} XP y terminaste el curso. ¡Se desbloqueó el siguiente!`);
     } else {
-      Alert.alert('¡Lección Completada! 🏆', `Ganaste ${xpGanada || leccion.xp || 0} XP.`);
+      Alert.alert('¡Lección completada!', `Ganaste ${xpGanada || leccion.xp || 0} XP.`);
     }
     navigation.goBack();
   };

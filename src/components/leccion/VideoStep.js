@@ -1,4 +1,5 @@
 // Archivo: src/components/leccion/VideoStep.js
+import { TextoConIcono } from '../icono/Icono';
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, Linking, StyleSheet, useWindowDimensions } from 'react-native';
 import { Button } from '../Button'; // Ajustá la ruta si hace falta
@@ -21,14 +22,15 @@ export const VideoStep = ({ videoId, title, onNext }) => {
             style={[styles.thumbnail, { height: altoMiniatura }]}
           />
           <View style={styles.overlay}>
-            <Text style={styles.playText}>▶ Reproducir video</Text>
+            <TextoConIcono nombre="play" tamano={20} style={styles.playText}>Reproducir video</TextoConIcono>
           </View>
         </TouchableOpacity>
       </View>
       
       <View style={styles.footer}>
         <Button
-          title="Ya lo vi, seguir 👉"
+          title="Ya lo vi, seguir"
+          iconoDerecha="adelante"
           onPress={onNext}
         />
       </View>

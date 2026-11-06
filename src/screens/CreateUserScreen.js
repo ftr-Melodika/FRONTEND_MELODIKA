@@ -68,7 +68,7 @@ export function CreateUserScreen({ navigation }) {
 
         <View style={[styles.glassCard, { width: cardWidth }]}>
           <Button 
-            title="← Volver" 
+            title="Volver" icono="volver" 
             variant="back" 
             onPress={() => navigation.goBack()} 
             style={styles.backButtonInside}

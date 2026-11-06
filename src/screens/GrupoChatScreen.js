@@ -193,7 +193,7 @@ export function GrupoChatScreen({ route, navigation }) {
     );
   };
 
-  const volver = <Button title="← Volver" variant="back" onPress={() => navigation.goBack()} />;
+  const volver = <Button title="Volver" icono="volver" variant="back" onPress={() => navigation.goBack()} />;
 
   return (
     <Background>

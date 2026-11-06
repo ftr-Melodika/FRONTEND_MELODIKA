@@ -84,7 +84,7 @@ export function HomeScreen({ navigation }) {
 
   const handleLeccionPress = useCallback((leccion) => {
     if (leccion.estado === 'bloqueada') {
-      Alert.alert('Lección Bloqueada 🔒', 'Completá las lecciones anteriores para avanzar.');
+      Alert.alert('Lección bloqueada', 'Completá las lecciones anteriores para avanzar.');
     } else {
       const leccionesDelCurso = mapa.lecciones;
       navigation.navigate('Leccion', { leccion, cursoId: mapa.curso?.id, totalLecciones: leccionesDelCurso.length });
@@ -93,7 +93,7 @@ export function HomeScreen({ navigation }) {
 
   const handleSelectCurso = (curso) => {
     if (!curso.desbloqueado) {
-      Alert.alert('Curso Bloqueado 🔒', 'Terminá el curso anterior para desbloquear este.');
+      Alert.alert('Curso bloqueado', 'Terminá el curso anterior para desbloquear este.');
       return;
     }
     setIsPickerOpen(false);
@@ -121,7 +121,7 @@ export function HomeScreen({ navigation }) {
         {!loading && mapa.lecciones.length > 0 && (
           <Text style={styles.progressText}>
             {completadas} de {mapa.lecciones.length} lecciones completadas
-            {mapa.curso?.completado ? '  •  ¡Curso terminado! 🏆' : ''}
+            {mapa.curso?.completado ? '  •  ¡Curso terminado!' : ''}
             {mapa.esMock ? '  •  (modo sin conexión)' : ''}
           </Text>
         )}

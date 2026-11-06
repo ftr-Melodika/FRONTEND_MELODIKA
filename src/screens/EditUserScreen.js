@@ -1,3 +1,4 @@
+import { TextoConIcono } from '../components/icono/Icono';
 import { useState, useContext, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Alert, ScrollView, Dimensions, Switch } from 'react-native';
 import { Background } from '../components/Background';
@@ -163,7 +164,7 @@ export function EditUserScreen({ route, navigation }) {
           {vieneDeSelectUser ? (
             <>
               <Button
-                title="← Volver"
+                title="Volver" icono="volver"
                 variant="back"
                 onPress={() => navigation.goBack()}
                 style={styles.backButtonInside}
@@ -191,7 +192,7 @@ export function EditUserScreen({ route, navigation }) {
 
           <View style={styles.privacidad}>
             <View style={styles.privacidadTextos}>
-              <Text style={styles.privacidadTitulo}>{esPublico ? '🌍 Perfil público' : '🔒 Perfil privado'}</Text>
+              <TextoConIcono nombre={esPublico ? 'globo' : 'candado'} tamano={18} style={styles.privacidadTitulo}>{esPublico ? 'Perfil público' : 'Perfil privado'}</TextoConIcono>
               <Text style={styles.privacidadDetalle}>
                 {esPublico
                   ? 'Cualquier usuario puede ver tus estadísticas.'

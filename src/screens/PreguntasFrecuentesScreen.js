@@ -1,4 +1,5 @@
 // Archivo: src/screens/PreguntasFrecuentesScreen.js
+import { Icono } from '../components/icono/Icono';
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,11 +16,11 @@ const PREGUNTAS = [
     respuesta: 'Las lecciones se desbloquean en orden. Al terminar una, se habilita la siguiente. Cuando completás todas las lecciones de un curso, se desbloquea el próximo curso.',
   },
   {
-    pregunta: '¿Cómo funciona la racha? 🔥',
+    pregunta: '¿Cómo funciona la racha?',
     respuesta: 'Cada día que completás al menos una lección, tu racha suma un día. Si pasan más de 3 días sin practicar, la racha vuelve a empezar.',
   },
   {
-    pregunta: '¿Qué es la XP? ⚡',
+    pregunta: '¿Qué es la XP?',
     respuesta: 'Son puntos de experiencia que ganás al completar lecciones. Se usan para el ranking global y para desbloquear logros. Repetir una lección ya completada no suma XP de nuevo.',
   },
   {
@@ -52,7 +53,7 @@ export function PreguntasFrecuentesScreen({ navigation }) {
               >
                 <View style={styles.preguntaRow}>
                   <Text style={styles.pregunta}>{item.pregunta}</Text>
-                  <Text style={styles.flecha}>{estaAbierta ? '▲' : '▼'}</Text>
+                  <Icono nombre={estaAbierta ? 'arriba' : 'abajo'} tamano={16} color="rgba(255,255,255,0.6)" style={styles.flecha} />
                 </View>
                 {estaAbierta && <Text style={styles.respuesta}>{item.respuesta}</Text>}
               </TouchableOpacity>
@@ -70,6 +71,6 @@ const styles = StyleSheet.create({
   itemAbierto: { borderColor: '#b28cff' },
   preguntaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   pregunta: { color: '#fff', fontSize: 16, fontWeight: 'bold', flex: 1 },
-  flecha: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginLeft: 10 },
+  flecha: { marginLeft: 10 },
   respuesta: { color: 'rgba(255,255,255,0.8)', fontSize: 14, lineHeight: 21, marginTop: 10 },
 });

@@ -87,49 +87,49 @@ export function SideMenu({ visible, onClose }) {
 
             <MenuItem
               title="Cursos"
-              icon="🎸"
+              icon="guitarra"
               isActive={pantallaActual === 'Home' || pantallaActual === 'Leccion'}
               onPress={() => irA('Home')}
             />
 
             <AccordotionItem
               title="Perfil"
-              icon="👤"
+              icon="usuario"
               defaultOpen={['EditUser', 'Logros', 'Progreso', 'Ranking'].includes(pantallaActual)}
             >
               <SubMenuItem
                 title="Configuración"
-                icon="⚙️"
+                icon="ajustes"
                 isActive={pantallaActual === 'EditUser'}
                 onPress={() => irA('EditUser', { perfilAEditar: perfil })}
               />
-              <SubMenuItem title="Logros y recompensas" icon="🏆" isActive={pantallaActual === 'Logros'} onPress={() => irA('Logros')} />
-              <SubMenuItem title="Progreso" icon="📊" isActive={pantallaActual === 'Progreso'} onPress={() => irA('Progreso')} />
-              <SubMenuItem title="Ranking" icon="🥇" isActive={pantallaActual === 'Ranking'} onPress={() => irA('Ranking')} />
+              <SubMenuItem title="Logros y recompensas" icon="trofeo" isActive={pantallaActual === 'Logros'} onPress={() => irA('Logros')} />
+              <SubMenuItem title="Progreso" icon="barras" isActive={pantallaActual === 'Progreso'} onPress={() => irA('Progreso')} />
+              <SubMenuItem title="Ranking" icon="medalla1" isActive={pantallaActual === 'Ranking'} onPress={() => irA('Ranking')} />
             </AccordotionItem>
 
             <MenuItem
               title="Práctica"
-              icon="🎹"
+              icon="pua"
               isActive={pantallaActual === 'Practica'}
               onPress={() => irA('Practica')}
             />
 
-            <AccordotionItem title="Comunidad" icon="👥" defaultOpen={['Solicitudes', 'Feedback', 'Grupos', 'GrupoChat'].includes(pantallaActual)}>
-              <SubMenuItem title="Solicitudes y amigos" icon="👋" isActive={pantallaActual === 'Solicitudes'} onPress={() => irA('Solicitudes')} />
-              <SubMenuItem title="Dar feedback" icon="💬" isActive={pantallaActual === 'Feedback'} onPress={() => irA('Feedback')} />
-              <SubMenuItem title="Grupos" icon="🤝" isActive={pantallaActual === 'Grupos' || pantallaActual === 'GrupoChat'} onPress={() => irA('Grupos')} />
+            <AccordotionItem title="Comunidad" icon="amigos" defaultOpen={['Solicitudes', 'Feedback', 'Grupos', 'GrupoChat'].includes(pantallaActual)}>
+              <SubMenuItem title="Solicitudes y amigos" icon="saludo" isActive={pantallaActual === 'Solicitudes'} onPress={() => irA('Solicitudes')} />
+              <SubMenuItem title="Dar feedback" icon="chat" isActive={pantallaActual === 'Feedback'} onPress={() => irA('Feedback')} />
+              <SubMenuItem title="Grupos" icon="union" isActive={pantallaActual === 'Grupos' || pantallaActual === 'GrupoChat'} onPress={() => irA('Grupos')} />
             </AccordotionItem>
 
-            <AccordotionItem title="Soporte" icon="🛠️" defaultOpen={['PreguntasFrecuentes', 'ReportarError', 'Contacto'].includes(pantallaActual)}>
+            <AccordotionItem title="Soporte" icon="soporte" defaultOpen={['PreguntasFrecuentes', 'ReportarError', 'Contacto'].includes(pantallaActual)}>
               <SubMenuItem
                 title="Preguntas frecuentes"
-                icon="❓"
+                icon="pregunta"
                 isActive={pantallaActual === 'PreguntasFrecuentes'}
                 onPress={() => irA('PreguntasFrecuentes')}
               />
-              <SubMenuItem title="Reportar errores" icon="🐛" isActive={pantallaActual === 'ReportarError'} onPress={() => irA('ReportarError')} />
-              <SubMenuItem title="Contacto" icon="📧" isActive={pantallaActual === 'Contacto'} onPress={() => irA('Contacto')} />
+              <SubMenuItem title="Reportar errores" icon="insecto" isActive={pantallaActual === 'ReportarError'} onPress={() => irA('ReportarError')} />
+              <SubMenuItem title="Contacto" icon="sobre" isActive={pantallaActual === 'Contacto'} onPress={() => irA('Contacto')} />
             </AccordotionItem>
 
             <View style={{ height: 10 }} />

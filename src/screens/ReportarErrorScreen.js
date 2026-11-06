@@ -10,7 +10,7 @@ export function ReportarErrorScreen() {
       etiquetaCategoria="¿Dónde pasó?"
       categorias={['Lecciones', 'Perfil', 'Progreso o racha', 'Inicio de sesión', 'Otro']}
       placeholder="Describí el error paso a paso..."
-      textoExito="¡Recibimos tu reporte! Gracias por avisarnos. 🐛"
+      textoExito="¡Recibimos tu reporte! Gracias por avisarnos."
     />
   );
 }

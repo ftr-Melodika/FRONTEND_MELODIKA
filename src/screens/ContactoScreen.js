@@ -10,7 +10,7 @@ export function ContactoScreen() {
       etiquetaCategoria="Motivo de la consulta"
       categorias={['Mi cuenta', 'Cursos', 'Otra consulta']}
       placeholder="Escribí tu consulta..."
-      textoExito="¡Recibimos tu consulta! 📧"
+      textoExito="¡Recibimos tu consulta!"
     />
   );
 }

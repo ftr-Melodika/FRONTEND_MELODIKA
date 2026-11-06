@@ -1,6 +1,7 @@
 // Archivo: src/screens/PracticaScreen.js
 // Práctica libre: el mástil marca una posición y hay que adivinar qué nota es.
 // Es solo para entrenar: no suma XP ni racha, y los aciertos duran hasta salir de la pantalla.
+import { TextoConIcono, COLORES_ICONO } from '../components/icono/Icono';
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -104,14 +105,15 @@ export function PracticaScreen() {
 
             {respondida && (
               <Text style={[styles.resultado, acerto ? styles.resultadoOk : styles.resultadoMal]}>
-                {acerto ? '¡Correcto! 🎉' : `Era ${pregunta.nota}`}
+                {acerto ? '¡Correcto!' : `Era ${pregunta.nota}`}
               </Text>
             )}
-            {respondida && <Button title="Siguiente  ▶" onPress={siguiente} />}
+            {respondida && <Button title="Siguiente" iconoDerecha="adelante" onPress={siguiente} />}
 
-            <Text style={styles.marcador}>
-              ✔️ {marcador.aciertos} de {marcador.total}   🔥 {marcador.seguidos} seguidas
-            </Text>
+            <View style={styles.marcadorFila}>
+              <TextoConIcono nombre="completado" tamano={16} acento={COLORES_ICONO.verde} style={styles.marcador}>{marcador.aciertos} de {marcador.total}</TextoConIcono>
+              <TextoConIcono nombre="llama" tamano={16} acento={COLORES_ICONO.llama} style={styles.marcador}>{marcador.seguidos} seguidas</TextoConIcono>
+            </View>
           </ScrollView>
         </View>
       </View>
@@ -136,5 +138,6 @@ const styles = StyleSheet.create({
   resultado: { fontSize: 15, fontWeight: 'bold', textAlign: 'center', marginTop: 10 },
   resultadoOk: { color: '#a3fba3' },
   resultadoMal: { color: '#ffb3bd' },
-  marcador: { color: 'rgba(255,255,255,0.8)', fontSize: 13, textAlign: 'center', marginTop: 10 },
+  marcadorFila: { flexDirection: 'row', justifyContent: 'center', gap: 14, marginTop: 10 },
+  marcador: { color: 'rgba(255,255,255,0.8)', fontSize: 13 },
 });

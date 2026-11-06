@@ -1,6 +1,7 @@
 // Archivo: src/screens/PerfilPublicoScreen.js
 // Perfil de otro usuario. Qué se puede ver lo decide el backend: si el perfil es privado
 // y no son amigos, las estadísticas directamente no llegan.
+import { Icono, TextoConIcono, COLORES_ICONO } from '../components/icono/Icono';
 import { useCallback, useContext, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -13,10 +14,10 @@ import { AvatarUsuario } from '../components/AvatarUsuario';
 import { AuthContext } from '../context/AuthContext';
 import { amistadesService } from '../services/amistadesService';
 
-function Estadistica({ icono, etiqueta, valor }) {
+function Estadistica({ icono, acento, etiqueta, valor }) {
   return (
     <View style={styles.statCard}>
-      <Text style={styles.statIcono}>{icono}</Text>
+      <Icono nombre={icono} tamano={28} acento={acento} />
       <Text style={styles.statValor}>{valor}</Text>
       <Text style={styles.statEtiqueta}>{etiqueta}</Text>
     </View>
@@ -89,7 +90,7 @@ export function PerfilPublicoScreen({ route, navigation }) {
       case 'amigos':
         return (
           <>
-            <Text style={styles.estado}>🤝 Son amigos</Text>
+            <TextoConIcono nombre="union" tamano={18} centrado style={styles.estado}>Son amigos</TextoConIcono>
             {confirmando ? (
               <Button title="Confirmar: dejar de seguir" variant="danger" onPress={quitar} loading={procesando} />
             ) : (
@@ -100,14 +101,14 @@ export function PerfilPublicoScreen({ route, navigation }) {
       case 'enviada':
         return (
           <>
-            <Text style={styles.estado}>⏳ Solicitud enviada</Text>
+            <TextoConIcono nombre="reloj" tamano={18} centrado style={styles.estado}>Solicitud enviada</TextoConIcono>
             <Button title="Cancelar solicitud" variant="secondary" onPress={quitar} loading={procesando} />
           </>
         );
       case 'recibida':
         return (
           <>
-            <Text style={styles.estado}>👋 Te envió una solicitud</Text>
+            <TextoConIcono nombre="saludo" tamano={18} acento={COLORES_ICONO.rayo} centrado style={styles.estado}>Te envió una solicitud</TextoConIcono>
             <Button title="Aceptar" onPress={() => responder('aceptar')} loading={procesando} />
             <Button title="Rechazar" variant="danger" onPress={() => responder('rechazar')} disabled={procesando} />
           </>
@@ -124,7 +125,7 @@ export function PerfilPublicoScreen({ route, navigation }) {
       <View style={[styles.container, { paddingLeft: Math.max(insets.left, 20), paddingRight: Math.max(insets.right, 20) }]}>
         <ScreenHeader
           title={datos ? `@${datos.username}` : 'Perfil'}
-          right={<Button title="← Volver" variant="back" onPress={() => navigation.goBack()} />}
+          right={<Button title="Volver" icono="volver" variant="back" onPress={() => navigation.goBack()} />}
         />
 
         {!!error && <Text style={styles.error}>{error}</Text>}
@@ -134,10 +135,10 @@ export function PerfilPublicoScreen({ route, navigation }) {
             <ScrollView style={styles.columnaPerfil} contentContainerStyle={styles.perfilContenido}>
               <AvatarUsuario nombre={datos.nombre} foto={datos.avatarUrl} tamano={84} />
               <Text style={styles.nombre}>{datos.nombre}</Text>
-              {!!datos.pais && <Text style={styles.detalle}>📍 {datos.pais}</Text>}
-              <Text style={styles.detalle}>
-                {datos.esPublico ? '🌍 Perfil público' : '🔒 Perfil privado'}  •  {datos.totalAmigos ?? 0} {datos.totalAmigos === 1 ? 'amigo' : 'amigos'}
-              </Text>
+              {!!datos.pais && <TextoConIcono nombre="pin" tamano={15} acento={COLORES_ICONO.rojo} centrado style={styles.detalle}>{datos.pais}</TextoConIcono>}
+              <TextoConIcono nombre={datos.esPublico ? 'globo' : 'candado'} tamano={15} centrado style={styles.detalle}>
+                {datos.esPublico ? 'Perfil público' : 'Perfil privado'}  •  {datos.totalAmigos ?? 0} {datos.totalAmigos === 1 ? 'amigo' : 'amigos'}
+              </TextoConIcono>
               <View style={styles.acciones}>{renderAcciones()}</View>
               {!!errorAccion && <Text style={styles.error}>{errorAccion}</Text>}
             </ScrollView>
@@ -146,10 +147,10 @@ export function PerfilPublicoScreen({ route, navigation }) {
               {stats ? (
                 <>
                   <View style={styles.statsFila}>
-                    <Estadistica icono="⚡" etiqueta="XP total" valor={stats.xp ?? 0} />
-                    <Estadistica icono="🔥" etiqueta="Racha (días)" valor={stats.racha ?? 0} />
-                    <Estadistica icono="✔️" etiqueta="Lecciones" valor={`${stats.leccionesCompletadas ?? 0} / ${stats.totalLecciones ?? 0}`} />
-                    <Estadistica icono="🏆" etiqueta="Cursos terminados" valor={stats.cursosCompletados ?? 0} />
+                    <Estadistica icono="rayo" acento={COLORES_ICONO.rayo} etiqueta="XP total" valor={stats.xp ?? 0} />
+                    <Estadistica icono="llama" acento={COLORES_ICONO.llama} etiqueta="Racha (días)" valor={stats.racha ?? 0} />
+                    <Estadistica icono="completado" acento={COLORES_ICONO.verde} etiqueta="Lecciones" valor={`${stats.leccionesCompletadas ?? 0} / ${stats.totalLecciones ?? 0}`} />
+                    <Estadistica icono="trofeo" acento={COLORES_ICONO.oro} etiqueta="Cursos terminados" valor={stats.cursosCompletados ?? 0} />
                   </View>
 
                   {(stats.cursos || []).map((curso) => {
@@ -157,7 +158,7 @@ export function PerfilPublicoScreen({ route, navigation }) {
                     return (
                       <View key={curso.id} style={styles.curso}>
                         <View style={styles.cursoTitulo}>
-                          <Text style={styles.cursoNombre} numberOfLines={1}>{curso.completado ? '✔️' : '🎸'}  {curso.nombre}</Text>
+                          <TextoConIcono nombre={curso.completado ? 'completado' : 'guitarra'} tamano={18} acento={curso.completado ? COLORES_ICONO.verde : undefined} contenedorStyle={styles.cursoNombreFila} style={styles.cursoNombre} numberOfLines={1}>{curso.nombre}</TextoConIcono>
                           <Text style={styles.cursoPorcentaje}>{porcentaje}%</Text>
                         </View>
                         <View style={styles.barraFondo}>
@@ -169,7 +170,7 @@ export function PerfilPublicoScreen({ route, navigation }) {
                 </>
               ) : (
                 <View style={styles.privado}>
-                  <Text style={styles.privadoIcono}>🔒</Text>
+                  <Icono nombre="candado" tamano={48} />
                   <Text style={styles.privadoTitulo}>Este perfil es privado</Text>
                   <Text style={styles.privadoTexto}>Vas a poder ver sus estadísticas cuando acepte tu solicitud.</Text>
                 </View>
@@ -197,17 +198,16 @@ const styles = StyleSheet.create({
   statsContenido: { flexGrow: 1, paddingBottom: 10 },
   statsFila: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 12 },
   statCard: { flexGrow: 1, flexBasis: 130, alignItems: 'center', padding: 12, borderRadius: 14, backgroundColor: 'rgba(178,140,255,0.15)', borderWidth: 1, borderColor: 'rgba(178,140,255,0.5)' },
-  statIcono: { fontSize: 22 },
   statValor: { color: '#fff', fontSize: 18, fontWeight: 'bold', marginTop: 2 },
   statEtiqueta: { color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 2, textAlign: 'center' },
   curso: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 12, marginBottom: 8 },
   cursoTitulo: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  cursoNombre: { color: '#fff', fontSize: 14, fontWeight: '600', flex: 1 },
+  cursoNombreFila: { flex: 1 },
+  cursoNombre: { color: '#fff', fontSize: 14, fontWeight: '600' },
   cursoPorcentaje: { color: '#a3fba3', fontSize: 14, fontWeight: 'bold', marginLeft: 10 },
   barraFondo: { height: 8, borderRadius: 4, backgroundColor: 'rgba(0,0,0,0.35)', overflow: 'hidden' },
   barraRelleno: { height: '100%', backgroundColor: '#b28cff' },
   privado: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
-  privadoIcono: { fontSize: 40 },
   privadoTitulo: { color: '#fff', fontSize: 18, fontWeight: 'bold', marginTop: 8 },
   privadoTexto: { color: 'rgba(255,255,255,0.75)', fontSize: 14, textAlign: 'center', marginTop: 4 },
 });

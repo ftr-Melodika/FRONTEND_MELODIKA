@@ -28,7 +28,7 @@ export function PracticeStep({ onBack, onFinish, finishing, trasteObjetivo, cuer
       </View>
 
       <View style={styles.btnRow}>
-        {onBack ? <Button title="⬅ Atrás" variant="secondary" onPress={onBack} style={styles.btnHalf} /> : null}
+        {onBack ? <Button title="Atrás" icono="volver" variant="secondary" onPress={onBack} style={styles.btnHalf} /> : null}
         <Button title="Terminar Lección" onPress={onFinish} loading={finishing} style={[styles.btnHalf, { backgroundColor: '#4c52d9' }]} />
       </View>
     </View>

@@ -1,3 +1,4 @@
+import { Icono, TextoConIcono, COLORES_ICONO } from '../components/icono/Icono';
 import { useCallback, useContext, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -63,7 +64,7 @@ export function ProgresoScreen({ navigation }) {
 
             <View style={styles.statCard}>
               <View style={[styles.iconCircle, { backgroundColor: 'rgba(178, 140, 255, 0.15)' }]}>
-                <Text style={styles.icon}>⚡</Text>
+                <Icono nombre="rayo" tamano={28} acento={COLORES_ICONO.rayo} />
               </View>
               <View style={styles.statTextWrapper}>
                 <Text style={styles.statLabel}>Experiencia Total</Text>
@@ -73,7 +74,7 @@ export function ProgresoScreen({ navigation }) {
 
             <View style={styles.statCard}>
               <View style={[styles.iconCircle, { backgroundColor: 'rgba(255, 165, 0, 0.15)' }]}>
-                <Text style={styles.icon}>🔥</Text>
+                <Icono nombre="llama" tamano={28} acento={COLORES_ICONO.llama} />
               </View>
               <View style={styles.statTextWrapper}>
                 <Text style={styles.statLabel}>Racha Actual</Text>
@@ -83,7 +84,7 @@ export function ProgresoScreen({ navigation }) {
 
             <View style={styles.statCard}>
               <View style={[styles.iconCircle, { backgroundColor: 'rgba(50, 205, 50, 0.15)' }]}>
-                <Text style={styles.icon}>✔️</Text>
+                <Icono nombre="completado" tamano={28} acento={COLORES_ICONO.verde} />
               </View>
               <View style={styles.statTextWrapper}>
                 <Text style={styles.statLabel}>Lecciones Completadas</Text>
@@ -97,7 +98,7 @@ export function ProgresoScreen({ navigation }) {
           <View style={styles.courseColumn}>
             <ScrollView style={styles.courseCard} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
               <Text style={styles.courseOverline}>CURSO ACTIVO</Text>
-              <Text style={styles.courseTitle}>🎸 {cursoActual?.nombre || 'Sin cursos todavía'}</Text>
+              <TextoConIcono nombre="guitarra" tamano={28} style={styles.courseTitle} contenedorStyle={styles.courseTitleFila}>{cursoActual?.nombre || 'Sin cursos todavía'}</TextoConIcono>
 
               {/* Barra de progreso */}
               <View style={styles.progressContainer}>
@@ -116,20 +117,27 @@ export function ProgresoScreen({ navigation }) {
                   Próxima lección: <Text style={{ fontWeight: 'bold', color: '#fff' }}>{cursoActual.proximaLeccion}</Text>
                 </Text>
               ) : cursoActual?.completado ? (
-                <Text style={styles.nextLessonInfo}>¡Terminaste este curso! 🏆</Text>
+                <TextoConIcono nombre="trofeo" tamano={18} acento={COLORES_ICONO.oro} style={styles.nextLessonInfo}>¡Terminaste este curso!</TextoConIcono>
               ) : null}
 
               {/* Resto de los cursos */}
               {(resumen?.cursos || []).filter((c) => c.id !== cursoActual?.id).map((c) => (
                 <View key={c.id} style={styles.otroCurso}>
-                  <Text style={styles.otroCursoNombre} numberOfLines={1}>
-                    {c.completado ? '✔️' : c.desbloqueado ? '🎸' : '🔒'}  {c.nombre}
-                  </Text>
+                  <TextoConIcono
+                    nombre={c.completado ? 'completado' : c.desbloqueado ? 'guitarra' : 'candado'}
+                    tamano={18}
+                    acento={c.completado ? COLORES_ICONO.verde : undefined}
+                    contenedorStyle={styles.otroCursoFila}
+                    style={styles.otroCursoNombre}
+                    numberOfLines={1}
+                  >
+                    {c.nombre}
+                  </TextoConIcono>
                   <Text style={styles.otroCursoPct}>{c.porcentaje ?? 0}%</Text>
                 </View>
               ))}
 
-              <Button title="Continuar aprendiendo  ▶" onPress={() => navigation.navigate('Home')} style={styles.continueBtn} />
+              <Button title="Continuar aprendiendo" iconoDerecha="adelante" onPress={() => navigation.navigate('Home')} style={styles.continueBtn} />
             </ScrollView>
           </View>
 
@@ -154,7 +162,6 @@ const styles = StyleSheet.create({
   // Tarjetas de Estadísticas (Izquierda)
   statCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.05)', padding: 15, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.1)' },
   iconCircle: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-  icon: { fontSize: 24 },
   statTextWrapper: { flex: 1 },
   statLabel: { color: 'rgba(255, 255, 255, 0.6)', fontSize: 13, fontWeight: '600', marginBottom: 4 },
   statValue: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
@@ -162,7 +169,8 @@ const styles = StyleSheet.create({
   // Tarjeta de Curso (Derecha)
   courseCard: { flex: 1, backgroundColor: '#111122', padding: 20, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(178, 140, 255, 0.2)' },
   courseOverline: { color: '#b28cff', fontSize: 12, fontWeight: 'bold', letterSpacing: 1.5, marginBottom: 8 },
-  courseTitle: { fontSize: 24, color: '#fff', fontFamily: 'serif', fontWeight: 'bold', marginBottom: 20 },
+  courseTitleFila: { marginBottom: 20 },
+  courseTitle: { fontSize: 24, color: '#fff', fontFamily: 'serif', fontWeight: 'bold' },
 
   progressContainer: { marginBottom: 25 },
   progressHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
@@ -173,7 +181,8 @@ const styles = StyleSheet.create({
 
   nextLessonInfo: { color: 'rgba(255, 255, 255, 0.6)', fontSize: 14, marginBottom: 20 },
   otroCurso: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
-  otroCursoNombre: { color: 'rgba(255,255,255,0.8)', fontSize: 14, flex: 1 },
+  otroCursoFila: { flex: 1 },
+  otroCursoNombre: { color: 'rgba(255,255,255,0.8)', fontSize: 14 },
   otroCursoPct: { color: '#a3fba3', fontSize: 14, fontWeight: 'bold', marginLeft: 10 },
   continueBtn: { marginTop: 16 },
 });

@@ -17,9 +17,10 @@ export const TheoryStep = ({ textoPrincipal, textoDestacado, onBack, onNext, esU
       </ScrollView>
 
       <View style={styles.btnRow}>
-        {onBack ? <Button title="⬅ Atrás" variant="secondary" onPress={onBack} style={styles.btnHalf} /> : null}
+        {onBack ? <Button title="Atrás" icono="volver" variant="secondary" onPress={onBack} style={styles.btnHalf} /> : null}
         <Button
-          title={esUltimo ? 'Terminar Lección' : 'Siguiente 👉'}
+          title={esUltimo ? 'Terminar Lección' : 'Siguiente'}
+          iconoDerecha={esUltimo ? undefined : 'adelante'}
           onPress={onNext}
           loading={finishing}
           style={[styles.btnHalf, esUltimo && { backgroundColor: '#4c52d9' }]}

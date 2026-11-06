@@ -1,4 +1,5 @@
 // Archivo: src/components/leccion/LeccionSidebar.js
+import { TextoConIcono, COLORES_ICONO } from '../icono/Icono';
 import { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,7 +20,7 @@ export function LeccionSidebar({ leccion, paso, totalPasos, instruccion }) {
       <Text style={styles.title} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.75}>
         {leccion?.titulo || 'Lección'}
       </Text>
-      <Text style={styles.xpText}>⚡ {leccion?.xp ?? 0} XP</Text>
+      <TextoConIcono nombre="rayo" tamano={15} acento={COLORES_ICONO.rayo} style={styles.xpText}>{leccion?.xp ?? 0} XP</TextoConIcono>
 
       {/* Barrita de progreso de los pasos */}
       <View style={styles.dotsRow}>
@@ -33,7 +34,7 @@ export function LeccionSidebar({ leccion, paso, totalPasos, instruccion }) {
       </ScrollView>
 
       {leccion?.estado === 'completada' && (
-        <Text style={styles.yaHecha}>✔️ Ya completaste esta lección</Text>
+        <TextoConIcono nombre="completado" tamano={15} acento={COLORES_ICONO.verde} centrado style={styles.yaHecha}>Ya completaste esta lección</TextoConIcono>
       )}
 
       <SideMenu visible={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
