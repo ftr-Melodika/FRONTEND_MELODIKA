@@ -15,12 +15,15 @@ import { useStreak } from '../hooks/useStreak';
 import { rachaService } from '../services/rachaService';
 import { leccionesService } from '../services/leccionesService';
 import { obtenerSecuencia } from '../utils/deteccionSonido';
+import { obtenerAfinacion, obtenerQuiz } from '../utils/actividades';
 
 // Texto por defecto de la barra lateral según el tipo de paso
 const INSTRUCCION_POR_DEFECTO = {
   video: 'Mirá la técnica que usa el profe en el video antes de agarrar la guitarra.',
   teoria: 'Leé la teoría con atención. Acordate que la cuerda más fina es la 1ra.',
   practica: '¡A tocar! Posicioná tus dedos exactamente como marca el mástil.',
+  quiz: 'Mirá la parte marcada en el dibujo y elegí cómo se llama.',
+  afinacion: 'Tocá cada cuerda al aire y girá su clavija hasta que la aguja quede en el centro.',
 };
 
 // Armamos los pasos según lo que traiga la lección: si no tiene video, no mostramos ese paso, etc.
@@ -29,7 +32,7 @@ function armarPasos(leccion) {
   if (leccion.videoId) pasos.push('video');
   pasos.push('teoria');
   const hayTraste = leccion.trasteObjetivo !== null && leccion.trasteObjetivo !== undefined;
-  if (hayTraste || obtenerSecuencia(leccion)) pasos.push('practica');
+  if (hayTraste || obtenerSecuencia(leccion) || obtenerQuiz(leccion) || obtenerAfinacion(leccion)) pasos.push('practica');
   return pasos;
 }
 
@@ -53,13 +56,14 @@ export function LeccionScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
 
   const pasoActual = pasos[indice];
+  const tipoPractica = leccion.practica?.tipo === 'quiz' || leccion.practica?.tipo === 'afinacion' ? leccion.practica.tipo : 'practica';
   const esUltimo = indice === pasos.length - 1;
   const irAtras = indice > 0 ? () => setIndice(indice - 1) : null;
   const irAdelante = () => setIndice(Math.min(indice + 1, pasos.length - 1));
 
   const instruccion =
     leccion.instrucciones?.[indice] ||
-    INSTRUCCION_POR_DEFECTO[pasoActual];
+    INSTRUCCION_POR_DEFECTO[pasoActual === 'practica' ? tipoPractica : pasoActual];
 
   // Al terminar: 1) registramos la lección (XP) en el backend, 2) chequeamos la racha,
   // 3) actualizamos el perfil en memoria y 4) mostramos el cierre, con el botón para seguir.
