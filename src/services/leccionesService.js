@@ -13,16 +13,29 @@ const MOCK_LECCIONES = [
     videoId: '6yKz57b0wG8',
     instrucciones: ['Mirá el video para entender cómo usar la clavija.', 'La cuerda más fina (abajo) es la 1ra (Mi).', 'Tocala al aire (sin pisar) hasta que afine.'],
     textoTeoria: 'La afinación estándar va de la 1ra a la 6ta cuerda: Mi, Si, Sol, Re, La, Mi.',
-    textoDestacado: 'Hoy vamos a afinar la 1ra cuerda al aire.',
-    cuerda: 1, trasteObjetivo: 0,
+    textoDestacado: 'Vamos a tocar las 6 cuerdas al aire, de la más gruesa a la más fina.',
+    cuerda: 6, trasteObjetivo: 0,
+    // Varias consignas en un mismo ejercicio: cuerda/trasteObjetivo repiten el primer paso para clientes viejos
+    practica: {
+      tipo: 'secuencia',
+      pasos: [6, 5, 4, 3, 2, 1].map((cuerda) => ({ tipo: 'nota', posiciones: [{ cuerda, traste: 0 }] })),
+    },
   },
   {
     id: 'mock-2', cursoId: 'mock', orden: 2, titulo: 'Primeros Acordes', tipo: 'Práctica', estado: 'disponible', xp: 100,
     videoId: 'bbzB5qR6N4c',
     instrucciones: ["Fijate cómo el profe posiciona la mano en forma de 'C'.", 'Tratemos de pisar la 1ra cuerda en el traste 3.', '¡Tocá fuerte y claro!'],
     textoTeoria: 'El traste 3 de la 1ra cuerda nos da la nota Sol.',
-    textoDestacado: 'Pisá el 3er espacio con tu dedo anular.',
-    cuerda: 1, trasteObjetivo: 3,
+    textoDestacado: 'Mi al aire, Fa con el índice y Sol con el anular.',
+    cuerda: 1, trasteObjetivo: 0,
+    practica: {
+      tipo: 'secuencia',
+      pasos: [
+        { tipo: 'nota', posiciones: [{ cuerda: 1, traste: 0 }] },
+        { tipo: 'nota', posiciones: [{ cuerda: 1, traste: 1, dedo: 1 }] },
+        { tipo: 'nota', posiciones: [{ cuerda: 1, traste: 3, dedo: 3 }] },
+      ],
+    },
   },
   { id: 'mock-3', cursoId: 'mock', orden: 3, titulo: 'Ritmo de Fogón', tipo: 'Práctica', estado: 'bloqueada', xp: 150 },
   { id: 'mock-4', cursoId: 'mock', orden: 4, titulo: 'Tu primer Canción', tipo: 'Canción', estado: 'bloqueada', xp: 200 },
@@ -43,6 +56,16 @@ function parsearInstrucciones(valor) {
     return lineas.length ? lineas : null;
   }
   return null;
+}
+
+// La columna practica es JSON: normalmente llega como objeto, pero se acepta también como texto
+function parsearPractica(valor) {
+  if (typeof valor !== 'string') return valor ?? null;
+  try {
+    return JSON.parse(valor);
+  } catch {
+    return null;
+  }
 }
 
 // "video" -> "Video" (la BD guarda tipos y niveles en minúscula)
@@ -67,7 +90,7 @@ function mapearLeccion(ejercicio) {
     instrucciones: parsearInstrucciones(ejercicio.instrucciones),
     cuerda: ejercicio.cuerda ?? null,
     trasteObjetivo: ejercicio.trasteObjetivo ?? null,
-    practica: ejercicio.practica ?? null,
+    practica: parsearPractica(ejercicio.practica),
     omitida: !!ejercicio.omitida,
     notaEsperada: ejercicio.notaEsperada ?? null,
     dotLeft: ejercicio.dotLeft || null,

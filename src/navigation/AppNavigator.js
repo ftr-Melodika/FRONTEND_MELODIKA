@@ -1,6 +1,5 @@
-import React, { useContext, useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
-import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
+import React, { useContext } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthContext } from '../context/AuthContext';
 import { LoadingModal } from '../components/LoadingModal'; // 👈 El nuevo modal
@@ -29,32 +28,11 @@ import { Background } from '../components/Background';
 
 const Stack = createNativeStackNavigator();
 
-// Cuánto se mantiene la pantalla de carga al cambiar de lugar en la app
-const DURACION_TRANSICION_MS = 500;
-
+// Antes cada cambio de pantalla mostraba la pantalla de carga 0,8 s a propósito: en un celular
+// lento se sumaba al tiempo real de montar la pantalla. Ahora la carga se muestra solo cuando hay
+// algo que esperar (cada pantalla usa LoadingModal mientras busca sus datos).
 export function AppNavigator() {
   const { isLoading, userToken } = useContext(AuthContext);
-  const navigationRef = useNavigationContainerRef();
-  const [enTransicion, setEnTransicion] = useState(false);
-  const rutaActualRef = useRef(null);
-  const temporizadorRef = useRef(null);
-
-  useEffect(() => () => clearTimeout(temporizadorRef.current), []);
-
-  const recordarRuta = () => {
-    rutaActualRef.current = navigationRef.getCurrentRoute()?.key ?? null;
-  };
-
-  // Comparamos la ruta porque el estado también cambia con cosas que no son moverse de pantalla
-  const handleCambioDeEstado = () => {
-    const rutaNueva = navigationRef.getCurrentRoute()?.key ?? null;
-    if (rutaNueva === rutaActualRef.current) return;
-    rutaActualRef.current = rutaNueva;
-
-    setEnTransicion(true);
-    clearTimeout(temporizadorRef.current);
-    temporizadorRef.current = setTimeout(() => setEnTransicion(false), DURACION_TRANSICION_MS);
-  };
 
   if (isLoading) {
     return (
@@ -66,8 +44,7 @@ export function AppNavigator() {
   }
 
   return (
-    <View style={{ flex: 1 }}>
-    <NavigationContainer ref={navigationRef} onReady={recordarRuta} onStateChange={handleCambioDeEstado}>
+    <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
         {userToken === null ? (
           <>
@@ -98,7 +75,5 @@ export function AppNavigator() {
         )}
       </Stack.Navigator>
     </NavigationContainer>
-    <LoadingModal visible={enTransicion} />
-    </View>
   );
 }

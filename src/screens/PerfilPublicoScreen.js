@@ -13,6 +13,7 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { AvatarUsuario } from '../components/AvatarUsuario';
 import { AuthContext } from '../context/AuthContext';
 import { amistadesService } from '../services/amistadesService';
+import { FUENTE_TITULO } from '../theme/fuentes';
 
 function Estadistica({ icono, acento, etiqueta, valor }) {
   return (
@@ -190,7 +191,7 @@ const styles = StyleSheet.create({
   fila: { flex: 1, flexDirection: 'row', gap: 20 },
   columnaPerfil: { flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
   perfilContenido: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 16 },
-  nombre: { color: '#fff', fontSize: 20, fontFamily: 'serif', fontWeight: 'bold', marginTop: 10, textAlign: 'center' },
+  nombre: { color: '#fff', fontSize: 20, fontFamily: FUENTE_TITULO, fontWeight: 'bold', marginTop: 10, textAlign: 'center' },
   detalle: { color: 'rgba(255,255,255,0.75)', fontSize: 13, marginTop: 4, textAlign: 'center' },
   acciones: { width: '100%', marginTop: 10 },
   estado: { color: '#a3fba3', fontSize: 14, fontWeight: 'bold', textAlign: 'center', marginBottom: 2 },

@@ -9,6 +9,7 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { Button } from '../components/Button';
 import { AuthContext } from '../context/AuthContext';
 import { leccionesService } from '../services/leccionesService';
+import { FUENTE_TITULO } from '../theme/fuentes';
 
 export function ProgresoScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -168,9 +169,9 @@ const styles = StyleSheet.create({
 
   // Tarjeta de Curso (Derecha)
   courseCard: { flex: 1, backgroundColor: '#111122', padding: 20, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(178, 140, 255, 0.2)' },
-  courseOverline: { color: '#b28cff', fontSize: 12, fontWeight: 'bold', letterSpacing: 1.5, marginBottom: 8 },
+  courseOverline: { color: '#fff', fontSize: 12, fontWeight: 'bold', letterSpacing: 1.5, marginBottom: 8 },
   courseTitleFila: { marginBottom: 20 },
-  courseTitle: { fontSize: 24, color: '#fff', fontFamily: 'serif', fontWeight: 'bold' },
+  courseTitle: { fontSize: 24, color: '#fff', fontFamily: FUENTE_TITULO, fontWeight: 'bold' },
 
   progressContainer: { marginBottom: 25 },
   progressHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },

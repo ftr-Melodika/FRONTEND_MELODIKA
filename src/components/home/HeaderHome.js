@@ -1,8 +1,10 @@
 import { Icono, COLORES_ICONO } from '../icono/Icono';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MenuButton } from '../MenuButton';
+import { FUENTE_TITULO } from '../../theme/fuentes';
 
-export function HeaderHome({ perfil, cuenta, curso, puedeCambiarCurso, solicitudesPendientes = 0, onCambiarCurso, onOpenMenu, onOpenNotificaciones }) {
+// Con `curso` muestra su nombre y un botón para volver a la lista (onVolver); sin curso, "Tus cursos".
+export function HeaderHome({ perfil, cuenta, curso, solicitudesPendientes = 0, onVolver, onOpenMenu, onOpenNotificaciones }) {
   // Determinamos el nombre a mostrar directamente acá
   const nombreMostrar = perfil ? perfil.nombre : cuenta?.email?.split('@')[0];
   const racha = perfil?.racha ?? 0;
@@ -21,17 +23,19 @@ export function HeaderHome({ perfil, cuenta, curso, puedeCambiarCurso, solicitud
       {/* Centro: curso actual (se achica la letra antes de cortarse) */}
       <TouchableOpacity
         style={styles.center}
-        onPress={onCambiarCurso}
-        disabled={!puedeCambiarCurso}
+        onPress={onVolver}
+        disabled={!onVolver}
         activeOpacity={0.7}
+        accessibilityRole={onVolver ? 'button' : undefined}
+        accessibilityLabel={onVolver ? 'Volver a todos los cursos' : undefined}
       >
         <View style={styles.cursoFila}>
           <Icono nombre="guitarra" tamano={24} />
           <Text style={styles.courseTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-            {curso?.nombre || 'Guitarra'}
+            {curso?.nombre || 'Tus cursos'}
           </Text>
         </View>
-        {puedeCambiarCurso && <View style={styles.cursoFila}><Text style={styles.cambiar}>Cambiar curso</Text><Icono nombre="abajo" tamano={12} color="rgba(255,255,255,0.6)" /></View>}
+        {onVolver && <View style={styles.cursoFila}><Icono nombre="volver" tamano={12} color="#fff" /><Text style={styles.cambiar}>Todos los cursos</Text></View>}
       </TouchableOpacity>
 
       {/* Derecha: estadísticas (nunca se achican) */}
@@ -66,11 +70,11 @@ export function HeaderHome({ perfil, cuenta, curso, puedeCambiarCurso, solicitud
 const styles = StyleSheet.create({
   topBar: { flexDirection: 'row', alignItems: 'center', minHeight: 50, marginBottom: 10, gap: 12 },
   left: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, minWidth: 0 },
-  welcomeText: { color: '#fff', fontSize: 16, fontFamily: 'serif', fontWeight: 'bold', flexShrink: 1 },
+  welcomeText: { color: '#fff', fontSize: 16, fontFamily: FUENTE_TITULO, fontWeight: 'bold', flexShrink: 1 },
   center: { flex: 1.3, alignItems: 'center', minWidth: 0 },
   cursoFila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, maxWidth: '100%' },
-  courseTitle: { flexShrink: 1, color: '#b28cff', fontSize: 20, fontWeight: 'bold', fontFamily: 'serif', textAlign: 'center' },
-  cambiar: { color: 'rgba(255,255,255,0.6)', fontSize: 11, marginTop: 1 },
+  courseTitle: { flexShrink: 1, color: '#fff', fontSize: 20, fontWeight: 'bold', fontFamily: FUENTE_TITULO, textAlign: 'center' },
+  cambiar: { color: '#fff', fontSize: 11, marginTop: 1 },
   right: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexShrink: 0 },
   statChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6, gap: 5 },
   campana: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },

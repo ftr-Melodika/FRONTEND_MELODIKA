@@ -9,6 +9,7 @@ import { perfilesService } from '../services/perfilesService';
 import { ProfileAvatar } from '../components/ProfileAvatar';
 import { Button } from '../components/Button';
 import { LoadingModal } from '../components/LoadingModal';
+import { FUENTE_TITULO } from '../theme/fuentes';
 
 // Mismo límite que valida el backend (perfilService.MAX_PERFILES)
 const MAX_PERFILES = 4;
@@ -153,8 +154,8 @@ export function SelectUserScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   scroll: { flex: 1, width: '100%' },
   container: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 20, paddingHorizontal: 20 },
-  title: { fontSize: 30, color: '#fff', fontFamily: 'serif', fontWeight: 'bold', marginBottom: 6, textAlign: 'center' },
-  subtitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14 },
+  title: { fontSize: 30, color: '#fff', fontFamily: FUENTE_TITULO, fontWeight: 'bold', marginBottom: 6, textAlign: 'center' },
+  subtitle: { color: '#fff', fontSize: 14 },
   profilesRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start', gap: 30, marginTop: 22 },
   avatarWrapper: { position: 'relative' },
   editBadge: { position: 'absolute', right: 0, top: 0, width: 30, height: 30, borderRadius: 15, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 4 },

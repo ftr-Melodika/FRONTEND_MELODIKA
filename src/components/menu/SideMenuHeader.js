@@ -1,5 +1,6 @@
 import { TextoConIcono, COLORES_ICONO } from '../icono/Icono';
 import { View, Text, StyleSheet, Image } from 'react-native';
+import { FUENTE_TITULO } from '../../theme/fuentes';
 
 export function SideMenuHeader({ perfil }) {
   const nombreMostrar = perfil?.nombre || 'Usuario';
@@ -41,7 +42,7 @@ const styles = StyleSheet.create({
   avatarInicial: { backgroundColor: '#b28cff', justifyContent: 'center', alignItems: 'center' },
   inicial: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
   textWrapper: { marginLeft: 15, flex: 1 },
-  name: { fontSize: 18, color: '#fff', fontWeight: 'bold', fontFamily: 'serif' },
+  name: { fontSize: 18, color: '#fff', fontWeight: 'bold', fontFamily: FUENTE_TITULO },
   username: { fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 2 },
   statsFila: { flexDirection: 'row', gap: 12, marginTop: 4 },
   stats: { fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: '600' },

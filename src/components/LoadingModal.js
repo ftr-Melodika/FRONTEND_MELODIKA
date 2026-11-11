@@ -4,6 +4,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Animated, Easing, StyleSheet } from 'react-native';
 import { Background } from './Background';
+import { FUENTE_TITULO } from '../theme/fuentes';
 
 const CANT_BARRAS = 5;
 const ALTO_BARRA = 44;
@@ -65,5 +66,5 @@ const styles = StyleSheet.create({
   centro: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   barras: { flexDirection: 'row', alignItems: 'center', height: ALTO_BARRA, gap: 7 },
   barra: { width: 8, height: ALTO_BARRA, borderRadius: 4, backgroundColor: '#b28cff' },
-  texto: { color: '#fff', marginTop: 18, fontSize: 16, fontWeight: '600', letterSpacing: 0.5, fontFamily: 'serif', textAlign: 'center' },
+  texto: { color: '#fff', marginTop: 18, fontSize: 16, fontWeight: '600', letterSpacing: 0.5, fontFamily: FUENTE_TITULO, textAlign: 'center' },
 });

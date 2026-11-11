@@ -5,6 +5,7 @@ import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MenuButton } from '../MenuButton';
 import { SideMenu } from '../SideMenu';
+import { FUENTE_TITULO } from '../../theme/fuentes';
 
 export function LeccionSidebar({ leccion, paso, totalPasos, instruccion }) {
   const insets = useSafeAreaInsets();
@@ -45,8 +46,8 @@ export function LeccionSidebar({ leccion, paso, totalPasos, instruccion }) {
 const styles = StyleSheet.create({
   sidebar: { width: '30%', backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: 20, padding: 15, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  pasosText: { color: '#a3fba3', fontSize: 13, fontWeight: 'bold' },
-  title: { fontSize: 20, color: '#fff', fontFamily: 'serif', fontWeight: 'bold', marginBottom: 6 },
+  pasosText: { color: '#fff', fontSize: 13, fontWeight: 'bold' },
+  title: { fontSize: 20, color: '#fff', fontFamily: FUENTE_TITULO, fontWeight: 'bold', marginBottom: 6 },
   xpText: { color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: '600', marginBottom: 10 },
   dotsRow: { flexDirection: 'row', gap: 6, marginBottom: 10 },
   dot: { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.15)' },

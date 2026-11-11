@@ -5,6 +5,7 @@ import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
 import { Checkbox } from '../components/form/Checkbox'; // 👈 Checkbox importado
 import { authService } from '../services/authService';
+import { FUENTE_TITULO } from '../theme/fuentes';
 
 export function RegisterScreen({ navigation }) {
   const [nombre, setNombre] = useState('');
@@ -74,5 +75,5 @@ const styles = StyleSheet.create({
   backButtonInside: { alignSelf: 'flex-start' },
   glassCard: { alignSelf: 'center', width: '70%', maxWidth: 560, maxHeight: '90%', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 25, borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1, paddingHorizontal: 25, paddingVertical: 2 },
   scrollContent: { paddingVertical: 16 },
-  title: { fontSize: 26, color: '#fff', textAlign: 'center', marginBottom: 15, fontFamily: 'serif', fontWeight: 'bold' },
+  title: { fontSize: 26, color: '#fff', textAlign: 'center', marginBottom: 15, fontFamily: FUENTE_TITULO, fontWeight: 'bold' },
 });

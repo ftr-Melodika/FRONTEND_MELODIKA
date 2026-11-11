@@ -1,0 +1,69 @@
+// Ejecutar con: npm test
+import test from 'node:test';
+import assert from 'node:assert';
+import { ACORDES_RESPALDO, acordeAlAzar, acordesDeRespaldo, extraerAcordes, preguntaDeAcorde } from './acordes.js';
+import { nombreDeMidi } from './deteccionSonido.js';
+
+// Como llega del backend (GET /api/cursos/perfil/:perfilId/curso/:cursoId), ya pasado por mapearLeccion
+const leccionDo = {
+  id: 'e1', orden: 4, titulo: 'Acorde de Do mayor (Do)', tipo: 'Practica',
+  practica: { tipo: 'acorde', nombre: 'Do', posiciones: [
+    { dedo: 3, cuerda: 5, traste: 3 }, { dedo: 2, cuerda: 4, traste: 2 }, { cuerda: 3, traste: 0 },
+    { dedo: 1, cuerda: 2, traste: 1 }, { cuerda: 1, traste: 0 }] },
+};
+
+test('extrae los acordes de las lecciones, con su forma y sus dedos', () => {
+  const [acorde] = extraerAcordes([leccionDo]);
+  assert.strictEqual(acorde.nombre, 'Do');
+  assert.strictEqual(acorde.titulo, 'Acorde de Do mayor (Do)');
+  assert.strictEqual(acorde.objetivo.tipo, 'acorde');
+  assert.deepStrictEqual(acorde.objetivo.posiciones.map((p) => p.dedo), [3, 2, undefined, 1, undefined]);
+  assert.deepStrictEqual([...new Set(acorde.objetivo.midis.map(nombreDeMidi))].sort(), ['Do', 'Mi', 'Sol']);
+});
+
+test('ignora lecciones sin acorde, inválidas o repetidas, y respeta el orden', () => {
+  const lecciones = [
+    { orden: 9, practica: { tipo: 'acorde', nombre: 'Re', posiciones: [{ cuerda: 4, traste: 0 }, { cuerda: 3, traste: 2 }] } },
+    { ...leccionDo, orden: 5 },
+    { orden: 1, practica: null, cuerda: 1, trasteObjetivo: 3 },
+    { orden: 2, practica: { tipo: 'nota', posiciones: [{ cuerda: 1, traste: 0 }] } },
+    { orden: 3, practica: { tipo: 'acorde', nombre: 'Roto', posiciones: [{ cuerda: 9, traste: 0 }, { cuerda: 1, traste: 0 }] } },
+    { ...leccionDo, orden: 7, titulo: 'Repaso de Do' },
+    null,
+  ];
+  assert.deepStrictEqual(extraerAcordes(lecciones).map((a) => a.nombre), ['Do', 'Re']);
+  assert.deepStrictEqual(extraerAcordes(undefined), []);
+});
+
+test('el respaldo tiene los 6 acordes del curso y todos son válidos', () => {
+  const acordes = acordesDeRespaldo();
+  assert.deepStrictEqual(acordes.map((a) => a.nombre), ACORDES_RESPALDO.map((a) => a.nombre));
+  const notas = Object.fromEntries(acordes.map((a) => [a.nombre, [...new Set(a.objetivo.midis.map(nombreDeMidi))].sort().join(' ')]));
+  assert.deepStrictEqual(notas, {
+    Mim: 'Mi Si Sol', Mi: 'Mi Si Sol#', Lam: 'Do La Mi', Do: 'Do Mi Sol', Sol: 'Re Si Sol', Re: 'Fa# La Re',
+  });
+});
+
+test('acordeAlAzar no repite el anterior, salvo que haya uno solo', () => {
+  const acordes = acordesDeRespaldo();
+  let anterior = null;
+  for (let i = 0; i < 300; i++) {
+    const nuevo = acordeAlAzar(acordes, anterior);
+    if (anterior) assert.notStrictEqual(nuevo.nombre, anterior.nombre);
+    anterior = nuevo;
+  }
+  const uno = acordes.slice(0, 1);
+  assert.strictEqual(acordeAlAzar(uno, uno[0]).nombre, uno[0].nombre);
+});
+
+test('preguntaDeAcorde trae el acorde correcto entre opciones distintas', () => {
+  const acordes = acordesDeRespaldo();
+  for (let i = 0; i < 100; i++) {
+    const { acorde, opciones } = preguntaDeAcorde(acordes);
+    assert.strictEqual(opciones.length, 4);
+    assert.strictEqual(new Set(opciones).size, 4);
+    assert.ok(opciones.includes(acorde.nombre));
+  }
+  // Con menos acordes que opciones, se usan los que hay
+  assert.strictEqual(preguntaDeAcorde(acordes.slice(0, 2)).opciones.length, 2);
+});

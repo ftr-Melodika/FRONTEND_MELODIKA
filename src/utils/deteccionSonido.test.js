@@ -12,6 +12,7 @@ import {
   midiDePosicion,
   nombreDeMidi,
   obtenerObjetivo,
+  obtenerSecuencia,
 } from './deteccionSonido.js';
 
 const FORMAS = {
@@ -37,7 +38,9 @@ function crearAzar(semilla) {
 }
 
 // Cuerdas con armónicos, un poco desafinadas, y con los graves atenuados como en un celular
-function sintetizar(midis, sr, n, { semilla = 1, ruido = 0.003, desafinacionCents = 0 } = {}) {
+// Con sinFundamental el micrófono no capta la nota base, solo sus armónicos (pasa en las cuerdas graves).
+// Puede ser true (ninguna nota) o una frecuencia: pierde la base de las notas más graves que esa.
+function sintetizar(midis, sr, n, { semilla = 1, ruido = 0.003, desafinacionCents = 0, sinFundamental = false } = {}) {
   const azar = crearAzar(semilla);
   const b = new Float32Array(n);
   for (const midi of midis) {
@@ -46,7 +49,8 @@ function sintetizar(midis, sr, n, { semilla = 1, ruido = 0.003, desafinacionCent
     [1, 0.7, 0.45, 0.3, 0.2, 0.12].forEach((a, k) => {
       const armonico = k + 1;
       const fk = f * armonico * Math.sqrt(1 + 1e-4 * armonico * armonico);
-      const respuesta = fk / (fk + 120); // El micrófono del celular capta poco por debajo de 120 Hz
+      const pierdeBase = armonico === 1 && (sinFundamental === true || fk < sinFundamental);
+      const respuesta = pierdeBase ? 0 : fk / (fk + 120); // El micrófono del celular capta poco por debajo de 120 Hz
       const fase = azar() * 2 * Math.PI;
       for (let i = 0; i < n; i++) b[i] += ganancia * a * respuesta * Math.sin((2 * Math.PI * fk * i) / sr + fase);
     });
@@ -130,6 +134,59 @@ for (const [sr, factor] of [[48000, 4], [44100, 3]]) {
     assert.deepStrictEqual([otra.correcta, otra.notaDetectada, otra.registro], [false, 'La', null]);
   });
 
+  test(`sin la nota base, sus armónicos no aprueban otra nota (${sr} Hz)`, () => {
+    const sinBase = (midi) => fundamentalesDe([midi], { sinFundamental: true });
+    // Do3 da Do4 y Sol4: no es un Sol
+    const doSinBase = compararNota(sinBase(48), 55);
+    assert.ok(!doSinBase.correcta, 'tocó Do y aceptó Sol');
+    assert.strictEqual(doSinBase.notaDetectada, 'Do');
+    // Mi2 da Mi3 y Si3: no es un Si
+    assert.ok(!compararNota(sinBase(40), 59).correcta, 'tocó Mi y aceptó Si');
+    // La2 da La3 y Mi4: no es un Mi
+    assert.ok(!compararNota(sinBase(45), 52).correcta, 'tocó La y aceptó Mi');
+  });
+
+  test(`sin la nota base, igual la reconoce por sus armónicos (${sr} Hz)`, () => {
+    for (const midi of [40, 45, 48, 50]) {
+      const r = compararNota(fundamentalesDe([midi], { sinFundamental: true }), midi);
+      assert.ok(r.correcta, `${nombreDeMidi(midi)}: detectó ${r.notaDetectada}`);
+      assert.strictEqual(r.notaDetectada, nombreDeMidi(midi));
+    }
+  });
+
+  test(`sin la nota base, ninguna nota de la primera posición aprueba otra (${sr} Hz)`, () => {
+    const tocables = [...new Set([1, 2, 3, 4, 5, 6].flatMap((c) => [0, 1, 2, 3, 4, 5].map((t) => midiDePosicion(c, t))))];
+    for (const tocada of tocables) {
+      const fundamentales = fundamentalesDe([tocada], { sinFundamental: true, semilla: tocada });
+      for (const pedida of tocables) {
+        const mismaNota = (tocada - pedida) % 12 === 0 && Math.abs(tocada - pedida) <= 12;
+        assert.strictEqual(compararNota(fundamentales, pedida).correcta, mismaNota, `tocó ${tocada} y se pidió ${pedida}`);
+      }
+    }
+  });
+
+  // Un Sol3 sin su base deja Sol4 y Re5: en un Do, ese Re no es una nota de más
+  test(`los armónicos de una cuerda del acorde no son notas de más (${sr} Hz)`, () => {
+    for (const nombre of ['Do', 'Sol', 'Mim', 'Mi', 'La', 'Lam']) {
+      const forma = midisDe(FORMAS[nombre]);
+      const r = compararAcorde(fundamentalesDe(forma, { sinFundamental: 200 }), forma);
+      assert.deepStrictEqual(r.sobrantes, [], `${nombre}: sobran ${r.sobrantes}`);
+    }
+  });
+
+  // Sin las bases, en un Do domina Sol4 y el Do4 queda débil: igual tiene que contar como nota de más
+  test(`rechaza un acorde equivocado aunque la nota de más suene débil (${sr} Hz)`, () => {
+    for (const semilla of [1, 2, 3, 4, 5, 6, 7, 8]) {
+      const r = compararAcorde(fundamentalesDe(midisDe(FORMAS.Do), { sinFundamental: 200, semilla }), midisDe(FORMAS.Sol));
+      assert.ok(!r.correcta, `semilla ${semilla}: tocó Do y aceptó Sol`);
+    }
+  });
+
+  // Limitación conocida: si el micrófono pierde la base de todas las cuerdas graves, una nota que
+  // suma armónicos de varias cuerdas tapa a las demás (en el Mi, el Si3 deja al Mi3 en un 2 %), y
+  // dos acordes que comparten dos notas (Do y Mim) pueden confundirse. Un micrófono real capta
+  // algo de la base, y con eso se distinguen.
+
   test(`una octava de diferencia se acepta (${sr} Hz)`, () => {
     assert.ok(compararNota(fundamentalesDe([52]), 40).correcta);
     assert.ok(compararNota(fundamentalesDe([40]), 52).correcta);
@@ -175,6 +232,30 @@ test('obtenerObjetivo trata una practica inválida como si no existiera', () => 
   }
 });
 
+test('obtenerSecuencia devuelve las consignas en orden y acepta el formato viejo', () => {
+  const secuencia = obtenerSecuencia({
+    cuerda: 6, trasteObjetivo: 0, // Para clientes viejos: igual al primer paso
+    practica: {
+      tipo: 'secuencia',
+      nombre: 'Cambios',
+      pasos: [
+        { tipo: 'nota', posiciones: [{ cuerda: 6, traste: 0 }] },
+        { tipo: 'acorde', nombre: 'Mim', posiciones: FORMAS.Mim.map(([cuerda, traste]) => ({ cuerda, traste })) },
+        { tipo: 'nota', posiciones: [{ cuerda: 9, traste: 0 }] }, // Inválido: se descarta
+        { tipo: 'nota', posiciones: [{ cuerda: 1, traste: 3, dedo: 3 }] },
+      ],
+    },
+  });
+  assert.deepStrictEqual(secuencia.map((o) => [o.tipo, o.nombre]), [['nota', 'Mi'], ['acorde', 'Mim'], ['nota', 'Sol']]);
+  assert.strictEqual(secuencia[2].posiciones[0].dedo, 3);
+
+  assert.deepStrictEqual(obtenerSecuencia({ cuerda: 1, trasteObjetivo: 3 }).map((o) => o.nombre), ['Sol']);
+  // Una secuencia sin pasos válidos cae al formato viejo
+  assert.deepStrictEqual(obtenerSecuencia({ cuerda: 5, trasteObjetivo: 0, practica: { tipo: 'secuencia', pasos: [] } }).map((o) => o.nombre), ['La']);
+  assert.strictEqual(obtenerSecuencia({ practica: { tipo: 'secuencia', pasos: 'x' } }), null);
+  assert.strictEqual(obtenerSecuencia({}), null);
+});
+
 test('el verificador exige sostener y perdona una lectura suelta', () => {
   const v = crearVerificador(400, 300, 3);
   assert.strictEqual(v.agregar(true, 0), false);
@@ -215,10 +296,11 @@ function concatenar(...partes) {
 }
 
 // Pasa audio por el detector en trozos, como llegan del micrófono
-function reproducir(detector, audio, sr) {
+// `desde` sigue el reloj de una pasada anterior por el mismo detector
+function reproducir(detector, audio, sr, desde = 0) {
   const trozo = Math.floor(sr / 10);
   const lecturas = [];
-  let ahora = 0;
+  let ahora = desde;
   for (let i = 0; i + trozo <= audio.length; i += trozo) {
     const lectura = detector.agregarBuffer(audio.subarray(i, i + trozo), 1, sr, ahora);
     if (lectura) lecturas.push(lectura);
@@ -294,6 +376,38 @@ test('reconoce las notas con el ruido igual de fuerte que la guitarra', () => {
 test('reconoce las notas con el ruido más fuerte que la guitarra', () => {
   for (const [c, t] of [[6, 0], [5, 0], [3, 0], [1, 0], [1, 3]]) {
     assert.ok(tocarEnRuido(nota(c, t), [midiDePosicion(c, t)], -10).at(-1).aprobado, `cuerda ${c} traste ${t}`);
+  }
+});
+
+// Lejos del celular la guitarra llega muy baja: en iOS el micrófono no sube el volumen solo.
+// A unos 2 m queda cerca de 0,002 de nivel, en una habitación silenciosa (0,0003 de ruido).
+const LEJOS = { nivel: 0.0003 };
+
+test('reconoce las notas con el celular lejos, en un lugar silencioso', () => {
+  for (const [c, t] of [[6, 0], [5, 0], [4, 2], [3, 0], [2, 1], [1, 0], [1, 3]]) {
+    const lecturas = tocarEnRuido(nota(c, t), [midiDePosicion(c, t)], 12, LEJOS);
+    assert.ok(lecturas.at(-1).aprobado, `cuerda ${c} traste ${t}`);
+  }
+});
+
+test('reconoce los acordes con el celular lejos, en un lugar silencioso', () => {
+  for (const [nombre, forma] of Object.entries(FORMAS)) {
+    assert.ok(tocarEnRuido(acorde(forma), midisDe(forma), 12, LEJOS).at(-1).aprobado, nombre);
+  }
+});
+
+test('con el celular lejos sigue rechazando lo equivocado', () => {
+  assert.ok(!tocarEnRuido(nota(1, 0), [65], 12, LEJOS).at(-1).aprobado);
+  assert.ok(!tocarEnRuido(acorde(FORMAS.Do), midisDe(FORMAS.Lam), 12, LEJOS).at(-1).aprobado);
+});
+
+test('un lugar silencioso, sin tocar, no dispara notas', () => {
+  for (const semilla of [11, 37, 91]) {
+    for (const objetivo of [nota(5, 0), nota(1, 3), acorde(FORMAS.Do)]) {
+      const lecturas = reproducir(crearDetector(objetivo), ambiente(SR, SR * 15, { ...LEJOS, semilla }), SR);
+      assert.ok(!lecturas.at(-1).aprobado);
+      assert.ok(!lecturas.some((l) => l.hayNota));
+    }
   }
 });
 
@@ -404,4 +518,25 @@ test('una nota aguda fuerte no se descarta como armónico de un zumbido grave', 
   pico(midiAFrecuencia(76), 1); // Mi5: 8 veces el Mi2, pero mucho más fuerte
   const midis = encontrarFundamentales(potencias, hzPorBin).map((f) => Math.round(f.midi));
   assert.ok(midis.includes(76), `se perdió la nota aguda: ${midis}`);
+});
+
+test('cambiarObjetivo pasa a otra nota sin volver a calibrar', () => {
+  const detector = crearDetector(nota(5, 0));
+  const primera = reproducir(detector, concatenar(ambiente(SR, SR * 2.5), pasaje([midiDePosicion(5, 0)], SR, 2.5, ambiente(SR, SR * 2.5, { semilla: 23 }), 0)), SR);
+  assert.ok(primera.at(-1).aprobado);
+
+  detector.cambiarObjetivo(nota(1, 3));
+  const durante = ambiente(SR, SR * 2.5, { semilla: 29 });
+  const segunda = reproducir(detector, concatenar(ambiente(SR, SR * 0.5, { semilla: 31 }), pasaje([midiDePosicion(1, 3)], SR, 2.5, durante, 0)), SR, 100000);
+  assert.ok(!segunda.some((l) => l.calibrando), 'volvió a calibrar');
+  assert.ok(!segunda[0].aprobado, 'arrastró el acierto anterior');
+  assert.ok(segunda.at(-1).aprobado);
+});
+
+test('después de cambiarObjetivo la nota anterior no aprueba la nueva', () => {
+  const detector = crearDetector(nota(5, 0));
+  reproducir(detector, ambiente(SR, SR * 2.5), SR);
+  detector.cambiarObjetivo(nota(1, 3));
+  const lecturas = reproducir(detector, pasaje([midiDePosicion(5, 0)], SR, 2.5, ambiente(SR, SR * 2.5, { semilla: 23 }), 0), SR, 100000);
+  assert.ok(!lecturas.at(-1).aprobado);
 });

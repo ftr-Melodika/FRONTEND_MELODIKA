@@ -5,6 +5,7 @@ import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
 import { AuthContext } from '../context/AuthContext'; 
 import { authService } from '../services/authService';
+import { FUENTE_TITULO } from '../theme/fuentes';
 
 export function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -54,6 +55,6 @@ const styles = StyleSheet.create({
   scroll: { flex: 1, width: '100%' },
   scrollContent: { flexGrow: 1, justifyContent: 'center', paddingVertical: 20 },
   glassCard: { alignSelf: 'center', width: '70%', maxWidth: 560, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 25, paddingVertical: 18, paddingHorizontal: 25, borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1 },
-  title: { fontSize: 24, color: '#fff', textAlign: 'center', marginBottom: 20, fontFamily: 'serif', fontWeight: 'bold' },
+  title: { fontSize: 24, color: '#fff', textAlign: 'center', marginBottom: 20, fontFamily: FUENTE_TITULO, fontWeight: 'bold' },
   containerLinks: { alignItems: 'center', marginVertical: 10 }
 });

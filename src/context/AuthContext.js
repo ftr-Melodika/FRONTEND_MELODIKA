@@ -2,6 +2,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { perfilesService, normalizarPerfil } from '../services/perfilesService';
+import { recordarToken } from '../api/tokenSesion';
 
 export const AuthContext = createContext();
 
@@ -23,6 +24,7 @@ export const AuthProvider = ({ children }) => {
         const cuenta = await AsyncStorage.getItem('userCuenta');
         const perfilGuardado = await AsyncStorage.getItem('userPerfil'); // Buscamos el perfil
 
+        recordarToken(token && cuenta ? token : null);
         if (token && cuenta) {
           setUserToken(token);
           setUserData(JSON.parse(cuenta));
@@ -45,6 +47,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await AsyncStorage.setItem('userToken', token);
       await AsyncStorage.setItem('userCuenta', JSON.stringify(cuenta));
+      recordarToken(token);
       
       setUserToken(token);
       setUserData(cuenta);
@@ -60,6 +63,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     setIsLoading(true);
     try {
+      recordarToken(null);
       await AsyncStorage.removeItem('userToken');
       await AsyncStorage.removeItem('userCuenta');
       await AsyncStorage.removeItem('userPerfil'); // Limpiamos el perfil al salir

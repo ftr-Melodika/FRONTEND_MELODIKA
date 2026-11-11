@@ -1,5 +1,5 @@
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { obtenerToken } from './tokenSesion';
 // NUEVO: Importamos el cable de emergencia
 import { globalLogout } from '../context/AuthContext';
 
@@ -16,7 +16,7 @@ const axiosClient = axios.create({
 // Interceptor de Salida (Queda igual)
 axiosClient.interceptors.request.use(
   async (config) => {
-    const token = await AsyncStorage.getItem('userToken');
+    const token = await obtenerToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

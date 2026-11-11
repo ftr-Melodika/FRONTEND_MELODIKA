@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MenuButton } from './MenuButton';
 import { SideMenu } from './SideMenu';
+import { FUENTE_TITULO } from '../theme/fuentes';
 
 export function ScreenHeader({ title, right }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -21,5 +22,5 @@ export function ScreenHeader({ title, right }) {
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 15 },
-  title: { flex: 1, fontSize: 24, color: '#fff', fontFamily: 'serif', fontWeight: 'bold' },
+  title: { flex: 1, fontSize: 24, color: '#fff', fontFamily: FUENTE_TITULO, fontWeight: 'bold' },
 });

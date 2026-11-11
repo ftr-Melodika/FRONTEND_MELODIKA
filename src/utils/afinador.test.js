@@ -99,3 +99,18 @@ for (const sr of [48000, 44100]) {
     assert.strictEqual(escuchar(afinador, silencio, sr, ahora).ultima.frecuencia, null);
   });
 }
+
+// Lejos del celular la cuerda llega muy baja (en iOS el micrófono no sube el volumen solo)
+test('afina con el celular lejos, con la cuerda muy baja', () => {
+  for (const sr of [48000, 44100]) {
+    const afinador = crearAfinador();
+    const real = conDesafinacion(110, 15);
+    const audio = sintetizar(real, sr, sr, { ruido: 0.002 }).map((v) => v * 0.012);
+    let suma = 0;
+    for (const v of audio) suma += v * v;
+    assert.ok(Math.sqrt(suma / audio.length) < 0.002, 'el audio de prueba no es lo bastante bajo');
+    const { ultima } = escuchar(afinador, audio, sr);
+    assert.ok(ultima.frecuencia, `no detectó la nota (${sr} Hz)`);
+    assert.ok(Math.abs(centsEntre(ultima.frecuencia, real)) <= 3);
+  }
+});

@@ -10,6 +10,7 @@ import { AvatarPicker } from '../components/form/AvatarPicker';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { perfilesService } from '../services/perfilesService';
 import { AuthContext } from '../context/AuthContext';
+import { FUENTE_TITULO } from '../theme/fuentes';
 
 const GENDER_OPTIONS = [
   { label: 'Masculino', value: 'Masculino' },
@@ -230,7 +231,7 @@ const styles = StyleSheet.create({
   backButtonText: { fontSize: 16, fontWeight: '600' },
   scrollContent: { flexGrow: 1, justifyContent: 'flex-start', alignItems: 'center', paddingVertical: 20 },
   glassCard: { alignSelf: 'center', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 25, paddingVertical: 18, paddingHorizontal: 28, marginVertical: 18, borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1 },
-  title: { fontSize: 24, color: '#fff', textAlign: 'center', marginBottom: 15, fontFamily: 'serif', fontWeight: 'bold' },
+  title: { fontSize: 24, color: '#fff', textAlign: 'center', marginBottom: 15, fontFamily: FUENTE_TITULO, fontWeight: 'bold' },
   deleteButton: { marginTop: 12 },
   privacidad: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255, 255, 255, 0.15)', borderColor: 'rgba(255, 255, 255, 0.3)', borderWidth: 1, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12, marginBottom: 10 },
   privacidadTextos: { flex: 1 },

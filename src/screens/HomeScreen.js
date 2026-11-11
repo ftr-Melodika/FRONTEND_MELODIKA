@@ -1,6 +1,7 @@
 // Archivo: src/screens/HomeScreen.js
-import { useState, useContext, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+// Primero se ven los cursos; al elegir uno, sus ejercicios. Al volver de una lección se queda en el curso.
+import { useState, useContext, useCallback, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Alert, ActivityIndicator, BackHandler } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Background } from '../components/Background';
@@ -9,7 +10,7 @@ import { AuthContext } from '../context/AuthContext';
 
 import { HeaderHome } from '../components/home/HeaderHome';
 import { CourseMap } from '../components/home/CourseMap';
-import { CoursePickerModal } from '../components/home/CoursePickerModal';
+import { CourseList } from '../components/home/CourseList';
 import { LoadingModal } from '../components/LoadingModal';
 
 import { leccionesService } from '../services/leccionesService';
@@ -25,10 +26,11 @@ export function HomeScreen({ navigation }) {
   const [mapa, setMapa] = useState({ cursos: [], curso: null, lecciones: [], esMock: false });
   const [loading, setLoading] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [solicitudesPendientes, setSolicitudesPendientes] = useState(0);
+  // null = lista de cursos; un id = los ejercicios de ese curso
+  const [cursoElegido, setCursoElegido] = useState(null);
 
-  // Recordamos el curso que eligió el usuario para no perderlo al volver de una lección
+  // El curso elegido también en una ref: cargarMapa la lee sin tener que recrearse
   const cursoElegidoRef = useRef(null);
   const yaCargoRef = useRef(false);
 
@@ -82,26 +84,69 @@ export function HomeScreen({ navigation }) {
     }, [perfilId])
   );
 
-  const handleLeccionPress = useCallback((leccion) => {
-    if (leccion.estado === 'bloqueada') {
-      Alert.alert('Lección bloqueada', 'Completá las lecciones anteriores para avanzar.');
-    } else {
-      const leccionesDelCurso = mapa.lecciones;
-      navigation.navigate('Leccion', { leccion, cursoId: mapa.curso?.id, cursoYaCompletado: !!mapa.curso?.completado, totalLecciones: leccionesDelCurso.length });
-    }
-  }, [navigation, mapa]);
+  const volverACursos = useCallback(() => {
+    cursoElegidoRef.current = null;
+    setCursoElegido(null);
+  }, []);
+
+  // En Android, el botón "atrás" desde los ejercicios vuelve a la lista de cursos
+  useEffect(() => {
+    if (!cursoElegido) return undefined;
+    const suscripcion = BackHandler.addEventListener('hardwareBackPress', () => {
+      volverACursos();
+      return true;
+    });
+    return () => suscripcion.remove();
+  }, [cursoElegido, volverACursos]);
 
   const handleSelectCurso = (curso) => {
     if (!curso.desbloqueado) {
       Alert.alert('Curso bloqueado', 'Terminá el curso anterior para desbloquear este.');
       return;
     }
-    setIsPickerOpen(false);
     cursoElegidoRef.current = curso.id;
+    setCursoElegido(curso.id);
     cargarMapa();
   };
 
+  const handleLeccionPress = useCallback((leccion) => {
+    if (leccion.estado === 'bloqueada') {
+      Alert.alert('Ejercicio bloqueado', 'Completá los ejercicios anteriores para avanzar.');
+      return;
+    }
+    navigation.navigate('Leccion', {
+      leccion,
+      cursoId: mapa.curso?.id,
+      cursoYaCompletado: !!mapa.curso?.completado,
+      totalLecciones: mapa.lecciones.length,
+      // Para que al terminar se pueda pasar directo al ejercicio siguiente
+      lecciones: mapa.lecciones,
+    });
+  }, [navigation, mapa]);
+
+  // Mientras llega el detalle del curso elegido no hay que mostrar los ejercicios del anterior
+  const cursoListo = cursoElegido !== null && mapa.curso?.id === cursoElegido;
   const completadas = mapa.lecciones.filter((l) => l.estado === 'completada').length;
+
+  let contenido = null;
+  if (!loading && cursoElegido === null) {
+    contenido = <CourseList cursos={mapa.cursos} onSelect={handleSelectCurso} />;
+  } else if (!loading && !cursoListo) {
+    contenido = <View style={styles.centro}><ActivityIndicator color="#fff" size="large" /></View>;
+  } else if (!loading && mapa.lecciones.length === 0) {
+    contenido = <View style={styles.centro}><Text style={styles.emptyText}>Este curso todavía no tiene ejercicios cargados.</Text></View>;
+  } else if (!loading) {
+    contenido = (
+      <>
+        <Text style={styles.progressText}>
+          {completadas} de {mapa.lecciones.length} ejercicios completados
+          {mapa.curso?.completado ? '  •  ¡Curso terminado!' : ''}
+          {mapa.esMock ? '  •  (modo sin conexión)' : ''}
+        </Text>
+        <CourseMap lecciones={mapa.lecciones} onLeccionPress={handleLeccionPress} />
+      </>
+    );
+  }
 
   return (
     <Background>
@@ -110,43 +155,14 @@ export function HomeScreen({ navigation }) {
         <HeaderHome
           perfil={perfil}
           cuenta={cuenta}
-          curso={mapa.curso}
-          puedeCambiarCurso={mapa.cursos.length > 1}
-          onCambiarCurso={() => setIsPickerOpen(true)}
+          curso={cursoListo ? mapa.curso : null}
+          onVolver={cursoElegido !== null ? volverACursos : undefined}
           onOpenMenu={() => setIsMenuOpen(true)}
           solicitudesPendientes={solicitudesPendientes}
           onOpenNotificaciones={() => navigation.navigate('Solicitudes')}
         />
-
-        {!loading && mapa.lecciones.length > 0 && (
-          <Text style={styles.progressText}>
-            {completadas} de {mapa.lecciones.length} lecciones completadas
-            {mapa.curso?.completado ? '  •  ¡Curso terminado!' : ''}
-            {mapa.esMock ? '  •  (modo sin conexión)' : ''}
-          </Text>
-        )}
-
-        {!loading && mapa.lecciones.length === 0 && (
-          <View style={styles.emptyBox}>
-            <Text style={styles.emptyText}>Este curso todavía no tiene lecciones cargadas.</Text>
-          </View>
-        )}
-
-        {!loading && mapa.lecciones.length > 0 && (
-          <CourseMap
-            lecciones={mapa.lecciones}
-            onLeccionPress={handleLeccionPress}
-          />
-        )}
+        {contenido}
       </View>
-
-      <CoursePickerModal
-        visible={isPickerOpen}
-        cursos={mapa.cursos}
-        cursoActualId={mapa.curso?.id}
-        onSelect={handleSelectCurso}
-        onClose={() => setIsPickerOpen(false)}
-      />
 
       <SideMenu
         visible={isMenuOpen}
@@ -159,7 +175,7 @@ export function HomeScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   mainContainer: { flex: 1, padding: 15 },
-  progressText: { color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: '600', textAlign: 'center', marginBottom: 10 },
-  emptyBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { color: 'rgba(255,255,255,0.8)', fontSize: 16 },
+  progressText: { color: '#fff', fontSize: 13, fontWeight: '600', textAlign: 'center', marginBottom: 10 },
+  centro: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyText: { color: '#fff', fontSize: 16 },
 });

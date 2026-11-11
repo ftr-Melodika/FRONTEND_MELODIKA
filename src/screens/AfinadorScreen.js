@@ -1,5 +1,6 @@
 // Archivo: src/screens/AfinadorScreen.js
-// Afinador cromático para las seis cuerdas. Detecta sola la cuerda, o se puede elegir una a mano.
+// Afinador cromático para las seis cuerdas. Guía de la 6ta a la 1ra: cuando una cuerda queda afinada
+// pasa sola a la siguiente. También se puede elegir una a mano o dejar que detecte la cuerda sola.
 import { useEffect, useRef, useState } from 'react';
 import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +13,10 @@ import { CENTS_AFINADA, CUERDAS_AFINADOR, compararConCuerda } from '../utils/afi
 const CENTS_ESCALA = 50; // El medidor llega hasta medio tono para cada lado
 const COLOR_AFINADA = '#32CD32';
 const COLOR_DESAFINADA = '#ff9a4d';
+// Cuánto tiene que quedar afinada antes de pasar a la siguiente: un paso fugaz por el centro
+// mientras se gira la clavija no cuenta
+const MS_AFINADA_PARA_AVANZAR = 1000;
+const ORDEN = CUERDAS_AFINADOR.map((c) => c.cuerda); // 6, 5, 4, 3, 2, 1
 
 const MENSAJES = {
   afinada: '¡Afinada!',
@@ -62,7 +67,7 @@ function Lectura({ resultado, frecuencia }) {
   );
 }
 
-function OpcionCuerda({ titulo, activa, onPress, ancha }) {
+function OpcionCuerda({ titulo, activa, hecha, onPress, ancha }) {
   return (
     <TouchableOpacity
       style={[styles.opcion, ancha && styles.opcionAncha, activa && styles.opcionActiva]}
@@ -71,7 +76,7 @@ function OpcionCuerda({ titulo, activa, onPress, ancha }) {
       accessibilityRole="button"
       accessibilityState={{ selected: activa }}
     >
-      <Text style={styles.opcionTexto} numberOfLines={1}>{titulo}</Text>
+      <Text style={styles.opcionTexto} numberOfLines={1}>{hecha ? `✓ ${titulo}` : titulo}</Text>
     </TouchableOpacity>
   );
 }
@@ -79,9 +84,39 @@ function OpcionCuerda({ titulo, activa, onPress, ancha }) {
 export function AfinadorScreen() {
   const insets = useSafeAreaInsets();
   const { estado, frecuencia } = useAfinador();
-  const [cuerdaElegida, setCuerdaElegida] = useState(null);
+  // Arranca guiando desde la 6ta; null = automático (detecta la cuerda sola, sin avanzar)
+  const [cuerdaElegida, setCuerdaElegida] = useState(ORDEN[0]);
+  const [afinadas, setAfinadas] = useState([]);
+  const [terminado, setTerminado] = useState(false);
 
   const resultado = frecuencia ? compararConCuerda(frecuencia, cuerdaElegida) : null;
+  const afinadaAhora = cuerdaElegida !== null && resultado?.estado === 'afinada';
+
+  // Si se mantiene afinada, se marca y pasa a la siguiente cuerda que falte.
+  // La anterior todavía suena al cambiar, pero en este orden nunca se repite la nota.
+  useEffect(() => {
+    if (!afinadaAhora) return undefined;
+    const espera = setTimeout(() => {
+      const hechas = afinadas.includes(cuerdaElegida) ? afinadas : [...afinadas, cuerdaElegida];
+      setAfinadas(hechas);
+      const desde = ORDEN.indexOf(cuerdaElegida);
+      const siguiente = [...ORDEN.slice(desde + 1), ...ORDEN.slice(0, desde)].find((c) => !hechas.includes(c));
+      if (siguiente) setCuerdaElegida(siguiente);
+      else setTerminado(true);
+    }, MS_AFINADA_PARA_AVANZAR);
+    return () => clearTimeout(espera);
+  }, [afinadaAhora, cuerdaElegida, afinadas]);
+
+  const empezarDeNuevo = () => {
+    setAfinadas([]);
+    setTerminado(false);
+    setCuerdaElegida(ORDEN[0]);
+  };
+
+  const elegir = (cuerda) => {
+    setTerminado(false);
+    setCuerdaElegida(cuerda);
+  };
 
   return (
     <Background>
@@ -90,19 +125,37 @@ export function AfinadorScreen() {
 
         <View style={styles.fila}>
           <View style={styles.columnaLectura}>
-            {estado === 'escuchando'
-              ? <Lectura resultado={resultado} frecuencia={frecuencia} />
-              : <AvisoMicrofono estado={estado} />}
+            {terminado ? (
+              <View style={styles.final}>
+                <Text style={[styles.nota, { color: COLOR_AFINADA }]}>¡Listo!</Text>
+                <Text style={styles.mensaje}>Las 6 cuerdas quedaron afinadas</Text>
+                <TouchableOpacity style={styles.botonDeNuevo} onPress={empezarDeNuevo} activeOpacity={0.8}>
+                  <Text style={styles.opcionTexto}>Afinar de nuevo</Text>
+                </TouchableOpacity>
+              </View>
+            ) : estado === 'escuchando' ? (
+              <>
+                {cuerdaElegida !== null && (
+                  <Text style={styles.guia}>
+                    Tocá la cuerda {cuerdaElegida} al aire  •  {afinadas.length} de {ORDEN.length} afinadas
+                  </Text>
+                )}
+                <Lectura resultado={resultado} frecuencia={frecuencia} />
+              </>
+            ) : (
+              <AvisoMicrofono estado={estado} />
+            )}
           </View>
 
           <ScrollView style={styles.columnaCuerdas} contentContainerStyle={styles.cuerdas}>
-            <OpcionCuerda titulo="Automático" ancha activa={cuerdaElegida === null} onPress={() => setCuerdaElegida(null)} />
+            <OpcionCuerda titulo="Automático" ancha activa={cuerdaElegida === null} onPress={() => elegir(null)} />
             {CUERDAS_AFINADOR.map(({ cuerda, nota }) => (
               <OpcionCuerda
                 key={cuerda}
                 titulo={`${cuerda} • ${nota}`}
                 activa={cuerdaElegida === cuerda}
-                onPress={() => setCuerdaElegida(cuerda)}
+                hecha={afinadas.includes(cuerda)}
+                onPress={() => elegir(cuerda)}
               />
             ))}
           </ScrollView>
@@ -132,4 +185,7 @@ const styles = StyleSheet.create({
   opcionAncha: { width: '100%' },
   opcionActiva: { backgroundColor: '#4c52d9' },
   opcionTexto: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  guia: { color: '#fff', fontSize: 14, fontWeight: 'bold', marginBottom: 4, textAlign: 'center' },
+  final: { alignItems: 'center', gap: 6 },
+  botonDeNuevo: { marginTop: 10, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 24, backgroundColor: '#4c52d9' },
 });

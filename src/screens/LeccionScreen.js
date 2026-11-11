@@ -8,12 +8,13 @@ import { LeccionSidebar } from '../components/leccion/LeccionSideBar';
 import { VideoStep } from '../components/leccion/VideoStep';
 import { TheoryStep } from '../components/leccion/TheoryStep';
 import { PracticeStep } from '../components/leccion/PracticeStep';
+import { FinLeccion } from '../components/leccion/FinLeccion';
 
 import { AuthContext } from '../context/AuthContext';
 import { useStreak } from '../hooks/useStreak';
 import { rachaService } from '../services/rachaService';
 import { leccionesService } from '../services/leccionesService';
-import { obtenerObjetivo } from '../utils/deteccionSonido';
+import { obtenerSecuencia } from '../utils/deteccionSonido';
 
 // Texto por defecto de la barra lateral según el tipo de paso
 const INSTRUCCION_POR_DEFECTO = {
@@ -28,7 +29,7 @@ function armarPasos(leccion) {
   if (leccion.videoId) pasos.push('video');
   pasos.push('teoria');
   const hayTraste = leccion.trasteObjetivo !== null && leccion.trasteObjetivo !== undefined;
-  if (hayTraste || obtenerObjetivo(leccion)) pasos.push('practica');
+  if (hayTraste || obtenerSecuencia(leccion)) pasos.push('practica');
   return pasos;
 }
 
@@ -39,6 +40,11 @@ export function LeccionScreen({ route, navigation }) {
   const pasos = useMemo(() => armarPasos(leccion), [leccion]);
   const [indice, setIndice] = useState(0);
   const [finishing, setFinishing] = useState(false);
+  const [fin, setFin] = useState(null); // { titulo, mensaje, icono, cursoCompletado } al terminar
+
+  // La lección siguiente del mismo curso (Home pasa la lista), para seguir sin volver al mapa
+  const lecciones = route.params?.lecciones || [];
+  const siguiente = lecciones[lecciones.findIndex((l) => l.id === leccion.id) + 1] || null;
 
   const { perfil, parchearPerfil } = useContext(AuthContext);
   const perfilId = perfil?.id;
@@ -56,7 +62,7 @@ export function LeccionScreen({ route, navigation }) {
     INSTRUCCION_POR_DEFECTO[pasoActual];
 
   // Al terminar: 1) registramos la lección (XP) en el backend, 2) chequeamos la racha,
-  // 3) actualizamos el perfil en memoria y 4) volvemos al mapa.
+  // 3) actualizamos el perfil en memoria y 4) mostramos el cierre, con el botón para seguir.
   // El frontend NO decide si la racha sube: solo obedece lo que devuelve el backend.
   // Si el alumno salteó la detección (omitida) no suma XP ni sostiene la racha.
   const handleTerminar = async ({ omitida = false } = {}) => {
@@ -105,17 +111,41 @@ export function LeccionScreen({ route, navigation }) {
     setFinishing(false);
 
     if (quedoOmitida) {
-      const siguiente = cursoCompletado ? 'Terminaste el curso.' : 'Podés seguir con la siguiente.';
-      Alert.alert('Lección salteada', `${siguiente} No sumó XP, pero si volvés y la tocás bien lo ganás.`);
+      setFin({ titulo: 'Lección salteada', icono: 'adelante', mensaje: 'No sumó XP, pero si volvés y la tocás bien lo ganás.' });
     } else if (yaCompletada) {
-      Alert.alert('¡Bien repasado!', 'Ya habías completado esta lección, así que no suma XP de nuevo.');
+      setFin({ titulo: '¡Bien repasado!', icono: 'check', mensaje: 'Ya habías completado esta lección, así que no suma XP de nuevo.' });
     } else if (cursoCompletado) {
-      Alert.alert('¡Curso completado!', `Ganaste ${xpGanada} XP y terminaste el curso. ¡Se desbloqueó el siguiente!`);
+      setFin({ titulo: '¡Curso completado!', mensaje: `Ganaste ${xpGanada} XP y terminaste el curso. ¡Se desbloqueó el siguiente!`, cursoCompletado });
     } else {
-      Alert.alert('¡Lección completada!', `Ganaste ${xpGanada || leccion.xp || 0} XP.`);
+      setFin({ titulo: '¡Lección completada!', mensaje: `Ganaste ${xpGanada || leccion.xp || 0} XP.` });
     }
-    navigation.goBack();
   };
+
+  // Reemplaza la pantalla: "Atrás" vuelve al curso, no a la lección anterior
+  const irASiguiente = () => {
+    navigation.replace('Leccion', {
+      ...route.params,
+      leccion: siguiente,
+      cursoYaCompletado: !!route.params?.cursoYaCompletado || !!fin?.cursoCompletado,
+    });
+  };
+
+  if (fin) {
+    return (
+      <Background>
+        <View style={[styles.horizontalContainer, { paddingRight: Math.max(insets.right, 15) }]}>
+          <FinLeccion
+            titulo={fin.titulo}
+            mensaje={fin.mensaje}
+            icono={fin.icono}
+            siguiente={siguiente}
+            onSiguiente={irASiguiente}
+            onVolver={() => navigation.goBack()}
+          />
+        </View>
+      </Background>
+    );
+  }
 
   return (
     <Background>
