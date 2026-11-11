@@ -1,17 +1,19 @@
 import React from 'react';
-import { ImageBackground, View, StyleSheet } from 'react-native';
+import { Image, View, StyleSheet } from 'react-native';
 
+// ImageBackground está deprecado desde React Native 0.88 (SDK 58):
+// se reemplaza por un View con una Image posicionada en absoluto detrás del contenido.
 export function Background({ children, style }) {
   return (
-    <ImageBackground
-      source={require('../../assets/background.png')}
-      style={[styles.background, style]}
-      resizeMode="stretch"
-      imageStyle={styles.image}
-    >
+    <View style={[styles.background, style]}>
+      <Image
+        source={require('../../assets/background.png')}
+        style={styles.image}
+        resizeMode="stretch"
+      />
       <View style={styles.overlay} />
       <View style={styles.content}>{children}</View>
-    </ImageBackground>
+    </View>
   );
 }
 
@@ -23,9 +25,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   image: {
+    position: 'absolute',
+    top: 0,
+    left: '-5%',
     width: '110%',
     height: '105%',
-    marginLeft: '-5%',
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,

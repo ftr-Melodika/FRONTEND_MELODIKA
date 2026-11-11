@@ -1,13 +1,22 @@
 // Archivo: src/components/leccion/QuizStep.js
-// Quiz de opción múltiple sobre una imagen: cada pregunta marca una parte y hay que elegir cuál es.
+// Quiz de opción múltiple. Cada pregunta puede mostrar una imagen (con una parte marcada o un acercamiento);
+// si ni la pregunta ni el quiz traen imagen, la pregunta ocupa todo el ancho.
 // Al responder se ve si estuvo bien y por qué. Al final se puede repasar lo que se falló.
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { Button } from '../Button';
-import { GuitarraIlustrada } from './GuitarraIlustrada';
+import { GuitarraIlustrada, proporcionImagen } from './GuitarraIlustrada';
 import { FUENTE_TITULO } from '../../theme/fuentes';
 
 const VERDE = '#a3fba3';
+
+// El tamaño más grande con esa proporción que entra en el área: un recorte alto (las clavijas)
+// no puede ocupar todo el ancho porque se saldría por abajo
+function encajar(area, proporcion) {
+  if (!area) return { width: '100%' };
+  const width = Math.min(area.width, area.height * proporcion);
+  return { width, height: width / proporcion };
+}
 
 export function QuizStep({ quiz, onBack, onFinish, finishing }) {
   // Los índices de las preguntas que se están respondiendo: todas, o solo las falladas al repasar
@@ -18,11 +27,14 @@ export function QuizStep({ quiz, onBack, onFinish, finishing }) {
   const [aciertos, setAciertos] = useState(0); // De la primera vuelta: es lo que se informa
   const [primeraVuelta, setPrimeraVuelta] = useState(true);
   const [terminado, setTerminado] = useState(false);
+  const [areaImagen, setAreaImagen] = useState(null);
 
   const indice = ronda[posicion];
   const pregunta = quiz.preguntas[indice];
   const respondida = elegida !== null;
   const acerto = elegida === pregunta?.correcta;
+  // Cada pregunta puede traer su propia imagen o un acercamiento; si no, se usa la del quiz
+  const imagen = pregunta?.imagen ?? quiz.imagen ?? null;
 
   const responder = (opcion) => {
     if (respondida) return;
@@ -56,9 +68,9 @@ export function QuizStep({ quiz, onBack, onFinish, finishing }) {
         <View style={styles.final}>
           <Text style={styles.titulo}>{primeraVuelta ? `Acertaste ${aciertos} de ${total}` : perfecto ? '¡Ahora sí, todas bien!' : 'Seguí practicando'}</Text>
           <Text style={styles.texto}>
-            {perfecto ? 'Ya conocés las partes de la guitarra.' : `Te ${falladas.length === 1 ? 'faltó 1' : `faltaron ${falladas.length}`}. Podés repasarlas antes de terminar.`}
+            {perfecto ? (quiz.nombre ? `Dominaste "${quiz.nombre}".` : '¡Respondiste todo bien!') : `Te ${falladas.length === 1 ? 'faltó 1' : `faltaron ${falladas.length}`}. Podés repasarlas antes de terminar.`}
           </Text>
-          <GuitarraIlustrada imagen={quiz.imagen ?? undefined} style={styles.imagenFinal} />
+          {quiz.imagen ? <GuitarraIlustrada imagen={quiz.imagen} style={styles.imagenFinal} /> : null}
         </View>
         <View style={styles.btnRow}>
           {perfecto ? (
@@ -79,13 +91,24 @@ export function QuizStep({ quiz, onBack, onFinish, finishing }) {
       </Text>
 
       <View style={styles.fila}>
-        <View style={styles.columnaImagen}>
+        {imagen ? (
+        <View
+          style={styles.columnaImagen}
+          onLayout={(e) => {
+            const { width, height } = e.nativeEvent.layout;
+            setAreaImagen({ width, height });
+          }}
+        >
           <GuitarraIlustrada
-            imagen={quiz.imagen ?? undefined}
+            key={indice}
+            imagen={imagen}
             marcador={pregunta.marcador}
+            recorte={pregunta.recorte}
             colorMarcador={!respondida ? '#ffd35c' : acerto ? VERDE : '#ff7e8d'}
+            style={encajar(areaImagen, proporcionImagen({ imagen: imagen, recorte: pregunta.recorte }))}
           />
         </View>
+        ) : null}
 
         <ScrollView style={styles.columnaPregunta} contentContainerStyle={styles.preguntaContenido}>
           <Text style={styles.pregunta}>{pregunta.pregunta}</Text>
@@ -135,7 +158,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, width: '100%', justifyContent: 'space-between' },
   contador: { color: '#fff', fontSize: 13, fontWeight: 'bold', textAlign: 'center', marginBottom: 4 },
   fila: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14 },
-  columnaImagen: { flex: 1.15, justifyContent: 'center' },
+  columnaImagen: { flex: 1.15, alignSelf: 'stretch', justifyContent: 'center', alignItems: 'center' },
   columnaPregunta: { flex: 1 },
   preguntaContenido: { flexGrow: 1, justifyContent: 'center' },
   pregunta: { color: '#fff', fontSize: 17, fontWeight: 'bold', fontFamily: FUENTE_TITULO, marginBottom: 8 },

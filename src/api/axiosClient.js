@@ -1,7 +1,5 @@
 import axios from 'axios';
-import { obtenerToken } from './tokenSesion';
-// NUEVO: Importamos el cable de emergencia
-import { globalLogout } from '../context/AuthContext';
+import { obtenerToken, avisarSesionExpirada } from './tokenSesion';
 
 import { BASE_URL } from '../config/api'; // 👈 importás la variable, no ENDPOINTS.BASE_URL
 
@@ -36,12 +34,9 @@ axiosClient.interceptors.response.use(
     if (error.response && error.response.status === 401 && error.config?.headers?.Authorization) {
       console.log('Sesión expirada detectada. Limpiando datos y memoria...');
       
-      // NUEVO: Llamamos a la función global. 
-      // Ella misma se encarga de borrar el AsyncStorage y limpiar la memoria de React,
-      // lo que causará que el AppNavigator vuelva mágicamente a la pantalla de Login.
-      if (typeof globalLogout === 'function') {
-        await globalLogout();
-      }
+      // AuthContext registra su logout: borra el AsyncStorage y la memoria de React,
+      // y el AppNavigator vuelve solo a la pantalla de Login.
+      await avisarSesionExpirada();
     }
     
     return Promise.reject(error);

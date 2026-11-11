@@ -79,3 +79,22 @@ test('siguienteCuerda sigue el orden, da la vuelta y termina', () => {
   assert.strictEqual(siguienteCuerda(orden, 3, [3, 2, 1]), 6); // Elegida a mano: vuelve a las que faltan
   assert.strictEqual(siguienteCuerda(orden, 1, orden), null);
 });
+
+test('obtenerQuiz lee la imagen y el recorte de cada pregunta', () => {
+  const quiz = obtenerQuiz({
+    practica: {
+      tipo: 'quiz',
+      preguntas: [
+        { ...preguntaValida, imagen: 'guitarra-acustica', recorte: { x: 0.07, y: 0.5, ancho: 0.14, alto: 0.5 } },
+        { ...preguntaValida, recorte: { x: 0.5, y: 0.5 } }, // Sin tamaño no es un recorte
+        { ...preguntaValida, imagen: '', recorte: { x: 0.5, y: 0.5, ancho: 0, alto: 0.3 } },
+      ],
+    },
+  });
+  assert.strictEqual(quiz.preguntas[0].imagen, 'guitarra-acustica');
+  assert.deepStrictEqual(quiz.preguntas[0].recorte, { x: 0.07, y: 0.5, ancho: 0.14, alto: 0.5 });
+  assert.strictEqual(quiz.preguntas[1].imagen, null);
+  assert.strictEqual(quiz.preguntas[1].recorte, null);
+  assert.strictEqual(quiz.preguntas[2].imagen, null);
+  assert.strictEqual(quiz.preguntas[2].recorte, null);
+});

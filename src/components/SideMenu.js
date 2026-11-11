@@ -108,12 +108,15 @@ export function SideMenu({ visible, onClose }) {
               <SubMenuItem title="Ranking" icon="medalla1" isActive={pantallaActual === 'Ranking'} onPress={() => irA('Ranking')} />
             </AccordotionItem>
 
-            <MenuItem
-              title="Práctica"
-              icon="pua"
-              isActive={pantallaActual === 'Practica'}
-              onPress={() => irA('Practica')}
-            />
+            <AccordotionItem title="Práctica" icon="pua" defaultOpen={['Practica', 'Canciones', 'Cancion'].includes(pantallaActual)}>
+              <SubMenuItem title="Práctica" icon="rayo" isActive={pantallaActual === 'Practica'} onPress={() => irA('Practica')} />
+              <SubMenuItem
+                title="Canciones"
+                icon="partitura"
+                isActive={pantallaActual === 'Canciones' || pantallaActual === 'Cancion'}
+                onPress={() => irA('Canciones')}
+              />
+            </AccordotionItem>
 
             <MenuItem title="Afinador" icon="notas" isActive={pantallaActual === 'Afinador'} onPress={() => irA('Afinador')} />
 

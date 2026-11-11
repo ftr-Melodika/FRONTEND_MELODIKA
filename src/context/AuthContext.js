@@ -2,11 +2,9 @@
 import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { perfilesService, normalizarPerfil } from '../services/perfilesService';
-import { recordarToken } from '../api/tokenSesion';
+import { recordarToken, registrarAlExpirarSesion } from '../api/tokenSesion';
 
 export const AuthContext = createContext();
-
-export let globalLogout = () => {};
 
 export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -113,8 +111,10 @@ export const AuthProvider = ({ children }) => {
     setPerfil(null);
   };
 
+  // Si el backend responde 401, axiosClient llama a este logout
   useEffect(() => {
-    globalLogout = logout;
+    registrarAlExpirarSesion(logout);
+    return () => registrarAlExpirarSesion(null);
   }, []);
 
   return (

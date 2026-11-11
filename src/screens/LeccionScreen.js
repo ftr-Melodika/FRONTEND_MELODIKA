@@ -22,7 +22,7 @@ const INSTRUCCION_POR_DEFECTO = {
   video: 'Mirá la técnica que usa el profe en el video antes de agarrar la guitarra.',
   teoria: 'Leé la teoría con atención. Acordate que la cuerda más fina es la 1ra.',
   practica: '¡A tocar! Posicioná tus dedos exactamente como marca el mástil.',
-  quiz: 'Mirá la parte marcada en el dibujo y elegí cómo se llama.',
+  quiz: 'Leé cada pregunta y elegí la respuesta correcta. Si hay una imagen, mirala con atención.',
   afinacion: 'Tocá cada cuerda al aire y girá su clavija hasta que la aguja quede en el centro.',
 };
 
@@ -30,9 +30,12 @@ const INSTRUCCION_POR_DEFECTO = {
 function armarPasos(leccion) {
   const pasos = [];
   if (leccion.videoId) pasos.push('video');
-  pasos.push('teoria');
   const hayTraste = leccion.trasteObjetivo !== null && leccion.trasteObjetivo !== undefined;
-  if (hayTraste || obtenerSecuencia(leccion) || obtenerQuiz(leccion) || obtenerAfinacion(leccion)) pasos.push('practica');
+  const hayPractica = hayTraste || !!obtenerSecuencia(leccion) || !!obtenerQuiz(leccion) || !!obtenerAfinacion(leccion);
+  // Sin texto de teoría, ese paso solo mostraría un mensaje genérico: si hay práctica, se saltea
+  const hayTeoria = !!leccion.textoTeoria || !!leccion.textoDestacado;
+  if (hayTeoria || !hayPractica) pasos.push('teoria');
+  if (hayPractica) pasos.push('practica');
   return pasos;
 }
 

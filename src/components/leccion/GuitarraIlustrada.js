@@ -1,8 +1,8 @@
 // Archivo: src/components/leccion/GuitarraIlustrada.js
 // Imágenes del quiz, dibujadas en SVG: se ven nítidas en cualquier pantalla y las coordenadas de
-// cada parte son exactas. Las lecciones las piden por clave en practica.imagen.
+// cada parte son exactas. Las lecciones las piden por clave en practica.imagen (o en cada pregunta).
 // Los marcadores usan coordenadas de 0 a 1 sobre la imagen (x a lo ancho, y a lo alto).
-import { View, StyleSheet } from 'react-native';
+import { Image, View, StyleSheet } from 'react-native';
 import Svg, { Circle, Defs, G, Line, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 
 const ANCHO = 1000;
@@ -119,13 +119,37 @@ function Marcador({ marcador, color }) {
   );
 }
 
-// Dibuja la imagen pedida (o nada si la clave no existe) con el marcador encima
-export function GuitarraIlustrada({ imagen = 'guitarra-acustica', marcador, colorMarcador = '#ffd35c', style }) {
+const esFoto = (imagen) => typeof imagen === 'string' && /^https?:\/\//.test(imagen);
+
+// Ancho / alto de lo que se va a ver: el dibujo entero, un recorte, o una foto (se muestra apaisada)
+export function proporcionImagen({ imagen, recorte } = {}) {
+  if (esFoto(imagen)) return 4 / 3;
+  return recorte ? (recorte.ancho * ANCHO) / (recorte.alto * ALTO) : ANCHO / ALTO;
+}
+
+// Dibuja la imagen pedida (o nada si la clave no existe) con el marcador encima.
+// `imagen` es una clave de IMAGENES o la URL de una foto. `recorte` ({ x, y, ancho, alto } de 0 a 1,
+// con x e y en el centro) muestra solo esa parte del dibujo, como si se acercara la cámara.
+export function GuitarraIlustrada({ imagen = 'guitarra-acustica', marcador, recorte, colorMarcador = '#ffd35c', style }) {
+  const proporcion = { aspectRatio: proporcionImagen({ imagen, recorte }) };
+
+  if (esFoto(imagen)) {
+    return (
+      <View style={[styles.contenedor, proporcion, style]} accessibilityRole="image" accessibilityLabel="Foto de una parte de la guitarra">
+        <Image source={{ uri: imagen }} style={styles.foto} resizeMode="contain" />
+      </View>
+    );
+  }
+
   const Dibujo = IMAGENES[imagen];
   if (!Dibujo) return null;
+  const caja = recorte
+    ? [(recorte.x - recorte.ancho / 2) * ANCHO, (recorte.y - recorte.alto / 2) * ALTO, recorte.ancho * ANCHO, recorte.alto * ALTO]
+    : [0, 0, ANCHO, ALTO];
+  const descripcion = recorte ? 'Acercamiento a una parte de la guitarra' : 'Dibujo de una guitarra con una parte marcada';
   return (
-    <View style={[styles.contenedor, style]} accessibilityRole="image" accessibilityLabel="Dibujo de una guitarra con una parte marcada">
-      <Svg width="100%" height="100%" viewBox={`0 0 ${ANCHO} ${ALTO}`}>
+    <View style={[styles.contenedor, proporcion, style]} accessibilityRole="image" accessibilityLabel={descripcion}>
+      <Svg width="100%" height="100%" viewBox={caja.join(' ')}>
         <Dibujo />
         {marcador && <Marcador marcador={marcador} color={colorMarcador} />}
       </Svg>
@@ -134,5 +158,6 @@ export function GuitarraIlustrada({ imagen = 'guitarra-acustica', marcador, colo
 }
 
 const styles = StyleSheet.create({
-  contenedor: { width: '100%', aspectRatio: ANCHO / ALTO },
+  contenedor: { width: '100%', overflow: 'hidden' },
+  foto: { width: '100%', height: '100%', borderRadius: 12 },
 });

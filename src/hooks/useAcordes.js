@@ -15,7 +15,9 @@ async function cargarAcordes(perfilId) {
     const detalles = await Promise.all(
       cursos.map((curso) => leccionesService.obtenerDetalleCurso(perfilId, curso.id).catch(() => null))
     );
-    const acordes = extraerAcordes(detalles.flatMap((detalle) => detalle?.lecciones || []));
+    const lecciones = detalles.flatMap((detalle, i) =>
+      (detalle?.lecciones || []).map((leccion) => ({ ...leccion, ordenCurso: cursos[i].orden ?? i })));
+    const acordes = extraerAcordes(lecciones);
     if (acordes.length >= 2) return { acordes, desdeRespaldo: false };
   } catch (error) {
     // Sin conexión o sin sesión: seguimos con el respaldo

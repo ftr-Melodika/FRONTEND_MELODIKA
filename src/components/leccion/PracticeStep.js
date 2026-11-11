@@ -47,7 +47,8 @@ function Progreso({ total, actual, completo }) {
 }
 
 // Recorre las consignas una por una. El micrófono queda abierto entre consigna y consigna.
-function PracticaConDeteccion({ onBack, onFinish, finishing, secuencia }) {
+// Fuera de una lección (en Canciones) no hay XP: se cambia el texto final y no se ofrece saltear.
+export function PracticaConDeteccion({ onBack, onFinish, finishing, secuencia, textoFinal = 'Terminar Lección', permitirSaltear = true }) {
   const [indice, setIndice] = useState(0);
   const [festejo, setFestejo] = useState(false);
   const [completo, setCompleto] = useState(false);
@@ -97,7 +98,7 @@ function PracticaConDeteccion({ onBack, onFinish, finishing, secuencia }) {
       <View style={styles.btnRow}>
         {onBack ? <Button title="Atrás" icono="volver" variant="secondary" onPress={onBack} style={styles.btnHalf} /> : null}
         {/* En una fila no entran tres botones, y "Terminar" no sirve hasta completar todas las consignas */}
-        {!completo && (puedeSaltear || sinMicrofono) ? (
+        {permitirSaltear && !completo && (puedeSaltear || sinMicrofono) ? (
           <Button
             title="Saltear (sin XP)"
             variant="secondary"
@@ -107,7 +108,7 @@ function PracticaConDeteccion({ onBack, onFinish, finishing, secuencia }) {
           />
         ) : (
           <Button
-            title="Terminar Lección"
+            title={textoFinal}
             onPress={() => onFinish()}
             loading={finishing && completo}
             disabled={!completo}

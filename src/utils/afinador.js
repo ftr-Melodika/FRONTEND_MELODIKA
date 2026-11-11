@@ -25,10 +25,33 @@ const MS_RETENCION = 800; // Cuando la cuerda se apaga, la lectura queda un mome
 
 export const CENTS_AFINADA = 5;
 
-export const CUERDAS_AFINADOR = [6, 5, 4, 3, 2, 1].map((cuerda) => {
-  const midi = midiDePosicion(cuerda, 0);
-  return { cuerda, nota: nombreDeMidi(midi), frecuencia: midiAFrecuencia(midi) };
-});
+const ORDEN_CUERDAS = [6, 5, 4, 3, 2, 1];
+
+// Afinaciones que se pueden elegir en el afinador. `semitonos` dice cuánto se baja o sube cada cuerda
+// respecto de la estándar, en el orden de ORDEN_CUERDAS (de la 6ta a la 1ra).
+// Ninguna pone seguidas dos cuerdas con la misma nota: la guía avanza sola y la anterior todavía suena.
+export const AFINACIONES = [
+  { id: 'estandar', nombre: 'Estándar', semitonos: [0, 0, 0, 0, 0, 0] },
+  { id: 'drop-d', nombre: 'Drop D', semitonos: [-2, 0, 0, 0, 0, 0] },
+  { id: 'medio-tono', nombre: 'Medio tono abajo', semitonos: [-1, -1, -1, -1, -1, -1] },
+  { id: 'un-tono', nombre: 'Un tono abajo', semitonos: [-2, -2, -2, -2, -2, -2] },
+  { id: 'drop-c', nombre: 'Drop C', semitonos: [-4, -2, -2, -2, -2, -2] },
+  { id: 'open-g', nombre: 'Open G', semitonos: [-2, -2, 0, 0, 0, -2] },
+  { id: 'open-d', nombre: 'Open D', semitonos: [-2, 0, 0, -1, -2, -2] },
+  { id: 'dadgad', nombre: 'DADGAD', semitonos: [-2, 0, 0, 0, -2, -2] },
+];
+
+// Las seis cuerdas de una afinación: [{ cuerda, nota, frecuencia }], de la 6ta a la 1ra.
+// Con un id desconocido devuelve la estándar.
+export function cuerdasDeAfinacion(id) {
+  const afinacion = AFINACIONES.find((a) => a.id === id) ?? AFINACIONES[0];
+  return ORDEN_CUERDAS.map((cuerda, i) => {
+    const midi = midiDePosicion(cuerda, 0) + afinacion.semitonos[i];
+    return { cuerda, nota: nombreDeMidi(midi), frecuencia: midiAFrecuencia(midi) };
+  });
+}
+
+export const CUERDAS_AFINADOR = cuerdasDeAfinacion('estandar');
 
 const centsEntre = (frecuencia, referencia) => 1200 * Math.log2(frecuencia / referencia);
 

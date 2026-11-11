@@ -50,7 +50,7 @@ export function ProgresoScreen({ navigation }) {
 
   return (
     <Background>
-      <View style={[styles.container, { paddingLeft: Math.max(insets.left, 20) }]}>
+      <View style={[styles.container, { paddingLeft: Math.max(insets.left, 20), paddingRight: Math.max(insets.right, 20), paddingBottom: Math.max(insets.bottom, 20) }]}>
 
         {/* HEADER */}
         <ScreenHeader title="Tu Progreso" />
@@ -97,7 +97,8 @@ export function ProgresoScreen({ navigation }) {
 
           {/* COLUMNA DERECHA: Curso Actual y Barra de Progreso */}
           <View style={styles.courseColumn}>
-            <ScrollView style={styles.courseCard} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
+            {/* El padding va en el contenido y no en el ScrollView: si no, abajo no queda margen y el botón se corta */}
+            <ScrollView style={styles.courseCard} contentContainerStyle={styles.courseCardContenido}>
               <Text style={styles.courseOverline}>CURSO ACTIVO</Text>
               <TextoConIcono nombre="guitarra" tamano={28} style={styles.courseTitle} contenedorStyle={styles.courseTitleFila}>{cursoActual?.nombre || 'Sin cursos todavía'}</TextoConIcono>
 
@@ -168,7 +169,8 @@ const styles = StyleSheet.create({
   statValue: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
 
   // Tarjeta de Curso (Derecha)
-  courseCard: { flex: 1, backgroundColor: '#111122', padding: 20, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(178, 140, 255, 0.2)' },
+  courseCard: { flex: 1, backgroundColor: '#111122', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(178, 140, 255, 0.2)' },
+  courseCardContenido: { flexGrow: 1, justifyContent: 'center', padding: 20, paddingBottom: 28 },
   courseOverline: { color: '#fff', fontSize: 12, fontWeight: 'bold', letterSpacing: 1.5, marginBottom: 8 },
   courseTitleFila: { marginBottom: 20 },
   courseTitle: { fontSize: 24, color: '#fff', fontFamily: FUENTE_TITULO, fontWeight: 'bold' },

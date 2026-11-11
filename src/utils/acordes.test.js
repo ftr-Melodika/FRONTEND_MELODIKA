@@ -1,7 +1,7 @@
 // Ejecutar con: npm test
 import test from 'node:test';
 import assert from 'node:assert';
-import { ACORDES_RESPALDO, acordeAlAzar, acordesDeRespaldo, extraerAcordes, preguntaDeAcorde } from './acordes.js';
+import { ACORDES_RESPALDO, acordeAlAzar, acordesDeRespaldo, extraerAcordes, preguntaDeAcorde, tituloDeAcorde } from './acordes.js';
 import { nombreDeMidi } from './deteccionSonido.js';
 
 // Como llega del backend (GET /api/cursos/perfil/:perfilId/curso/:cursoId), ya pasado por mapearLeccion
@@ -66,4 +66,46 @@ test('preguntaDeAcorde trae el acorde correcto entre opciones distintas', () => 
   }
   // Con menos acordes que opciones, se usan los que hay
   assert.strictEqual(preguntaDeAcorde(acordes.slice(0, 2)).opciones.length, 2);
+});
+
+test('también toma los acordes que vienen dentro de una secuencia, sin los de dos notas', () => {
+  const mim = { tipo: 'acorde', nombre: 'Mim', posiciones: [
+    { cuerda: 6, traste: 0 }, { dedo: 2, cuerda: 5, traste: 2 }, { dedo: 3, cuerda: 4, traste: 2 },
+    { cuerda: 3, traste: 0 }, { cuerda: 2, traste: 0 }, { cuerda: 1, traste: 0 }] };
+  const lecciones = [
+    { orden: 1, titulo: 'Acorde de Mi menor (Mim)', practica: { tipo: 'secuencia', nombre: 'Mim', pasos: [
+      { tipo: 'nota', posiciones: [{ dedo: 2, cuerda: 5, traste: 2 }] },
+      { tipo: 'nota', posiciones: [{ dedo: 3, cuerda: 4, traste: 2 }] },
+      mim,
+    ] } },
+    { orden: 2, titulo: 'Boogie', practica: { tipo: 'secuencia', pasos: [
+      { tipo: 'acorde', nombre: 'La5', posiciones: [{ cuerda: 5, traste: 0 }, { cuerda: 4, traste: 2 }] },
+      { tipo: 'acorde', nombre: 'Sol7', posiciones: [
+        { cuerda: 6, traste: 3 }, { cuerda: 5, traste: 2 }, { cuerda: 4, traste: 0 },
+        { cuerda: 3, traste: 0 }, { cuerda: 2, traste: 0 }, { cuerda: 1, traste: 1 }] },
+      mim,
+    ] } },
+  ];
+  const acordes = extraerAcordes(lecciones);
+  assert.deepStrictEqual(acordes.map((a) => a.nombre), ['Mim', 'Sol7']);
+  assert.deepStrictEqual(acordes.map((a) => a.titulo), ['Mi menor', 'Sol séptima']);
+});
+
+test('tituloDeAcorde nombra mayores, menores y séptimas', () => {
+  assert.strictEqual(tituloDeAcorde('Lam'), 'La menor');
+  assert.strictEqual(tituloDeAcorde('Fa'), 'Fa mayor');
+  assert.strictEqual(tituloDeAcorde('Re7'), 'Re séptima');
+  assert.strictEqual(tituloDeAcorde('Fa#m'), 'Fa# menor');
+  assert.strictEqual(tituloDeAcorde('La5'), 'La5');
+});
+
+test('si dos cursos enseñan el mismo acorde, queda el del curso anterior', () => {
+  const fa = (posiciones) => ({ tipo: 'acorde', nombre: 'Fa', posiciones });
+  const facil = fa([{ cuerda: 4, traste: 3 }, { cuerda: 3, traste: 2 }, { cuerda: 2, traste: 1 }, { cuerda: 1, traste: 1 }]);
+  const cejilla = fa([{ cuerda: 6, traste: 1 }, { cuerda: 5, traste: 3 }, { cuerda: 4, traste: 3 }, { cuerda: 3, traste: 2 }, { cuerda: 2, traste: 1 }, { cuerda: 1, traste: 1 }]);
+  const [acorde] = extraerAcordes([
+    { ordenCurso: 8, orden: 2, titulo: 'Fa con cejilla', practica: cejilla },
+    { ordenCurso: 5, orden: 8, titulo: 'Fa sin cejilla', practica: facil },
+  ]);
+  assert.strictEqual(acorde.titulo, 'Fa sin cejilla');
 });

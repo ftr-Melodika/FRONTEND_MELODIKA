@@ -1,7 +1,7 @@
 // Pruebas con audio sintético que imita un micrófono de celular. Ejecutar con: npm test
 import test from 'node:test';
 import assert from 'node:assert';
-import { CUERDAS_AFINADOR, compararConCuerda, crearAfinador, detectarFrecuencia } from './afinador.js';
+import { AFINACIONES, CUERDAS_AFINADOR, compararConCuerda, crearAfinador, cuerdasDeAfinacion, detectarFrecuencia } from './afinador.js';
 
 const AMPLITUDES = [1, 0.7, 0.45, 0.3, 0.2, 0.12];
 const TASA_ANALISIS = 12000;
@@ -112,5 +112,26 @@ test('afina con el celular lejos, con la cuerda muy baja', () => {
     const { ultima } = escuchar(afinador, audio, sr);
     assert.ok(ultima.frecuencia, `no detectó la nota (${sr} Hz)`);
     assert.ok(Math.abs(centsEntre(ultima.frecuencia, real)) <= 3);
+  }
+});
+
+test('las afinaciones dan las notas esperadas de la 6ta a la 1ra', () => {
+  const notas = (id) => cuerdasDeAfinacion(id).map((c) => c.nota).join(' ');
+  assert.strictEqual(notas('estandar'), 'Mi La Re Sol Si Mi');
+  assert.strictEqual(notas('drop-d'), 'Re La Re Sol Si Mi');
+  assert.strictEqual(notas('un-tono'), 'Re Sol Do Fa La Re');
+  assert.strictEqual(notas('open-g'), 'Re Sol Re Sol Si Re');
+  assert.strictEqual(notas('dadgad'), 'Re La Re Sol La Re');
+  // La 6ta en Drop D suena un tono más grave que en la estándar
+  assert.ok(Math.abs(cuerdasDeAfinacion('drop-d')[0].frecuencia - 73.42) < 0.01);
+  // Un id desconocido cae en la estándar
+  assert.deepStrictEqual(cuerdasDeAfinacion('no-existe'), CUERDAS_AFINADOR);
+});
+
+test('ninguna afinación pone seguidas dos cuerdas con la misma nota', () => {
+  for (const { id, semitonos } of AFINACIONES) {
+    assert.strictEqual(semitonos.length, 6, id);
+    const cuerdas = cuerdasDeAfinacion(id);
+    for (let i = 1; i < cuerdas.length; i++) assert.notStrictEqual(cuerdas[i].nota, cuerdas[i - 1].nota, id);
   }
 });

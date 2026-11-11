@@ -13,3 +13,16 @@ export async function obtenerToken() {
 export function recordarToken(nuevo) {
   token = nuevo ?? null;
 }
+
+// Qué hacer cuando el backend avisa que la sesión expiró (401). AuthContext lo registra al montarse.
+// Vive acá y no en AuthContext para que axiosClient no tenga que importar el contexto:
+// AuthContext -> perfilesService -> axiosClient -> AuthContext formaba un ciclo de imports.
+let alExpirarSesion = null;
+
+export function registrarAlExpirarSesion(funcion) {
+  alExpirarSesion = funcion;
+}
+
+export async function avisarSesionExpirada() {
+  if (typeof alExpirarSesion === 'function') await alExpirarSesion();
+}

@@ -18,7 +18,15 @@ function validarMarcador(marcador) {
   return conTamano ? { x: marcador.x, y: marcador.y, ancho: marcador.ancho, alto: marcador.alto } : { x: marcador.x, y: marcador.y };
 }
 
+// Qué parte de la imagen mostrar: un recuadro { x, y, ancho, alto } de 0 a 1, con x e y en el centro.
+// Tiene que tener tamaño; si no, se muestra la imagen entera.
+function validarRecorte(recorte) {
+  const valido = validarMarcador(recorte);
+  return valido?.ancho > 0 && valido?.alto > 0 ? valido : null;
+}
+
 // practica.tipo = 'quiz'. Devuelve { nombre, imagen, preguntas } o null.
+// Cada pregunta puede traer su propia imagen y un recorte (un acercamiento a una parte del dibujo).
 // Una pregunta inválida (sin texto, con menos de 2 opciones o sin respuesta correcta) se descarta.
 export function obtenerQuiz(leccion) {
   const practica = leccion?.practica;
@@ -34,6 +42,8 @@ export function obtenerQuiz(leccion) {
         opciones,
         correcta: p.correcta,
         marcador: validarMarcador(p.marcador),
+        imagen: textoValido(p.imagen) ? p.imagen : null,
+        recorte: validarRecorte(p.recorte),
         explicacion: textoValido(p.explicacion) ? p.explicacion : null,
       };
     })
