@@ -40,12 +40,13 @@ function crearAzar(semilla) {
 // Cuerdas con armónicos, un poco desafinadas, y con los graves atenuados como en un celular
 // Con sinFundamental el micrófono no capta la nota base, solo sus armónicos (pasa en las cuerdas graves).
 // Puede ser true (ninguna nota) o una frecuencia: pierde la base de las notas más graves que esa.
-function sintetizar(midis, sr, n, { semilla = 1, ruido = 0.003, desafinacionCents = 0, sinFundamental = false } = {}) {
+// Los midis pueden tener decimales (64.45 es un Mi 45 cents alto). `volumenes` baja alguna cuerda: [1, 0.25].
+function sintetizar(midis, sr, n, { semilla = 1, ruido = 0.003, desafinacionCents = 0, sinFundamental = false, volumenes = [] } = {}) {
   const azar = crearAzar(semilla);
   const b = new Float32Array(n);
-  for (const midi of midis) {
+  for (const [indice, midi] of midis.entries()) {
     const f = midiAFrecuencia(midi + desafinacionCents / 100);
-    const ganancia = 0.6 + 0.4 * azar();
+    const ganancia = (0.6 + 0.4 * azar()) * (volumenes[indice] ?? 1);
     [1, 0.7, 0.45, 0.3, 0.2, 0.12].forEach((a, k) => {
       const armonico = k + 1;
       const fk = f * armonico * Math.sqrt(1 + 1e-4 * armonico * armonico);
@@ -186,6 +187,85 @@ for (const [sr, factor] of [[48000, 4], [44100, 3]]) {
   // suma armónicos de varias cuerdas tapa a las demás (en el Mi, el Si3 deja al Mi3 en un 2 %), y
   // dos acordes que comparten dos notas (Do y Mim) pueden confundirse. Un micrófono real capta
   // algo de la base, y con eso se distinguen.
+
+  // ---- Precisión: la nota tiene que ser esa, no una parecida ----
+
+  const primeraPosicion = [1, 2, 3, 4, 5, 6].flatMap((c) => [0, 1, 2, 3, 4, 5].map((t) => midiDePosicion(c, t)));
+
+  test(`una nota corrida medio semitono no aprueba, y avisa hacia dónde (${sr} Hz)`, () => {
+    for (const sinFundamental of [false, true]) {
+      for (const midi of primeraPosicion) {
+        const baja = compararNota(fundamentalesDe([midi - 0.45], { sinFundamental, semilla: midi }), midi);
+        assert.deepStrictEqual([baja.correcta, baja.notaDetectada, baja.afinacion], [false, nombreDeMidi(midi), 'baja'], `midi ${midi} bajo`);
+        const alta = compararNota(fundamentalesDe([midi + 0.45], { sinFundamental, semilla: midi }), midi);
+        assert.deepStrictEqual([alta.correcta, alta.notaDetectada, alta.afinacion], [false, nombreDeMidi(midi), 'alta'], `midi ${midi} alto`);
+      }
+    }
+  });
+
+  test(`una nota apenas desafinada sigue aprobando (${sr} Hz)`, () => {
+    for (const sinFundamental of [false, true]) {
+      for (const midi of primeraPosicion) {
+        for (const corrida of [-0.2, 0.2]) {
+          const r = compararNota(fundamentalesDe([midi + corrida], { sinFundamental, semilla: midi }), midi);
+          assert.ok(r.correcta, `midi ${midi} corrido ${corrida}: detectó ${r.notaDetectada} (${r.cents} cents)`);
+          assert.strictEqual(r.afinacion, null);
+        }
+      }
+    }
+  });
+
+  test(`el semitono de al lado no aprueba y se informa con su nombre (${sr} Hz)`, () => {
+    for (const sinFundamental of [false, true]) {
+      for (const midi of primeraPosicion) {
+        for (const vecina of [midi - 1, midi + 1]) {
+          const r = compararNota(fundamentalesDe([vecina], { sinFundamental, semilla: midi }), midi);
+          assert.deepStrictEqual([r.correcta, r.notaDetectada, r.afinacion], [false, nombreDeMidi(vecina), null], `pedida ${midi}, tocada ${vecina}`);
+        }
+      }
+    }
+  });
+
+  // Otra cuerda rozada o la nota anterior que todavía suena: se oye la pedida, pero no es lo que se tocó
+  test(`si la nota pedida apenas se oye debajo de otra, no aprueba (${sr} Hz)`, () => {
+    for (const midi of primeraPosicion) {
+      for (const otra of [midi + 1, midi - 2, midi + 3, midi + 6]) {
+        const r = compararNota(fundamentalesDe([otra, midi], { volumenes: [1, 0.2], semilla: midi }), midi);
+        assert.deepStrictEqual([r.correcta, r.notaDetectada], [false, nombreDeMidi(otra)], `pedida ${midi}, tocada ${otra}`);
+      }
+    }
+  });
+
+  test(`la nota pedida aprueba aunque otra más débil siga sonando (${sr} Hz)`, () => {
+    for (const midi of primeraPosicion) {
+      for (const otra of [midi + 1, midi - 2, midi + 3, midi + 6]) {
+        const r = compararNota(fundamentalesDe([midi, otra], { volumenes: [1, 0.3], semilla: midi }), midi);
+        assert.ok(r.correcta, `pedida ${midi}, sonaba ${otra}: detectó ${r.notaDetectada}`);
+      }
+    }
+  });
+
+  // Si3 y Mi4 son también el 3º y el 4º armónico de un Mi2, pero nadie tocó un Mi2
+  test(`dos cuerdas vecinas sonando juntas no se toman por una nota grave (${sr} Hz)`, () => {
+    for (const [pedida, otra] of [[64, 59], [59, 64], [65, 60], [67, 62], [68, 71], [64, 68]]) {
+      const r = compararNota(fundamentalesDe([pedida, otra], { volumenes: [1, 0.5], semilla: pedida }), pedida);
+      assert.deepStrictEqual([r.correcta, r.notaDetectada, r.registro], [true, nombreDeMidi(pedida), null], `pedida ${pedida}, sonaba ${otra}`);
+    }
+  });
+
+  test(`un acorde con una cuerda corrida medio semitono no aprueba (${sr} Hz)`, () => {
+    // En cada acorde se corre la cuerda cuya nota no está repetida en otra
+    const casos = { Do: 'Sol', Sol: 'Re', Re: 'Fa#', La: 'Do#', Lam: 'Do', Mim: 'Sol', Rem: 'Fa' };
+    for (const [nombre, nota] of Object.entries(casos)) {
+      const forma = midisDe(FORMAS[nombre]);
+      for (const corrida of [-0.45, 0.45]) {
+        const sonando = forma.map((m) => (nombreDeMidi(m) === nota ? m + corrida : m));
+        const r = compararEn(sonando, forma);
+        assert.ok(!r.correcta, `${nombre} con ${nota} corrido ${corrida} aprobó`);
+        assert.deepStrictEqual(r.desafinadas, [nota], `${nombre}: faltan ${r.faltantes}, sobran ${r.sobrantes}`);
+      }
+    }
+  });
 
   test(`una octava de diferencia se acepta (${sr} Hz)`, () => {
     assert.ok(compararNota(fundamentalesDe([52]), 40).correcta);
@@ -425,6 +505,34 @@ test('con ruido sigue rechazando lo equivocado', () => {
   const lam = tocarEnRuido(acorde(FORMAS.Do), midisDe(FORMAS.Lam), 0);
   assert.ok(!lam.at(-1).aprobado);
   assert.ok(lam.some((l) => l.hayNota && l.faltantes.includes('Sol')));
+});
+
+test('con ruido, una nota corrida medio semitono no aprueba y una apenas desafinada sí', () => {
+  for (const [c, t] of [[6, 0], [5, 3], [4, 2], [3, 0], [2, 1], [1, 0], [1, 3]]) {
+    const midi = midiDePosicion(c, t);
+    for (const db of [12, 0]) {
+      for (const corrida of [-0.45, 0.45]) {
+        const lecturas = tocarEnRuido(nota(c, t), [midi + corrida], db);
+        assert.ok(!lecturas.at(-1).aprobado, `cuerda ${c} traste ${t} corrida ${corrida} a ${db} dB aprobó`);
+        assert.ok(lecturas.some((l) => l.hayNota && l.afinacion === (corrida < 0 ? 'baja' : 'alta')), `cuerda ${c} traste ${t}: no avisó`);
+      }
+      for (const corrida of [-0.15, 0.15]) {
+        assert.ok(tocarEnRuido(nota(c, t), [midi + corrida], db).at(-1).aprobado, `cuerda ${c} traste ${t} corrida ${corrida} a ${db} dB`);
+      }
+    }
+  }
+});
+
+test('con ruido, el semitono de al lado nunca aprueba', () => {
+  for (let c = 1; c <= 6; c++) {
+    for (const t of [0, 2, 4]) {
+      const midi = midiDePosicion(c, t);
+      for (const vecina of [midi - 1, midi + 1]) {
+        const lecturas = tocarEnRuido(nota(c, t), [vecina], 0);
+        assert.ok(!lecturas.some((l) => l.correcta), `cuerda ${c} traste ${t}: tocó ${nombreDeMidi(vecina)} y lo dio por bueno`);
+      }
+    }
+  }
 });
 
 test('una música de fondo constante deja de molestar', () => {

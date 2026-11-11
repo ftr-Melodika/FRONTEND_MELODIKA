@@ -20,6 +20,16 @@ const FRECUENCIA_MAX = 1400;
 const UMBRAL_PICO = 0.01; // Potencia mínima de un pico, relativa al más fuerte
 const UMBRAL_PRESENTE = 0.03; // Desde acá una nota esperada cuenta como presente
 const UMBRAL_SOBRANTE = 0.15; // Una nota ajena solo molesta si suena fuerte
+
+// Qué tan cerca de la nota tiene que sonar para contar (un semitono son 100 cents). Antes se
+// redondeaba a la nota más cercana: algo corrido hasta 49 cents, a mitad de camino de la nota
+// de al lado, aprobaba igual. La frecuencia se mide con un error de unos 10 cents en el peor ruido.
+const TOLERANCIA_NOTA_CENTS = 30;
+// En un acorde los armónicos de varias cuerdas se pisan y corren un poco cada pico
+const TOLERANCIA_ACORDE_CENTS = 40;
+// La nota pedida tiene que ser de lo más fuerte que suena. Antes alcanzaba con un 3 %: se podía
+// tocar otra nota y aprobar porque la pedida sonaba apenas (otra cuerda rozada, la nota anterior).
+const UMBRAL_NOTA_PRINCIPAL = 0.3;
 // Armónicos de una cuerda del acorde que caen en otra nota (quinta y tercera, octavas arriba).
 // Si la base de esa cuerda no se oye, pueden parecer notas sueltas: no cuentan como notas de más.
 const ARMONICOS_DEL_ACORDE = [3, 5, 6];
@@ -281,10 +291,13 @@ function esArmonicoDe(pico, grave) {
   return Math.abs(cents) <= TOLERANCIA_ARMONICO_CENTS;
 }
 
-// Notas que suenan por encima del ruido, cada una como { frecuencia, midi, potencia },
+// Notas que suenan por encima del ruido, cada una como { frecuencia, midi, potencia, fuerza },
 // con la potencia relativa a la más fuerte. Resta el ruido medido y descarta los armónicos,
 // porque el armónico de una cuerda no prueba que suene otra: el Do grave también
 // produce un Sol aunque la cuerda de Sol esté apagada.
+// `potencia` es la del pico de la nota; `fuerza` le suma sus armónicos. Para saber cuál de dos
+// notas suena más fuerte sirve la fuerza: el micrófono del celular capta poco la base de las
+// cuerdas graves, y por su pico solo parecerían más débiles de lo que son.
 export function encontrarFundamentales(potencias, hzPorBin, ruido = null) {
   const binMin = Math.max(1, Math.floor(FRECUENCIA_MIN / hzPorBin));
   const binMax = Math.min(potencias.length - 2, Math.ceil(FRECUENCIA_MAX / hzPorBin));
@@ -312,12 +325,30 @@ export function encontrarFundamentales(potencias, hzPorBin, ruido = null) {
     picos.push({ frecuencia: (i + ajuste) * hzPorBin, potencia: p });
   }
 
-  const fundamentales = picos.filter((pico) => !picos.some((grave) => grave.frecuencia < pico.frecuencia && esArmonicoDe(pico, grave)));
+  const fundamentales = [];
+  const armonicos = [];
+  for (const pico of picos) {
+    const esArmonico = picos.some((grave) => grave.frecuencia < pico.frecuencia && esArmonicoDe(pico, grave));
+    if (esArmonico) armonicos.push(pico);
+    else fundamentales.push({ ...pico, fuerza: pico.potencia });
+  }
+  // Cada armónico suma a la nota más grave que lo explica (los picos están de grave a agudo)
+  for (const armonico of armonicos) {
+    const base = fundamentales.find((f) => f.frecuencia < armonico.frecuencia && esArmonicoDe(armonico, f));
+    if (base) base.fuerza += armonico.potencia;
+  }
   const mayor = fundamentales.reduce((max, p) => Math.max(max, p.potencia), 0);
-  return fundamentales.map((p) => ({ frecuencia: p.frecuencia, midi: frecuenciaAMidi(p.frecuencia), potencia: p.potencia / mayor }));
+  const mayorFuerza = fundamentales.reduce((max, p) => Math.max(max, p.fuerza), 0);
+  return fundamentales.map((p) => ({
+    frecuencia: p.frecuencia,
+    midi: frecuenciaAMidi(p.frecuencia),
+    potencia: p.potencia / mayor,
+    fuerza: p.fuerza / mayorFuerza,
+  }));
 }
 
 const coincide = (frecuencia, objetivo) => Math.abs(1200 * Math.log2(frecuencia / objetivo)) <= TOLERANCIA_ARMONICO_CENTS;
+const fuerzaDe = (nota) => nota.fuerza ?? nota.potencia;
 
 // Si dos notas son armónicos distintos de una misma nota de guitarra que no se oye, sonó esa.
 // Ej.: un Do3 sin su base deja Do4 (2º armónico) y Sol4 (3º). Como 392/261 = 1,5, el Sol no se
@@ -338,6 +369,10 @@ export function agruparArmonicos(fundamentales) {
         return j >= 2 && j <= ARMONICO_MAXIMO_VIRTUAL && j !== k && coincide(otra.frecuencia, base * j);
       });
       if (explicadas.length === 0) continue;
+      // A una nota sin su base se le oye el 2º armónico. Si no está, son dos notas distintas que
+      // suenan juntas: Si3 y Mi4 (dos cuerdas vecinas al aire) también son el 3º y el 4º de un Mi2.
+      const estaElSegundo = k === 2 || explicadas.some((otra) => Math.round(otra.frecuencia / base) === 2);
+      if (!estaElSegundo) continue;
       const potencia = explicadas.reduce((suma, otra) => suma + otra.potencia, nota.potencia);
       if (!mejor || potencia > mejor.potencia) mejor = { base, explicadas, potencia };
     }
@@ -345,35 +380,63 @@ export function agruparArmonicos(fundamentales) {
       resultado.push(nota);
       continue;
     }
-    mejor.explicadas.forEach((otra) => restantes.splice(restantes.indexOf(otra), 1));
+    // La fuerza de la nota deducida es la de todos los armónicos que se le oyeron
+    let fuerza = fuerzaDe(nota);
+    mejor.explicadas.forEach((otra) => {
+      fuerza += fuerzaDe(otra);
+      restantes.splice(restantes.indexOf(otra), 1);
+    });
     // Los armónicos más débiles de la nota deducida tampoco son otras notas
     const virtual = { frecuencia: mejor.base, potencia: nota.potencia };
     for (let i = restantes.length - 1; i >= 0; i--) {
-      if (restantes[i].potencia <= nota.potencia && esArmonicoDe(restantes[i], virtual)) restantes.splice(i, 1);
+      if (restantes[i].potencia <= nota.potencia && esArmonicoDe(restantes[i], virtual)) {
+        fuerza += fuerzaDe(restantes[i]);
+        restantes.splice(i, 1);
+      }
     }
-    resultado.push({ frecuencia: mejor.base, midi: frecuenciaAMidi(mejor.base), potencia: nota.potencia, virtual: true });
+    resultado.push({ frecuencia: mejor.base, midi: frecuenciaAMidi(mejor.base), potencia: nota.potencia, fuerza, virtual: true });
   }
   return resultado;
 }
 
-// Compara con la nota pedida. Acepta la exacta o una octava arriba o abajo, porque el micrófono
-// del celular capta poco la fundamental de las cuerdas graves. Mi2 y Mi4 siguen siendo distintas.
-// Otra nota más fuerte no la invalida: puede ser ruido del ambiente.
+// Compara con la nota pedida. Tiene que sonar afinada (a menos de TOLERANCIA_NOTA_CENTS) y ser de
+// lo más fuerte que se oye: medio semitono corrida, o apenas audible debajo de otra, no cuenta.
+// Acepta una octava arriba o abajo, porque el micrófono del celular capta poco la fundamental de
+// las cuerdas graves. Mi2 y Mi4 siguen siendo distintas.
+// Devuelve { correcta, notaDetectada, frecuencia, cents, registro, afinacion }:
+// - cents: cuánto se aparta lo que suena de la nota informada
+// - registro: 'grave' | 'aguda' si es la nota pedida pero en otra octava
+// - afinacion: 'baja' | 'alta' si es la nota pedida pero suena corrida
 export function compararNota(fundamentalesOidas, midiEsperado) {
   const fundamentales = agruparArmonicos(fundamentalesOidas);
-  if (fundamentales.length === 0) return { correcta: false, notaDetectada: null, registro: null };
+  if (fundamentales.length === 0) return { correcta: false, notaDetectada: null, registro: null, afinacion: null };
   const octavasDe = (f) => Math.round((f.midi - midiEsperado) / 12);
-  const esLaMismaNota = (f) => claseDeMidi(f.midi) === claseDeMidi(midiEsperado);
+  const desvioDe = (f) => (f.midi - midiEsperado - 12 * octavasDe(f)) * 100; // Cents hasta la nota pedida, sin contar octavas
+  const masFuerte = (a, b) => (fuerzaDe(b) > fuerzaDe(a) ? b : a);
 
-  const correcta = fundamentales.some((f) => esLaMismaNota(f) && Math.abs(octavasDe(f)) <= 1 && f.potencia >= UMBRAL_PRESENTE);
-  const principal = fundamentales.reduce((a, b) => (b.potencia > a.potencia ? b : a));
-  const octavaEquivocada = !correcta && esLaMismaNota(principal);
+  const principal = fundamentales.reduce(masFuerte);
+  const acertadas = fundamentales.filter(
+    (f) =>
+      Math.abs(octavasDe(f)) <= 1 &&
+      Math.abs(desvioDe(f)) <= TOLERANCIA_NOTA_CENTS &&
+      fuerzaDe(f) >= fuerzaDe(principal) * UMBRAL_NOTA_PRINCIPAL
+  );
+  const correcta = acertadas.length > 0;
+  const informada = correcta ? acertadas.reduce(masFuerte) : principal;
+
+  let registro = null;
+  let afinacion = null;
+  if (!correcta && claseDeMidi(informada.midi) === claseDeMidi(midiEsperado)) {
+    if (Math.abs(octavasDe(informada)) > 1) registro = octavasDe(informada) < 0 ? 'grave' : 'aguda';
+    else afinacion = desvioDe(informada) < 0 ? 'baja' : 'alta';
+  }
   return {
     correcta,
-    notaDetectada: nombreDeMidi(principal.midi),
-    frecuencia: principal.frecuencia,
-    cents: Math.round((principal.midi - Math.round(principal.midi)) * 100),
-    registro: octavaEquivocada ? (octavasDe(principal) < 0 ? 'grave' : 'aguda') : null,
+    notaDetectada: nombreDeMidi(informada.midi),
+    frecuencia: informada.frecuencia,
+    cents: Math.round((informada.midi - Math.round(informada.midi)) * 100),
+    registro,
+    afinacion,
   };
 }
 
@@ -381,10 +444,13 @@ export function compararNota(fundamentalesOidas, midiEsperado) {
 // lo que falta, en lo que sonó recién (`recientes`).
 // Lo que sobra excluye los armónicos de las cuerdas que se esperan: un Sol3 sin su base deja
 // Sol4 y Re5, y ese Re no es una nota de más en un Do.
+// Cada nota del acorde tiene que sonar afinada (a menos de TOLERANCIA_ACORDE_CENTS): si solo se
+// oye corrida va a `desafinadas` y el acorde no aprueba.
 export function compararAcorde(fundamentales, midis, recientes = fundamentales) {
   const frecuenciasEsperadas = midis.map(midiAFrecuencia);
   const esArmonicoDelAcorde = (f) =>
     frecuenciasEsperadas.some((base) => ARMONICOS_DEL_ACORDE.some((j) => coincide(f.frecuencia, base * j)));
+  const afinada = (f) => Math.abs(f.midi - Math.round(f.midi)) * 100 <= TOLERANCIA_ACORDE_CENTS;
   const potenciasPorNota = (lista) => {
     const potencias = new Array(12).fill(0);
     lista.forEach((f) => {
@@ -395,11 +461,16 @@ export function compararAcorde(fundamentales, midis, recientes = fundamentales) 
   };
   const actuales = potenciasPorNota(fundamentales.filter((f) => !esArmonicoDelAcorde(f)));
   const oidas = potenciasPorNota(recientes);
+  const oidasAfinadas = potenciasPorNota(recientes.filter(afinada));
 
   const esperadas = [...new Set(midis.map(claseDeMidi))];
   const faltantes = esperadas.filter((clase) => oidas[clase] < UMBRAL_PRESENTE).map((clase) => NOTAS[clase]);
+  const desafinadas = esperadas
+    .filter((clase) => oidas[clase] >= UMBRAL_PRESENTE && oidasAfinadas[clase] < UMBRAL_PRESENTE)
+    .map((clase) => NOTAS[clase]);
   const sobrantes = NOTAS.filter((_, clase) => !esperadas.includes(clase) && actuales[clase] >= UMBRAL_SOBRANTE);
-  return { correcta: fundamentales.length > 0 && faltantes.length === 0 && sobrantes.length === 0, faltantes, sobrantes };
+  const correcta = fundamentales.length > 0 && faltantes.length === 0 && desafinadas.length === 0 && sobrantes.length === 0;
+  return { correcta, faltantes, sobrantes, desafinadas };
 }
 
 // ---- Seguimiento en el tiempo ----

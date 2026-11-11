@@ -7,7 +7,7 @@ import { crearDetector } from '../utils/deteccionSonido';
 // Lo que la pantalla muestra de una lectura. Si no cambió, no hace falta volver a dibujar:
 // llega una lectura cada 150 ms y redibujar todo (mástil incluido) pesa en un celular lento.
 const claveVisible = (l) =>
-  l ? [l.calibrando, l.hayNota, l.correcta, l.aprobado, l.notaDetectada, l.registro, l.faltantes?.join(), l.sobrantes?.join()].join('|') : '';
+  l ? [l.calibrando, l.hayNota, l.correcta, l.aprobado, l.notaDetectada, l.registro, l.afinacion, l.faltantes?.join(), l.sobrantes?.join(), l.desafinadas?.join()].join('|') : '';
 
 // estado: ver useMicrofono
 // lectura: última evaluación, ver crearDetector

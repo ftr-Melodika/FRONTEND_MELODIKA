@@ -28,11 +28,16 @@ function textoDeLectura(objetivo, lectura) {
     if (lectura.registro) {
       return `Es ${lectura.notaDetectada}, pero más ${lectura.registro}. Tocá ${dondeTocar(objetivo.posiciones[0])}`;
     }
+    // Es la nota, pero corrida: está a mitad de camino de la de al lado y no cuenta
+    if (lectura.afinacion) {
+      return `Casi: es ${lectura.notaDetectada}, pero suena ${lectura.afinacion}. Revisá la afinación`;
+    }
     return `Suena ${lectura.notaDetectada}, buscá ${objetivo.nombre}`;
   }
 
   const partes = [];
   if (lectura.faltantes.length) partes.push(`Falta ${lectura.faltantes.join(', ')}`);
+  if (lectura.desafinadas?.length) partes.push(`Desafinada: ${lectura.desafinadas.join(', ')}`);
   if (lectura.sobrantes.length) partes.push(`Sobra ${lectura.sobrantes.join(', ')}`);
   return partes.join('  •  ');
 }

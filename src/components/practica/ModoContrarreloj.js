@@ -25,6 +25,7 @@ const formatearTiempo = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(
 function pistaDeAcorde(lectura) {
   const partes = [];
   if (lectura.faltantes?.length) partes.push(`Falta ${lectura.faltantes.join(', ')}`);
+  if (lectura.desafinadas?.length) partes.push(`Desafinada: ${lectura.desafinadas.join(', ')}`);
   if (lectura.sobrantes?.length) partes.push(`Sobra ${lectura.sobrantes.join(', ')}`);
   return partes.join('  •  ');
 }
@@ -134,9 +135,13 @@ export function ModoContrarreloj({ material, acordes }) {
   let consigna = conAcordes ? 'Contrarreloj de acordes' : 'Contrarreloj de notas';
   if (jugando && conAcordes) consigna = (suenaMal && pistaDeAcorde(lectura)) || `Rasgueá ${objetivo.nombre}`;
   if (jugando && !conAcordes) {
-    consigna = suenaMal
-      ? `Suena ${lectura.notaDetectada}, buscá ${objetivo.nombre}`
-      : `Tocá ${objetivo.nombre} en la cuerda ${actual.posicion.cuerda}`;
+    consigna = `Tocá ${objetivo.nombre} en la cuerda ${actual.posicion.cuerda}`;
+    if (suenaMal) {
+      // Con la nota pedida corrida o en otra octava, "Suena Mi, buscá Mi" no se entendería
+      if (lectura.afinacion) consigna = `Casi: es ${lectura.notaDetectada}, pero suena ${lectura.afinacion}`;
+      else if (lectura.registro) consigna = `Es ${lectura.notaDetectada}, pero más ${lectura.registro}: va en la cuerda ${actual.posicion.cuerda}`;
+      else consigna = `Suena ${lectura.notaDetectada}, buscá ${objetivo.nombre}`;
+    }
   }
 
   const unidad = conAcordes ? 'acordes' : 'notas';
