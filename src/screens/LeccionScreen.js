@@ -16,6 +16,7 @@ import { rachaService } from '../services/rachaService';
 import { leccionesService } from '../services/leccionesService';
 import { obtenerSecuencia } from '../utils/deteccionSonido';
 import { obtenerAfinacion, obtenerQuiz } from '../utils/actividades';
+import { obtenerRitmo } from '../utils/ritmo';
 
 // Texto por defecto de la barra lateral según el tipo de paso
 const INSTRUCCION_POR_DEFECTO = {
@@ -24,6 +25,7 @@ const INSTRUCCION_POR_DEFECTO = {
   practica: '¡A tocar! Posicioná tus dedos exactamente como marca el mástil.',
   quiz: 'Leé cada pregunta y elegí la respuesta correcta. Si hay una imagen, mirala con atención.',
   afinacion: 'Tocá cada cuerda al aire y girá su clavija hasta que la aguja quede en el centro.',
+  ritmo: 'Tocá Empezar, esperá la cuenta y aplaudí con cada pulso (el clic o la luz). Marcá el pulso con el pie.',
 };
 
 // Armamos los pasos según lo que traiga la lección: si no tiene video, no mostramos ese paso, etc.
@@ -31,7 +33,7 @@ function armarPasos(leccion) {
   const pasos = [];
   if (leccion.videoId) pasos.push('video');
   const hayTraste = leccion.trasteObjetivo !== null && leccion.trasteObjetivo !== undefined;
-  const hayPractica = hayTraste || !!obtenerSecuencia(leccion) || !!obtenerQuiz(leccion) || !!obtenerAfinacion(leccion);
+  const hayPractica = hayTraste || !!obtenerSecuencia(leccion) || !!obtenerQuiz(leccion) || !!obtenerAfinacion(leccion) || !!obtenerRitmo(leccion);
   // Sin texto de teoría, ese paso solo mostraría un mensaje genérico: si hay práctica, se saltea
   const hayTeoria = !!leccion.textoTeoria || !!leccion.textoDestacado;
   if (hayTeoria || !hayPractica) pasos.push('teoria');
@@ -59,7 +61,7 @@ export function LeccionScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
 
   const pasoActual = pasos[indice];
-  const tipoPractica = leccion.practica?.tipo === 'quiz' || leccion.practica?.tipo === 'afinacion' ? leccion.practica.tipo : 'practica';
+  const tipoPractica = ['quiz', 'afinacion', 'ritmo'].includes(leccion.practica?.tipo) ? leccion.practica.tipo : 'practica';
   const esUltimo = indice === pasos.length - 1;
   const irAtras = indice > 0 ? () => setIndice(indice - 1) : null;
   const irAdelante = () => setIndice(Math.min(indice + 1, pasos.length - 1));

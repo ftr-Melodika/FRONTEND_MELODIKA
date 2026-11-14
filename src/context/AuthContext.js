@@ -2,7 +2,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { perfilesService, normalizarPerfil } from '../services/perfilesService';
-import { recordarToken, registrarAlExpirarSesion } from '../api/tokenSesion';
+import { borrarSesion, cargarSesion, guardarSesion, refrescarSesion, registrarAlExpirarSesion } from '../api/tokenSesion';
 
 export const AuthContext = createContext();
 
@@ -18,17 +18,27 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkLogin = async () => {
       try {
-        const token = await AsyncStorage.getItem('userToken');
+        const { token, refreshToken } = await cargarSesion();
         const cuenta = await AsyncStorage.getItem('userCuenta');
         const perfilGuardado = await AsyncStorage.getItem('userPerfil'); // Buscamos el perfil
 
-        recordarToken(token && cuenta ? token : null);
-        if (token && cuenta) {
-          setUserToken(token);
+        if ((token || refreshToken) && cuenta) {
+          // Se entra directo con lo guardado, aunque el token haya vencido: se renueva al primer
+          // pedido al backend (o acá abajo, en segundo plano)
+          setUserToken(token || 'renovando');
           setUserData(JSON.parse(cuenta));
-          
+
           if (perfilGuardado) {
             setPerfil(normalizarPerfil(JSON.parse(perfilGuardado))); // Restauramos el perfil si existía
+          }
+
+          // Token nuevo al abrir la app. Sin internet no pasa nada: la sesión sigue.
+          if (refreshToken) {
+            refrescarSesion()
+              .then((nuevo) => setUserToken(nuevo))
+              .catch((error) => {
+                if (error.sesionMuerta) logout();
+              });
           }
         }
       } catch (error) {
@@ -40,13 +50,13 @@ export const AuthProvider = ({ children }) => {
     checkLogin();
   }, []);
 
-  const login = async (token, cuenta) => {
+  // refreshToken y expiresAt los devuelve el login del backend: con ellos la sesión no se cierra sola
+  const login = async (token, cuenta, refreshToken, expiresAt) => {
     setIsLoading(true);
     try {
-      await AsyncStorage.setItem('userToken', token);
+      await guardarSesion({ token, refreshToken, expiresAt });
       await AsyncStorage.setItem('userCuenta', JSON.stringify(cuenta));
-      recordarToken(token);
-      
+
       setUserToken(token);
       setUserData(cuenta);
       // Al loguear una cuenta nueva, el perfil arranca en null hasta que seleccione uno
@@ -61,8 +71,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     setIsLoading(true);
     try {
-      recordarToken(null);
-      await AsyncStorage.removeItem('userToken');
+      await borrarSesion();
       await AsyncStorage.removeItem('userCuenta');
       await AsyncStorage.removeItem('userPerfil'); // Limpiamos el perfil al salir
       
@@ -111,7 +120,7 @@ export const AuthProvider = ({ children }) => {
     setPerfil(null);
   };
 
-  // Si el backend responde 401, axiosClient llama a este logout
+  // Si el backend rechaza el refresh token (la sesión murió de verdad), axiosClient llama a este logout
   useEffect(() => {
     registrarAlExpirarSesion(logout);
     return () => registrarAlExpirarSesion(null);

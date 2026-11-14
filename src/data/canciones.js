@@ -1,132 +1,87 @@
 // Archivo: src/data/canciones.js
-// Catálogo de canciones para tocar: acordes, rasgueo sugerido, tempo y estructura.
-// No hay una API pública que dé esto (los sitios de cifrados no tienen API abierta y no permiten
-// copiar su contenido), así que el catálogo es propio. No lleva letras: tienen derechos de autor.
-// Solo usa los acordes abiertos de los cursos 3 y 5 (ver FORMAS_ACORDES): las que en el original
-// llevan cejilla se tocan con capo y formas abiertas. El tempo es aproximado.
+// Catálogo de canciones de la sección Práctica: acordes, rasgueo, tempo y capo.
+// No lleva letras: tienen derechos de autor. Los acordes van en cifrado americano (Em, C, G…).
 //
-// Cada sección es una lista de compases; un compás con dos acordes ("Do Fa") lleva medio compás de cada uno.
+// `progresion`: un elemento por compás (4/4); un compás con dos acordes ("Em C") lleva medio compás
+// de cada uno. `formas`: si la canción usa otra forma de un acorde (Wonderwall), la reemplaza.
+// `bpm` es el tempo aproximado del original.
 
-// Rasgueos sugeridos. `cuenta` es lo que se dice en voz alta; `golpes` el rasgueo en cada parte
-// ('↓' abajo, '↑' arriba, '' la mano pasa sin tocar).
-export const RASGUEOS = {
-  basico: {
-    nombre: 'Básico',
-    descripcion: 'Uno hacia abajo en cada tiempo. Es el primero que aprendiste: sirve para cualquier canción.',
-    cuenta: ['1', '2', '3', '4'],
-    golpes: ['↓', '↓', '↓', '↓'],
-  },
-  abajoArriba: {
-    nombre: 'Abajo y arriba',
-    descripcion: 'Abajo en cada número y arriba en cada "y". Le da movimiento a las canciones rápidas.',
-    cuenta: ['1', 'y', '2', 'y', '3', 'y', '4', 'y'],
-    golpes: ['↓', '↑', '↓', '↑', '↓', '↑', '↓', '↑'],
-  },
-  balada: {
-    nombre: 'Balada',
-    descripcion: 'El rasgueo más usado del pop y del fogón. La mano no se detiene: en los huecos pasa sin tocar.',
-    cuenta: ['1', 'y', '2', 'y', '3', 'y', '4', 'y'],
-    golpes: ['↓', '', '↓', '↑', '', '↑', '↓', '↑'],
-  },
-  seisOchos: {
-    nombre: 'En 6/8',
-    descripcion: 'Seis partes por compás, con el acento en el 1 y en el 4. Suena a vals lento.',
-    cuenta: ['1', '2', '3', '4', '5', '6'],
-    golpes: ['↓', '↓', '↑', '↓', '↓', '↑'],
-  },
+// Cómo se arma cada acorde. Cuerda 1 = Mi agudo; las cuerdas que no se tocan no aparecen.
+// Con capo, el traste 0 es el capo: las formas son las mismas y suenan más agudas.
+const p = (cuerda, traste, dedo) => (traste === 0 ? { cuerda, traste } : { cuerda, traste, dedo });
+export const FORMAS = {
+  Em: [p(6, 0), p(5, 2, 2), p(4, 2, 3), p(3, 0), p(2, 0), p(1, 0)],
+  Am: [p(5, 0), p(4, 2, 2), p(3, 2, 3), p(2, 1, 1), p(1, 0)],
+  C: [p(5, 3, 3), p(4, 2, 2), p(3, 0), p(2, 1, 1), p(1, 0)],
+  G: [p(6, 3, 2), p(5, 2, 1), p(4, 0), p(3, 0), p(2, 0), p(1, 3, 3)],
+  D: [p(4, 0), p(3, 2, 1), p(2, 3, 3), p(1, 2, 2)],
+  B7: [p(5, 2, 2), p(4, 1, 1), p(3, 2, 3), p(2, 0), p(1, 2, 4)],
+  // Con cejilla en el traste 2 (de la 5ta a la 1ra)
+  Bm: [p(5, 2, 1), p(4, 4, 3), p(3, 4, 4), p(2, 3, 2), p(1, 2, 1)],
+  // Do con el Sol en el bajo
+  'C/G': [p(6, 3, 3), p(5, 3, 4), p(4, 2, 2), p(3, 0), p(2, 1, 1), p(1, 0)],
+  // Con cejilla en el traste 1
+  F: [p(6, 1, 1), p(5, 3, 3), p(4, 3, 4), p(3, 2, 2), p(2, 1, 1), p(1, 1, 1)],
+  Fm: [p(6, 1, 1), p(5, 3, 3), p(4, 3, 4), p(3, 1, 1), p(2, 1, 1), p(1, 1, 1)],
+  // Con cejilla en el traste 3
+  Gm: [p(6, 3, 1), p(5, 5, 3), p(4, 5, 4), p(3, 3, 1), p(2, 3, 1), p(1, 3, 1)],
+  Cm: [p(5, 3, 1), p(4, 5, 3), p(3, 5, 4), p(2, 4, 2), p(1, 3, 1)],
+  Em7: [p(6, 0), p(5, 2, 1), p(4, 2, 2), p(3, 0), p(2, 3, 3), p(1, 3, 4)],
+  Dsus4: [p(4, 0), p(3, 2, 1), p(2, 3, 3), p(1, 3, 4)],
+  A7sus4: [p(5, 0), p(4, 2, 1), p(3, 0), p(2, 3, 3), p(1, 3, 4)],
 };
+
+export const REFERENCIAS_RASGUEO = '↓ = abajo  ·  ↑ = arriba  ·  · = la mano pasa sin tocar  ·  X = golpe apagado';
 
 export const CANCIONES = [
   {
-    id: 'knockin-on-heavens-door', titulo: "Knockin' on Heaven's Door", artista: 'Bob Dylan', anio: 1973,
-    bpm: 69, compas: '4/4', pulsosPorCompas: 4, tonalidad: 'Sol mayor', capo: 0, rasgueo: 'balada',
-    consejo: 'Toda la canción repite las mismas dos vueltas. Ideal para la primera canción.',
-    secciones: [
-      { nombre: 'Estrofa', compases: ['Sol', 'Re', 'Lam', 'Lam', 'Sol', 'Re', 'Do', 'Do'] },
-      { nombre: 'Estribillo', compases: ['Sol', 'Re', 'Lam', 'Lam', 'Sol', 'Re', 'Do', 'Do'] },
-    ],
+    id: 'de-musica-ligera', titulo: 'De música ligera', artista: 'Soda Stereo', bpm: 126, capo: 0,
+    progresion: ['Em C', 'G D'],
+    rasgueo: '↓↓ / ↑↑↓↓',
+    consejo: 'Dos acordes por compás: el "/" del rasgueo marca el cambio.',
   },
   {
-    id: 'zombie', titulo: 'Zombie', artista: 'The Cranberries', anio: 1994,
-    bpm: 84, compas: '4/4', pulsosPorCompas: 4, tonalidad: 'Mi menor', capo: 0, rasgueo: 'balada',
-    consejo: 'Cuatro acordes que se repiten en toda la canción. En el estribillo rasgueá con más fuerza.',
-    secciones: [
-      { nombre: 'Estrofa', compases: ['Mim', 'Do', 'Sol', 'Re'] },
-      { nombre: 'Estribillo', compases: ['Mim', 'Do', 'Sol', 'Re'] },
-    ],
+    id: 'lamento-boliviano', titulo: 'Lamento boliviano', artista: 'Enanitos Verdes', bpm: 88, capo: 0,
+    progresion: ['Em', 'Em', 'Bm', 'Bm', 'Am', 'Am', 'Em', 'B7'],
+    rasgueo: '↓ · ↓↑ · ↑↓↑',
+    consejo: 'Bm lleva cejilla en el traste 2. B7 te lleva de vuelta a Em.',
   },
   {
-    id: 'stand-by-me', titulo: 'Stand By Me', artista: 'Ben E. King', anio: 1961,
-    bpm: 118, compas: '4/4', pulsosPorCompas: 4, tonalidad: 'La mayor (con capo)', capo: 2, rasgueo: 'balada',
-    consejo: 'El original está en La, con un acorde de cejilla. Con capo en el traste 2 y estas formas suena igual.',
-    secciones: [
-      { nombre: 'Estrofa', compases: ['Sol', 'Sol', 'Mim', 'Mim', 'Do', 'Re', 'Sol', 'Sol'] },
-      { nombre: 'Estribillo', compases: ['Sol', 'Sol', 'Mim', 'Mim', 'Do', 'Re', 'Sol', 'Sol'] },
-    ],
+    id: 'flaca', titulo: 'Flaca', artista: 'Andrés Calamaro', bpm: 70, capo: 0,
+    progresion: ['G', 'B7', 'Em', 'C', 'G', 'D', 'G', 'D'],
+    rasgueo: '↓ · ↓↑ · ↑↓↑ (lento)',
+    consejo: 'Tranquila y sin apuro: dejá sonar cada acorde.',
   },
   {
-    id: 'wonderwall', titulo: 'Wonderwall (versión simplificada)', artista: 'Oasis', anio: 1995,
-    bpm: 87, compas: '4/4', pulsosPorCompas: 4, tonalidad: 'Fa# menor (con capo)', capo: 2, rasgueo: 'abajoArriba',
-    consejo: 'El original usa acordes con notas agregadas; estos son los acordes básicos que están debajo. El rasgueo es constante y con mucho movimiento.',
-    secciones: [
-      { nombre: 'Estrofa', compases: ['Mim', 'Sol', 'Re', 'La'] },
-      { nombre: 'Pre-estribillo', compases: ['Do', 'Re', 'Mim', 'Mim', 'Do', 'Re', 'Mim', 'Mim', 'Do', 'Re', 'La', 'La'] },
-      { nombre: 'Estribillo', compases: ['Do', 'Mim', 'Sol', 'Mim'] },
-    ],
+    id: 'arrancarmelo', titulo: 'Arrancármelo', artista: 'WOS', bpm: 80, capo: 0,
+    progresion: ['C/G', 'F', 'Fm', 'Gm'],
+    rasgueo: '↓ en las primeras 2 estrofas, y después ↓ · ↓↑ · ↑↓↑',
+    consejo: 'F, Fm y Gm llevan cejilla. De F a Fm solo se mueve un dedo.',
   },
   {
-    id: 'let-it-be', titulo: 'Let It Be', artista: 'The Beatles', anio: 1970,
-    bpm: 72, compas: '4/4', pulsosPorCompas: 4, tonalidad: 'Do mayor', capo: 0, rasgueo: 'basico',
-    consejo: 'Empezá con el rasgueo básico, parejo y tranquilo. El Fa es el de cuatro cuerdas, sin cejilla.',
-    secciones: [
-      { nombre: 'Estrofa', compases: ['Do', 'Sol', 'Lam', 'Fa', 'Do', 'Sol', 'Fa Do', 'Do'] },
-      { nombre: 'Estribillo', compases: ['Lam', 'Sol', 'Fa', 'Do', 'Do', 'Sol', 'Fa Do', 'Do'] },
-    ],
+    id: 'wonderwall', titulo: 'Wonderwall', artista: 'Oasis', bpm: 87, capo: 2,
+    progresion: ['Em7', 'G', 'Dsus4', 'A7sus4'],
+    // En Wonderwall el Sol se toca con los dedos 3 y 4 en las cuerdas 2 y 1, como en los demás acordes
+    formas: { G: [p(6, 3, 2), p(5, 2, 1), p(4, 0), p(3, 0), p(2, 3, 3), p(1, 3, 4)] },
+    rasgueo: '↓↓↓ / ↓↑↓↑↓↓ / ↓↑↓↑↓↓ / ↓↑↑ ↑↓↑↓↑',
+    consejo: 'Los dedos 3 y 4 quedan fijos en las cuerdas 2 y 1 en los cuatro acordes: no los levantes.',
   },
   {
-    id: 'despacito', titulo: 'Despacito', artista: 'Luis Fonsi', anio: 2017,
-    bpm: 89, compas: '4/4', pulsosPorCompas: 4, tonalidad: 'Si menor (con capo)', capo: 2, rasgueo: 'balada',
-    consejo: 'Los mismos cuatro acordes en toda la canción. Con capo en el traste 2 suena como el original, que usa cejillas.',
-    secciones: [
-      { nombre: 'Estrofa', compases: ['Lam', 'Fa', 'Do', 'Sol'] },
-      { nombre: 'Estribillo', compases: ['Lam', 'Fa', 'Do', 'Sol'] },
-    ],
+    id: 'creep', titulo: 'Creep', artista: 'Radiohead', bpm: 92, capo: 0,
+    progresion: ['G', 'B7', 'C', 'Cm'],
+    rasgueo: '↓↓ ↑↑↓ ↓↑↓↑',
+    consejo: 'Cm lleva cejilla en el traste 3. De C a Cm la mano sube por el mástil.',
   },
   {
-    id: 'la-bamba', titulo: 'La Bamba', artista: 'Ritchie Valens', anio: 1958,
-    bpm: 150, compas: '4/4', pulsosPorCompas: 4, tonalidad: 'Do mayor', capo: 0, rasgueo: 'abajoArriba',
-    consejo: 'Un solo ciclo que se repite toda la canción: Do y Fa medio compás cada uno, y Sol un compás entero. Es rápida: practicala lento primero.',
-    secciones: [
-      { nombre: 'Toda la canción', compases: ['Do Fa', 'Sol', 'Do Fa', 'Sol'] },
-    ],
+    id: 'riptide', titulo: 'Riptide', artista: 'Vance Joy', bpm: 101, capo: 1,
+    progresion: ['Am', 'G', 'C', 'C'],
+    rasgueo: '↓ ↓ ↑↓↑↓',
+    consejo: 'Tres acordes abiertos y un rasgueo con mucho movimiento.',
   },
   {
-    id: 'brown-eyed-girl', titulo: 'Brown Eyed Girl', artista: 'Van Morrison', anio: 1967,
-    bpm: 150, compas: '4/4', pulsosPorCompas: 4, tonalidad: 'Sol mayor', capo: 0, rasgueo: 'abajoArriba',
-    consejo: 'Alegre y rápida. El Re7 del estribillo se sostiene dos compases antes de volver a Sol.',
-    secciones: [
-      { nombre: 'Estrofa', compases: ['Sol', 'Do', 'Sol', 'Re', 'Sol', 'Do', 'Sol', 'Re'] },
-      { nombre: 'Puente', compases: ['Do', 'Re', 'Sol', 'Mim', 'Do', 'Re', 'Sol', 'Re'] },
-      { nombre: 'Estribillo', compases: ['Re7', 'Re7', 'Sol', 'Do', 'Sol', 'Re'] },
-    ],
-  },
-  {
-    id: 'imagine', titulo: 'Imagine', artista: 'John Lennon', anio: 1971,
-    bpm: 76, compas: '4/4', pulsosPorCompas: 4, tonalidad: 'Do mayor', capo: 0, rasgueo: 'basico',
-    consejo: 'Originalmente es en piano: en guitarra queda muy bien con el rasgueo básico y suave.',
-    secciones: [
-      { nombre: 'Estrofa', compases: ['Do', 'Fa', 'Do', 'Fa'] },
-      { nombre: 'Puente', compases: ['Fa', 'Lam', 'Rem', 'Fa', 'Sol', 'Sol7'] },
-      { nombre: 'Estribillo', compases: ['Fa', 'Sol', 'Do', 'Mi7', 'Fa', 'Sol', 'Do', 'Mi7'] },
-    ],
-  },
-  {
-    id: 'hallelujah', titulo: 'Hallelujah', artista: 'Leonard Cohen', anio: 1984,
-    bpm: 56, compas: '6/8', pulsosPorCompas: 2, tonalidad: 'Do mayor', capo: 0, rasgueo: 'seisOchos',
-    consejo: 'Se cuenta de a seis (1 2 3 4 5 6) y el pulso cae en el 1 y en el 4. Tocala lenta y suave.',
-    secciones: [
-      { nombre: 'Estrofa', compases: ['Do', 'Lam', 'Do', 'Lam', 'Fa', 'Sol', 'Do', 'Sol', 'Do', 'Fa', 'Sol', 'Lam', 'Fa', 'Sol', 'Mi7', 'Lam'] },
-      { nombre: 'Estribillo', compases: ['Fa', 'Lam', 'Fa', 'Do', 'Sol', 'Do'] },
-    ],
+    id: 'stand-by-me', titulo: 'Stand By Me', artista: 'Ben E. King', bpm: 118, capo: 2,
+    progresion: ['G', 'Em', 'C', 'D'],
+    rasgueo: '↓↑ X (se repite)',
+    consejo: 'La X es un golpe apagado: apoyá la palma sobre las cuerdas al rasguear.',
   },
 ];

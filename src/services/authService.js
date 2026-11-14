@@ -7,10 +7,10 @@ export const authService = {
   login: async (email, password) => {
     try {
       const response = await axiosClient.post(ENDPOINTS.login, { email, password });
-      // El backend responde { success, message, data: { token, cuenta } }
-      const { token, cuenta } = response.data?.data || response.data || {};
+      // El backend responde { success, message, data: { token, refreshToken, expiresAt, cuenta } }
+      const { token, refreshToken, expiresAt, cuenta } = response.data?.data || response.data || {};
       if (!token) throw new Error('El servidor no devolvió un token de sesión.');
-      return { token, cuenta };
+      return { token, refreshToken, expiresAt, cuenta };
     } catch (error) {
       // Atrapamos el error crudo, lo traducimos y lo volvemos a lanzar
       throw new Error(getErrorMessage(error));

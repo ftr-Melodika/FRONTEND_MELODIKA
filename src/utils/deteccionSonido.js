@@ -588,6 +588,8 @@ export function crearDetector(objetivoInicial) {
         aprobado,
         nivel,
         oidas: fundamentales.map((f) => nombreDeMidi(f.midi)),
+        // Las notas oídas, para comparar contra otra nota que la del objetivo (el riff en movimiento)
+        fundamentales,
       };
     },
   };

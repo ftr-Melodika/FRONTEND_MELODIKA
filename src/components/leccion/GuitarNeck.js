@@ -2,6 +2,7 @@
 import { memo } from 'react';
 import { View, Text, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { detectarCejillas, enCejilla } from '../../utils/cejilla';
 
 // El alto del mástil se adapta a la pantalla (en un celular horizontal no entran 220px + botones)
 const ALTO_MAXIMO = 220;
@@ -46,7 +47,8 @@ export function dedoSugerido(traste, primerTraste = Math.max(1, traste - CANT_TR
 }
 
 // Punto lleno sobre un traste (con el número de dedo), o anillo vacío si la cuerda se toca al aire
-function Punto({ cuerda, traste, dedo, tamano, separacion, primerTraste, correcto }) {
+function Punto({ cuerda, traste, dedo, tamano, separacion, primerTraste, correcto, resaltar }) {
+  const atenuado = !!resaltar && cuerda !== resaltar;
   const alAire = traste === 0;
   const top = alturaDeCuerda(cuerda, separacion) - tamano / 2;
   const left = alAire
@@ -63,9 +65,31 @@ function Punto({ cuerda, traste, dedo, tamano, separacion, primerTraste, correct
         alAire && correcto && styles.puntoAlAireCorrecto,
         { width: tamano, height: tamano, borderRadius: tamano / 2, top, left },
         !alAire && { marginLeft: -tamano / 2 },
+        atenuado && styles.atenuado,
       ]}
     >
       {alAire || !dedo ? null : <Text style={[styles.puntoTexto, { fontSize: Math.round(tamano * 0.52) }]}>{String(dedo)}</Text>}
+    </View>
+  );
+}
+
+// Cejilla: una barra sobre el traste que cubre todas las cuerdas que aprieta el dedo, con su número
+function Cejilla({ dedo, traste, desde, hasta, tamano, separacion, primerTraste, correcto, resaltar }) {
+  const atenuado = !!resaltar && (resaltar > desde || resaltar < hasta);
+  const top = alturaDeCuerda(desde, separacion) - tamano / 2;
+  const height = alturaDeCuerda(hasta, separacion) - alturaDeCuerda(desde, separacion) + tamano;
+  const left = `${(((traste - primerTraste + 0.5) / CANT_TRASTES) * 100).toFixed(2)}%`;
+  return (
+    <View
+      accessibilityLabel={`Cejilla en el traste ${traste}, de la cuerda ${desde} a la ${hasta}, dedo ${dedo}`}
+      style={[
+        styles.punto,
+        correcto && styles.puntoCorrecto,
+        { width: tamano, height, borderRadius: tamano / 2, top, left, marginLeft: -tamano / 2 },
+        atenuado && styles.atenuado,
+      ]}
+    >
+      <Text style={[styles.puntoTexto, { fontSize: Math.round(tamano * 0.52) }]}>{String(dedo)}</Text>
     </View>
   );
 }
@@ -102,7 +126,11 @@ function Marcador({ traste, primerTraste, separacion, tamano }) {
 // dotLeft y dotBottom ubican el punto a mano: solo sirven para una lección que no indica su cuerda.
 // Con memo no se vuelve a dibujar si no cambió nada: la detección y el reloj de la práctica
 // actualizan la pantalla varias veces por segundo. `posiciones` y `onElegir` deben ser estables.
-export const GuitarNeck = memo(function GuitarNeck({ targetNumber, cuerda, dotLeft, dotBottom, posiciones, onElegir, correcto }) {
+// `cejillas` (de cejillasDeSecuencia) muestra la cejilla de la lección en un paso de nota suelta,
+// cuando esa nota la aprieta la cejilla. Debe ser estable, como `posiciones`.
+// `resaltar` (número de cuerda), junto con `posiciones`: muestra el acorde entero pero remarca solo
+// esa cuerda y atenúa el resto. Es para tocar un acorde cuerda por cuerda.
+export const GuitarNeck = memo(function GuitarNeck({ targetNumber, cuerda, dotLeft, dotBottom, posiciones, onElegir, correcto, cejillas: cejillasLeccion, resaltar }) {
   const { height } = useWindowDimensions();
   const altoMastil = Math.round(Math.min(ALTO_MAXIMO, Math.max(ALTO_MINIMO, height * 0.42)));
   const altoMadera = altoMastil - ALTO_PIE;
@@ -121,11 +149,15 @@ export const GuitarNeck = memo(function GuitarNeck({ targetNumber, cuerda, dotLe
   const primerTraste = Math.max(1, trasteMaximo - CANT_TRASTES + 1);
   // Si la lección no indica el dedo, se sugiere uno
   const puntos = puntosBase.map((p) => ({ ...p, dedo: p.dedo ?? dedoSugerido(p.traste, primerTraste) }));
+  // Las cejillas se dibujan como una barra; sus cuerdas no llevan punto propio
+  const cejillas = posiciones
+    ? detectarCejillas(posiciones)
+    : (cejillasLeccion || []).filter((c) => puntos.some((p) => enCejilla([c], p.cuerda, p.traste)));
   const trastes = Array.from({ length: CANT_TRASTES }, (_, i) => primerTraste + i);
   const conCejuela = primerTraste === 1;
 
   const cuerdasActivas = posiciones ? posiciones.map((p) => Number(p.cuerda)) : [Number(cuerda)];
-  const puntoProps = { tamano, separacion, primerTraste, correcto };
+  const puntoProps = { tamano, separacion, primerTraste, correcto, resaltar: posiciones ? resaltar : undefined };
   const tamanoMarcador = Math.max(6, Math.round(separacion * 0.38));
 
   return (
@@ -136,7 +168,7 @@ export const GuitarNeck = memo(function GuitarNeck({ targetNumber, cuerda, dotLe
         <View style={styles.columnaEtiquetas}>
           {CUERDAS.map((num) => {
             const muda = posiciones && !cuerdasActivas.includes(num);
-            const activa = cuerdasActivas.includes(num);
+            const activa = posiciones && resaltar ? num === resaltar : cuerdasActivas.includes(num);
             return (
               <View key={num} style={[styles.etiquetaFila, { height: separacion }]}>
                 <Text
@@ -186,7 +218,10 @@ export const GuitarNeck = memo(function GuitarNeck({ targetNumber, cuerda, dotLe
                 <Punto key={p.cuerda} {...p} {...puntoProps} />
               ))}
               <View style={[styles.capaPuntos, { left: ANCHO_AL_AIRE + ANCHO_CEJUELA }]} pointerEvents="none">
-                {puntos.filter((p) => p.traste !== 0).map((p) => (
+                {cejillas.map((c) => (
+                  <Cejilla key={`c${c.dedo}-${c.traste}`} {...c} {...puntoProps} />
+                ))}
+                {puntos.filter((p) => p.traste !== 0 && !enCejilla(cejillas, p.cuerda, p.traste)).map((p) => (
                   <Punto key={p.cuerda} {...p} {...puntoProps} />
                 ))}
               </View>
@@ -261,6 +296,8 @@ const styles = StyleSheet.create({
 
   capaTactil: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, flexDirection: 'row', zIndex: 20 },
   zonaPresionada: { backgroundColor: 'rgba(255,255,255,0.15)' },
+  // El resto del acorde, cuando se toca cuerda por cuerda
+  atenuado: { opacity: 0.3 },
 
   pie: { flexDirection: 'row', height: ALTO_PIE, alignItems: 'center', marginLeft: ANCHO_ETIQUETA_CUERDA },
   pieTexto: { color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: 'bold', textAlign: 'center' },

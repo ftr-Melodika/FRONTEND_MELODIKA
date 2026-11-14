@@ -1,7 +1,7 @@
 // Ejecutar con: npm test
 import test from 'node:test';
 import assert from 'node:assert';
-import { ACORDES_RESPALDO, acordeAlAzar, acordesDeRespaldo, extraerAcordes, preguntaDeAcorde, tituloDeAcorde } from './acordes.js';
+import { ACORDES_RESPALDO, acordeAlAzar, acordesDeContexto, acordesDeRespaldo, extraerAcordes, preguntaDeAcorde, tituloDeAcorde } from './acordes.js';
 import { nombreDeMidi } from './deteccionSonido.js';
 
 // Como llega del backend (GET /api/cursos/perfil/:perfilId/curso/:cursoId), ya pasado por mapearLeccion
@@ -108,4 +108,18 @@ test('si dos cursos enseñan el mismo acorde, queda el del curso anterior', () =
     { ordenCurso: 5, orden: 8, titulo: 'Fa sin cejilla', practica: facil },
   ]);
   assert.strictEqual(acorde.titulo, 'Fa sin cejilla');
+});
+
+test('acordesDeContexto: cada nota del acorde perfecto muestra la forma entera del acorde', () => {
+  const nota = (cuerda, traste) => ({ tipo: 'nota', posiciones: [{ cuerda, traste }] });
+  const lam = { tipo: 'acorde', nombre: 'Lam', posiciones: [{ cuerda: 5, traste: 0 }, { cuerda: 4, traste: 2, dedo: 2 }, { cuerda: 3, traste: 2, dedo: 3 }, { cuerda: 2, traste: 1, dedo: 1 }, { cuerda: 1, traste: 0 }] };
+  const contexto = acordesDeContexto([nota(5, 0), nota(4, 2), nota(2, 1), lam]);
+  assert.deepStrictEqual(contexto, [lam.posiciones, lam.posiciones, lam.posiciones, null]);
+});
+
+test('acordesDeContexto: una nota que no es del acorde siguiente (un riff) se muestra sola', () => {
+  const nota = (cuerda, traste) => ({ tipo: 'nota', posiciones: [{ cuerda, traste }] });
+  const re = { tipo: 'acorde', nombre: 'Re', posiciones: [{ cuerda: 4, traste: 0 }, { cuerda: 3, traste: 2, dedo: 1 }, { cuerda: 2, traste: 3, dedo: 3 }, { cuerda: 1, traste: 2, dedo: 2 }] };
+  assert.deepStrictEqual(acordesDeContexto([nota(6, 3), re]), [null, null]);
+  assert.deepStrictEqual(acordesDeContexto([nota(1, 0), nota(1, 1), nota(1, 3)]), [null, null, null]);
 });

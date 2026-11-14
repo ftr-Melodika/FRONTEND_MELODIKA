@@ -37,6 +37,9 @@ export const FORMAS_ACORDES = {
   La7: [p(5, 0), p(4, 2, 2), p(3, 0), p(2, 2, 3), p(1, 0)],
   Re7: [p(4, 0), p(3, 2, 2), p(2, 1, 1), p(1, 2, 3)],
   Sol7: [p(6, 3, 3), p(5, 2, 2), p(4, 0), p(3, 0), p(2, 0), p(1, 1, 1)],
+  Si7: [p(5, 2, 2), p(4, 1, 1), p(3, 2, 3), p(2, 0), p(1, 2, 4)],
+  // Versión fácil de Si menor, sin cejilla
+  Sim7: [p(5, 2, 1), p(4, 0), p(3, 2, 2), p(2, 0), p(1, 2, 3)],
   // Sin cejilla: el dedo 1 aprieta la 1ra y la 2da cuerda a la vez
   Fa: [p(4, 3, 3), p(3, 2, 2), p(2, 1, 1), p(1, 1, 1)],
 };
@@ -119,4 +122,18 @@ export function preguntaDeAcorde(acordes, anterior, azar = azarPorDefecto, canti
   const acorde = acordeAlAzar(acordes, anterior, azar);
   const otros = mezclar(acordes.filter((a) => a.nombre !== acorde.nombre), azar).slice(0, cantidadOpciones - 1);
   return { acorde, opciones: mezclar([acorde, ...otros], azar).map((a) => a.nombre) };
+}
+
+// Para tocar un acorde cuerda por cuerda: en cada paso de nota suelta, la forma del acorde al que
+// pertenece (el próximo acorde de la secuencia que tiene esa misma cuerda y traste), o null.
+// Así el mástil muestra el acorde entero y remarca solo la cuerda que hay que tocar.
+// `secuencia` es una lista de objetivos (ver obtenerSecuencia). Devuelve una lista del mismo largo.
+export function acordesDeContexto(secuencia) {
+  return secuencia.map((paso, i) => {
+    if (paso?.tipo !== 'nota') return null;
+    const { cuerda, traste } = paso.posiciones[0];
+    const acorde = secuencia.slice(i + 1).find((otro) => otro?.tipo === 'acorde');
+    const pertenece = acorde?.posiciones.some((p) => Number(p.cuerda) === Number(cuerda) && Number(p.traste) === Number(traste));
+    return pertenece ? acorde.posiciones : null;
+  });
 }

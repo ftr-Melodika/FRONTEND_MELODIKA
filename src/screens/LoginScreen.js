@@ -18,7 +18,7 @@ export function LoginScreen({ navigation }) {
     setLoading(true);
     try {
       const data = await authService.login(email.trim(), password);
-      await login(data.token, data.cuenta);
+      await login(data.token, data.cuenta, data.refreshToken, data.expiresAt);
     } catch (error) {
       Alert.alert('Error', error.message);
     } finally {

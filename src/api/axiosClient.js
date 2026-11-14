@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { obtenerToken, avisarSesionExpirada } from './tokenSesion';
+import { obtenerToken, refrescarSesion, avisarSesionExpirada } from './tokenSesion';
 
 import { BASE_URL } from '../config/api'; // 👈 importás la variable, no ENDPOINTS.BASE_URL
 
@@ -11,7 +11,8 @@ const axiosClient = axios.create({
     'ngrok-skip-browser-warning': 'true',
   },
 });
-// Interceptor de Salida (Queda igual)
+
+// Interceptor de salida: agrega el token (renovado antes si está por vencer)
 axiosClient.interceptors.request.use(
   async (config) => {
     const token = await obtenerToken();
@@ -23,23 +24,30 @@ axiosClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor de Entrada (CORREGIDO)
+// Interceptor de entrada: si el token venció, se renueva y se reintenta el pedido una vez.
+// La sesión solo se cierra si el backend rechaza el refresh token (ver tokenSesion.js):
+// sin internet o con el servidor caído, el pedido falla pero la sesión sigue.
 axiosClient.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   async (error) => {
-    // Si el backend nos devuelve un error 401
-    // (Solo si la request iba con token: un 401 en el login es "contraseña incorrecta", no sesión expirada)
-    if (error.response && error.response.status === 401 && error.config?.headers?.Authorization) {
-      console.log('Sesión expirada detectada. Limpiando datos y memoria...');
-      
-      // AuthContext registra su logout: borra el AsyncStorage y la memoria de React,
-      // y el AppNavigator vuelve solo a la pantalla de Login.
-      await avisarSesionExpirada();
+    const config = error.config;
+    // Solo si la request iba con token: un 401 en el login es "contraseña incorrecta", no sesión vencida
+    const tokenVencido = error.response?.status === 401 && config?.headers?.Authorization;
+    if (!tokenVencido || config._reintentado) return Promise.reject(error);
+
+    try {
+      const nuevo = await refrescarSesion();
+      config._reintentado = true;
+      config.headers.Authorization = `Bearer ${nuevo}`;
+      return axiosClient(config);
+    } catch (errorRefresh) {
+      if (errorRefresh.sesionMuerta) {
+        console.log('La sesión venció y no se pudo renovar: vuelve al login.');
+        // AuthContext registra su logout: borra la sesión y el AppNavigator vuelve al Login
+        await avisarSesionExpirada();
+      }
+      return Promise.reject(error);
     }
-    
-    return Promise.reject(error);
   }
 );
 

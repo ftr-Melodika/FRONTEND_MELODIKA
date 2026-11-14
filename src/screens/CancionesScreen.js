@@ -1,6 +1,6 @@
 // Archivo: src/screens/CancionesScreen.js
 // Catálogo de canciones para tocar con lo aprendido. Se puede buscar por título o artista
-// y filtrar las fáciles (solo usan los acordes del curso "Tus Primeros Acordes").
+// y filtrar las fáciles (solo usan los acordes del curso "Acordes").
 import { useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,7 +29,7 @@ function TarjetaCancion({ cancion, onPress }) {
       <View style={styles.tarjetaArriba}>
         <View style={styles.tarjetaTextos}>
           <Text style={styles.titulo} numberOfLines={1}>{cancion.titulo}</Text>
-          <Text style={styles.artista} numberOfLines={1}>{cancion.artista} · {cancion.anio}</Text>
+          <Text style={styles.artista} numberOfLines={1}>{cancion.artista}</Text>
         </View>
         <Text style={[styles.nivel, nivel === 'Fácil' ? styles.nivelFacil : styles.nivelIntermedio]}>{nivel}</Text>
       </View>
@@ -37,7 +37,7 @@ function TarjetaCancion({ cancion, onPress }) {
         {acordes.map((a) => <Text key={a} style={styles.acorde}>{a}</Text>)}
       </View>
       <Text style={styles.datos}>
-        ~{cancion.bpm} BPM  •  {cancion.compas}{cancion.capo ? `  •  Capo ${cancion.capo}` : ''}
+        ~{cancion.bpm} BPM  •  Rasgueo: {cancion.rasgueo}{cancion.capo ? `  •  Capo ${cancion.capo}` : ''}
       </Text>
     </TouchableOpacity>
   );
@@ -95,7 +95,7 @@ export function CancionesScreen({ navigation }) {
           ListEmptyComponent={<Text style={styles.vacio}>No encontramos canciones con esa búsqueda.</Text>}
           ListFooterComponent={
             <Text style={styles.nota}>
-              Las fáciles usan solo los acordes del curso "Tus Primeros Acordes". Las intermedias suman los de "Más Acordes Abiertos".
+              Las fáciles usan solo los acordes del curso "Acordes" (Em, Am, D, A, E, C, G y B7). Las intermedias suman otros, como los de cejilla.
             </Text>
           }
         />

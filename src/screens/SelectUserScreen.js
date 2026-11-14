@@ -53,9 +53,10 @@ export function SelectUserScreen({ navigation, route }) {
       const perfilesData = await perfilesService.obtenerPerfiles();
       setPerfiles(Array.isArray(perfilesData) ? perfilesData : []);
     } catch (error) {
+      // Si la sesión murió de verdad, axiosClient ya cerró la sesión y la app volvió al login.
+      // Cualquier otro error (sin internet, servidor caído) no cierra la sesión.
       if (error.isAuthError) {
-        Alert.alert('Sesión Expirada', 'Volvé a ingresar.');
-        await logout();
+        Alert.alert('Error', 'No pudimos cargar tus perfiles. Probá de nuevo en un rato.');
         return;
       }
       Alert.alert('Error', error.message);

@@ -7,7 +7,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "test": "node --test src/utils/deteccionSonido.test.js src/utils/afinador.test.js src/utils/practica.test.js src/utils/acordes.test.js src/utils/actividades.test.js src/utils/canciones.test.js"
+    "test": "node --test src/utils/deteccionSonido.test.js src/utils/afinador.test.js src/utils/practica.test.js src/utils/acordes.test.js src/utils/cejilla.test.js src/utils/ritmo.test.js src/utils/riff.test.js src/utils/actividades.test.js src/utils/canciones.test.js"
   },
   "dependencies": {
     "@expo/ngrok": "^4.1.0",
@@ -22,6 +22,7 @@
     "expo-image-manipulator": "~58.0.16",
     "expo-image-picker": "~58.0.10",
     "expo-linear-gradient": "~58.0.3",
+    "expo-secure-store": "~58.0.3",
     "expo-status-bar": "~58.0.4",
     "react": "19.3.0",
     "react-dom": "19.3.0",
