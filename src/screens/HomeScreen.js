@@ -149,7 +149,7 @@ export function HomeScreen({ navigation }) {
   }
 
   return (
-    <Background variante="partitura">
+    <Background>
 
       <View style={[styles.mainContainer, { paddingLeft: Math.max(insets.left, 15), paddingRight: Math.max(insets.right, 15) }]}>
         <HeaderHome
