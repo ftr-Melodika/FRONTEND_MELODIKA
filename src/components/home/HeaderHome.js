@@ -1,45 +1,42 @@
 import { Icono, COLORES_ICONO } from '../icono/Icono';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MenuButton } from '../MenuButton';
-import { FUENTE_TITULO } from '../../theme/fuentes';
+import { COLORES, FUENTES } from '../../theme/tokens';
 
-// Con `curso` muestra su nombre y un botón para volver a la lista (onVolver); sin curso, "Tus cursos".
+// Con `curso` muestra su nombre y un botón para volver a la lista (onVolver); sin curso, el saludo es el protagonista.
 export function HeaderHome({ perfil, cuenta, curso, solicitudesPendientes = 0, onVolver, onOpenMenu, onOpenNotificaciones }) {
-  // Determinamos el nombre a mostrar directamente acá
   const nombreMostrar = perfil ? perfil.nombre : cuenta?.email?.split('@')[0];
   const racha = perfil?.racha ?? 0;
 
   return (
     <View style={styles.topBar}>
-      {/* Izquierda: menú + saludo (el saludo se recorta si no entra) */}
-      <View style={styles.left}>
-        <MenuButton onPress={onOpenMenu} />
-        <Text style={styles.welcomeText} numberOfLines={1}>
-          Hola, {nombreMostrar}
+      <MenuButton onPress={onOpenMenu} style={styles.menu} />
+
+      <View style={styles.titulos}>
+        {onVolver ? (
+          <TouchableOpacity onPress={onVolver} activeOpacity={0.7} style={styles.volver} accessibilityRole="button" accessibilityLabel="Volver a todos los cursos">
+            <Icono nombre="volver" tamano={14} color="#fff" />
+            <Text style={styles.volverTexto}>Todos los cursos</Text>
+          </TouchableOpacity>
+        ) : (
+          <Text style={styles.saludo} numberOfLines={1}>Hola, {nombreMostrar}</Text>
+        )}
+        <Text style={styles.titulo} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+          {curso?.nombre || 'Tus cursos'}
         </Text>
-        <Icono nombre="saludo" tamano={20} acento={COLORES_ICONO.rayo} />
       </View>
 
-      {/* Centro: curso actual (se achica la letra antes de cortarse) */}
-      <TouchableOpacity
-        style={styles.center}
-        onPress={onVolver}
-        disabled={!onVolver}
-        activeOpacity={0.7}
-        accessibilityRole={onVolver ? 'button' : undefined}
-        accessibilityLabel={onVolver ? 'Volver a todos los cursos' : undefined}
-      >
-        <View style={styles.cursoFila}>
-          <Icono nombre="guitarra" tamano={24} />
-          <Text style={styles.courseTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-            {curso?.nombre || 'Tus cursos'}
-          </Text>
-        </View>
-        {onVolver && <View style={styles.cursoFila}><Icono nombre="volver" tamano={12} color="#fff" /><Text style={styles.cambiar}>Todos los cursos</Text></View>}
-      </TouchableOpacity>
-
-      {/* Derecha: estadísticas (nunca se achican) */}
       <View style={styles.right}>
+        <View style={styles.stat} accessibilityLabel={`${perfil?.xp ?? 0} puntos de experiencia`}>
+          <Icono nombre="rayo" tamano={18} acento={COLORES_ICONO.rayo} />
+          <Text style={styles.statNumero}>{perfil?.xp ?? 0}</Text>
+          <Text style={styles.statUnidad}>XP</Text>
+        </View>
+        <View style={styles.stat} accessibilityLabel={`Racha de ${racha} ${racha === 1 ? 'día' : 'días'}`}>
+          <Icono nombre="llama" tamano={18} acento={COLORES_ICONO.llama} />
+          <Text style={styles.statNumero}>{racha}</Text>
+          <Text style={styles.statUnidad}>{racha === 1 ? 'día' : 'días'}</Text>
+        </View>
         <TouchableOpacity
           style={styles.campana}
           onPress={onOpenNotificaciones}
@@ -54,31 +51,24 @@ export function HeaderHome({ perfil, cuenta, curso, solicitudesPendientes = 0, o
             </View>
           )}
         </TouchableOpacity>
-        <View style={styles.statChip}>
-          <Icono nombre="rayo" tamano={17} acento={COLORES_ICONO.rayo} />
-          <Text style={styles.statText}>{perfil?.xp ?? 0} XP</Text>
-        </View>
-        <View style={styles.statChip}>
-          <Icono nombre="llama" tamano={17} acento={COLORES_ICONO.llama} />
-          <Text style={styles.statText}>{racha} {racha === 1 ? 'día' : 'días'}</Text>
-        </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  topBar: { flexDirection: 'row', alignItems: 'center', minHeight: 50, marginBottom: 10, gap: 12 },
-  left: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, minWidth: 0 },
-  welcomeText: { color: '#fff', fontSize: 16, fontFamily: FUENTE_TITULO, fontWeight: 'bold', flexShrink: 1 },
-  center: { flex: 1.3, alignItems: 'center', minWidth: 0 },
-  cursoFila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, maxWidth: '100%' },
-  courseTitle: { flexShrink: 1, color: '#fff', fontSize: 20, fontWeight: 'bold', fontFamily: FUENTE_TITULO, textAlign: 'center' },
-  cambiar: { color: '#fff', fontSize: 11, marginTop: 1 },
-  right: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexShrink: 0 },
-  statChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6, gap: 5 },
-  campana: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
-  badge: { position: 'absolute', top: -5, right: -5, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: '#ff4d67', borderWidth: 1, borderColor: '#fff' },
-  badgeTexto: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
-  statText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  topBar: { flexDirection: 'row', alignItems: 'center', minHeight: 56, marginBottom: 6, gap: 14 },
+  menu: { backgroundColor: COLORES.profundo, borderColor: COLORES.linea },
+  titulos: { flex: 1, minWidth: 0 },
+  saludo: { color: COLORES.textoSuave, fontSize: 14, fontFamily: FUENTES.cuerpoMedio },
+  titulo: { color: '#fff', fontSize: 30, lineHeight: 36, fontFamily: FUENTES.display },
+  volver: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 2 },
+  volverTexto: { color: COLORES.textoSuave, fontSize: 14, fontFamily: FUENTES.cuerpoMedio },
+  right: { flexDirection: 'row', alignItems: 'center', gap: 18, flexShrink: 0 },
+  stat: { flexDirection: 'row', alignItems: 'baseline', gap: 5 },
+  statNumero: { color: '#fff', fontSize: 20, fontFamily: FUENTES.display },
+  statUnidad: { color: COLORES.textoSuave, fontSize: 13, fontFamily: FUENTES.cuerpoMedio },
+  campana: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORES.profundo, borderWidth: 1, borderColor: COLORES.linea },
+  badge: { position: 'absolute', top: -3, right: -3, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: '#ff4d67', borderWidth: 1.5, borderColor: COLORES.indigo },
+  badgeTexto: { color: '#fff', fontSize: 10, fontFamily: FUENTES.cuerpoNegrita },
 });
