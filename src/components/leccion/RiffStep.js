@@ -3,9 +3,10 @@
 // con el número de traste, y hay que tocar cada una cuando pasa por la línea amarilla.
 // Si se erra mucho, el mástil se frena y vuelve a donde se empezó a errar.
 // En las canciones avanzan acordes: un rectángulo con el nombre (cifrado americano) que cubre las
-// cuerdas que se tocan.
+// cuerdas que se tocan. Detrás vienen los golpes del rasgueo, más transparentes y con su flecha,
+// en el tiempo en que se tocan: son una guía, lo que se evalúa es el acorde.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Button } from '../Button';
 import { useRiff } from '../../hooks/useRiff';
 import { nombreDeMidi } from '../../utils/deteccionSonido';
@@ -18,6 +19,7 @@ const ANCHO_ETIQUETA = 22;
 const X_LINEA = 56; // Dónde está la línea para tocar, desde el borde izquierdo del mástil
 const TAMANO_NOTA = 26;
 const ANCHO_ACORDE = 48;
+const ANCHO_GOLPE = 34; // Entra entre corchea y corchea (55 px) con aire; en semicorcheas se achica
 const PX_POR_PULSO = 110;
 const SEGUNDOS_PARA_SALTEAR = 20;
 
@@ -34,18 +36,36 @@ function Nota({ nota, resultado, pxPorMs }) {
   if (nota.tipo === 'acorde') {
     const arriba = centroCuerda(nota.cuerdaGrave) - TAMANO_NOTA / 2;
     const abajo = centroCuerda(nota.cuerdaAguda) + TAMANO_NOTA / 2;
+    const estado = [resultado === true && styles.notaBien, resultado === false && styles.notaMal];
+    const anchoGolpe = Math.min(ANCHO_GOLPE, (nota.msParte ?? Infinity) * pxPorMs - 4);
+    const angosto = anchoGolpe < ANCHO_GOLPE;
     return (
-      <View
-        style={[
-          styles.nota,
-          styles.acorde,
-          resultado === true && styles.notaBien,
-          resultado === false && styles.notaMal,
-          { left: X_LINEA + nota.t * pxPorMs - ANCHO_ACORDE / 2, top: arriba, height: abajo - arriba },
-        ]}
-      >
-        <Text style={styles.acordeTexto} numberOfLines={1} adjustsFontSizeToFit>{nota.nombre}</Text>
-      </View>
+      <>
+        {nota.golpes?.map((g, i) => (
+          <View
+            key={i}
+            style={[
+              styles.nota,
+              styles.golpe,
+              ...estado,
+              { width: anchoGolpe, left: X_LINEA + (nota.t + g.t) * pxPorMs - anchoGolpe / 2, top: arriba, height: abajo - arriba },
+            ]}
+          >
+            <Text style={[styles.golpeTexto, angosto && styles.golpeTextoAngosto]}>{g.golpe}</Text>
+          </View>
+        ))}
+        {/* El acorde va al final para quedar encima si un golpe lo toca */}
+        <View
+          style={[
+            styles.nota,
+            styles.acorde,
+            ...estado,
+            { left: X_LINEA + nota.t * pxPorMs - ANCHO_ACORDE / 2, top: arriba, height: abajo - arriba },
+          ]}
+        >
+          <Text style={styles.acordeTexto} numberOfLines={1} adjustsFontSizeToFit>{nota.nombre}</Text>
+        </View>
+      </>
     );
   }
   return (
@@ -93,8 +113,37 @@ function Tira({ recorrido, resultados, tramo, pxPorMs }) {
   );
 }
 
-// Fuera de una lección (en Canciones) no hay XP: se cambia el texto final y no se ofrece saltear
-export function RiffStep({ riff, onBack, onFinish, finishing, textoFinal = 'Terminar Lección', permitirSaltear = true }) {
+// Botones para elegir la velocidad (x0.5, x1). Mientras suena no se puede cambiar.
+function SelectorVelocidad({ opciones, valor, onCambiar, deshabilitado }) {
+  return (
+    <View style={styles.velocidades} accessibilityRole="radiogroup" accessibilityLabel="Velocidad">
+      {opciones.map((o) => {
+        const activa = o.valor === valor;
+        return (
+          <TouchableOpacity
+            key={o.titulo}
+            style={[styles.velocidad, activa && styles.velocidadActiva, deshabilitado && !activa && styles.velocidadDeshabilitada]}
+            onPress={() => onCambiar(o.valor)}
+            disabled={deshabilitado || activa}
+            activeOpacity={0.8}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: activa, disabled: deshabilitado }}
+            accessibilityLabel={`Velocidad ${o.titulo}`}
+          >
+            <Text style={styles.velocidadTexto}>{o.titulo}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+// Fuera de una lección (en Canciones) no hay XP: se cambia el texto final y no se ofrece saltear.
+// Con `velocidades` (y `velocidad` + `onCambiarVelocidad`) se puede elegir la velocidad antes de tocar.
+export function RiffStep({
+  riff, onBack, onFinish, finishing, textoFinal = 'Terminar Lección', permitirSaltear = true,
+  velocidad, velocidades, onCambiarVelocidad,
+}) {
   const [puedeSaltear, setPuedeSaltear] = useState(false);
   const { fase, estado, empezar, detener, recorrido, tramo, resultados, resumen, retrocesos } = useRiff(riff);
   const pxPorMs = PX_POR_PULSO / riff.msPulso;
@@ -145,7 +194,12 @@ export function RiffStep({ riff, onBack, onFinish, finishing, textoFinal = 'Term
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.titulo} numberOfLines={1}>{riff.nombre}  •  {riff.bpm} BPM</Text>
+        <View style={styles.encabezado}>
+          <Text style={styles.titulo} numberOfLines={1}>{riff.nombre}  •  {riff.bpm} BPM</Text>
+          {velocidades && onCambiarVelocidad ? (
+            <SelectorVelocidad opciones={velocidades} valor={velocidad} onCambiar={onCambiarVelocidad} deshabilitado={enMarcha} />
+          ) : null}
+        </View>
 
         <View style={styles.fila}>
           <View style={styles.etiquetas}>
@@ -183,7 +237,13 @@ export function RiffStep({ riff, onBack, onFinish, finishing, textoFinal = 'Term
 const styles = StyleSheet.create({
   container: { flex: 1, width: '100%', justifyContent: 'space-between' },
   content: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%', gap: 8 },
+  encabezado: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 12 },
   titulo: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
+  velocidades: { flexDirection: 'row', gap: 6 },
+  velocidad: { minWidth: 52, minHeight: 36, paddingHorizontal: 10, justifyContent: 'center', alignItems: 'center', borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.3)' },
+  velocidadActiva: { backgroundColor: '#4c52d9' },
+  velocidadDeshabilitada: { opacity: 0.45 },
+  velocidadTexto: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
   fila: { flexDirection: 'row', width: '100%', height: ALTO },
   etiquetas: { width: ANCHO_ETIQUETA },
   etiquetaFila: { justifyContent: 'center', alignItems: 'center' },
@@ -203,6 +263,9 @@ const styles = StyleSheet.create({
   notaTexto: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
   acorde: { width: ANCHO_ACORDE, borderRadius: 10, paddingHorizontal: 2 },
   acordeTexto: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  golpe: { width: ANCHO_GOLPE, borderRadius: 8, opacity: 0.4 },
+  golpeTexto: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
+  golpeTextoAngosto: { fontSize: 14 },
   guia: { color: 'rgba(255,255,255,0.85)', fontSize: 13, textAlign: 'center', paddingHorizontal: 12 },
   estado: { color: 'rgba(255,255,255,0.9)', fontSize: 14, textAlign: 'center', paddingHorizontal: 12 },
   estadoError: { color: '#ff9aa5' },

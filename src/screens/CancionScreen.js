@@ -3,8 +3,8 @@
 // - Aprenderla: 1) cada acorde, cuerda por cuerda y después rasgueado; 2) los cambios entre
 //   acordes de la canción; 3) tocarla.
 // - Tocarla: los acordes avanzan por el mástil y se rasguea cada uno cuando llega a la línea.
-import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Background } from '../components/Background';
 import { ScreenHeader } from '../components/ScreenHeader';
@@ -13,9 +13,12 @@ import { Button } from '../components/Button';
 import { GuitarNeck } from '../components/leccion/GuitarNeck';
 import { PracticaConDeteccion } from '../components/leccion/PracticeStep';
 import { RiffStep } from '../components/leccion/RiffStep';
-import { CANCIONES, REFERENCIAS_RASGUEO } from '../data/canciones';
+import { Rasgueo } from '../components/canciones/Rasgueo';
+import { REFERENCIAS_RASGUEO } from '../data/canciones';
+import { cancionesService } from '../services/cancionesService';
 import {
-  acordesDeCancion, acordesDeCompas, aprendizajeDeCancion, formaDeAcorde, nivelDeCancion, riffDeCancion, VELOCIDADES,
+  acordesDeCancion, acordesDeCompas, aprendizajeDeCancion, cuentaDeRasgueo, formaDeAcorde, nivelDeCancion, rasgueosDeCancion,
+  OPCIONES_VELOCIDAD, partesDeCompas, riffDeCancion, VELOCIDADES,
 } from '../utils/canciones';
 import { FUENTE_TITULO } from '../theme/fuentes';
 
@@ -80,18 +83,42 @@ function Opciones({ opciones, valor, onCambiar }) {
 
 export function CancionScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
-  const original = CANCIONES.find((c) => c.id === route.params?.id);
+  const id = route.params?.id;
+  // Se muestra la que trae la lista mientras se pide la versión actual al backend
+  // (si alguien cambió el tempo o el rasgueo, se usa lo último)
+  const [original, setOriginal] = useState(route.params?.cancion?.id === id ? route.params.cancion : null);
+  const [cargando, setCargando] = useState(!original);
+  const [error, setError] = useState(null);
   const [acordeAbierto, setAcordeAbierto] = useState(null);
   // modo: null (la ficha de la canción) | 'aprender' | 'tocar'
   const [modo, setModo] = useState(null);
   const [paso, setPaso] = useState(0);
   const [conCapo, setConCapo] = useState(true);
-  const [velocidad, setVelocidad] = useState(VELOCIDADES.lenta);
+  // Se elige adentro de "Tocala" (x0.5 o x1); cada vez que se entra arranca en la original
+  const [velocidad, setVelocidad] = useState(VELOCIDADES.original);
 
   // Sin capo, la app espera las notas de las formas tal cual (suena más grave que la grabación)
   const cancion = useMemo(() => (original && !conCapo ? { ...original, capo: 0 } : original), [original, conCapo]);
   const aprendizaje = useMemo(() => (cancion ? aprendizajeDeCancion(cancion) : null), [cancion]);
   const riff = useMemo(() => (cancion ? riffDeCancion(cancion, velocidad) : null), [cancion, velocidad]);
+  const rasgueos = useMemo(() => (cancion ? rasgueosDeCancion(cancion) : []), [cancion]);
+
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      setError(null);
+      try {
+        const datos = await cancionesService.obtener(id);
+        if (!cancelado && datos) setOriginal(datos);
+      } catch (e) {
+        // Si ya se tiene la de la lista, se sigue con esa
+        if (!cancelado) setError(e.message);
+      } finally {
+        if (!cancelado) setCargando(false);
+      }
+    })();
+    return () => { cancelado = true; };
+  }, [id]);
 
   const volver = (
     <TouchableOpacity style={styles.volver} onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Volver a Canciones">
@@ -106,7 +133,9 @@ export function CancionScreen({ route, navigation }) {
       <Background>
         <View style={[styles.container, relleno]}>
           <ScreenHeader title="Canción" right={volver} />
-          <Text style={styles.texto}>No encontramos esta canción.</Text>
+          {cargando
+            ? <ActivityIndicator color="#fff" size="large" />
+            : <Text style={styles.texto}>{error || 'No encontramos esta canción.'}</Text>}
         </View>
       </Background>
     );
@@ -115,11 +144,15 @@ export function CancionScreen({ route, navigation }) {
   const salir = () => {
     setModo(null);
     setPaso(0);
+    setVelocidad(VELOCIDADES.original);
   };
 
   if (modo) {
     const pasoActual = modo === 'tocar' ? 'tocar' : PASOS_APRENDER[paso];
-    const siguiente = () => setPaso((p) => p + 1);
+    const siguiente = () => {
+      setPaso((p) => p + 1);
+      setVelocidad(VELOCIDADES.original);
+    };
     const titulo = modo === 'tocar'
       ? `Tocar: ${cancion.titulo}`
       : `Aprender ${cancion.titulo} · ${paso + 1}/${PASOS_APRENDER.length} ${TITULO_PASO[pasoActual]}`;
@@ -155,6 +188,9 @@ export function CancionScreen({ route, navigation }) {
               onFinish={salir}
               textoFinal="¡Listo!"
               permitirSaltear={false}
+              velocidad={velocidad}
+              velocidades={OPCIONES_VELOCIDAD}
+              onCambiarVelocidad={setVelocidad}
             />
           )}
         </View>
@@ -203,7 +239,28 @@ export function CancionScreen({ route, navigation }) {
             </View>
 
             <Text style={styles.subtitulo}>Rasgueo</Text>
-            <Text style={styles.rasgueo}>{cancion.rasgueo}</Text>
+            {rasgueos.length > 1 && <Text style={styles.ayuda}>Cambia según el compás.</Text>}
+            {rasgueos.map((r) => {
+              const dosAcordes = r.compases[0].acordes.length === 2;
+              // De qué parte a cuál toca cada acorde ("Em: 1 a 1 y  ·  C: 2 a 4 y")
+              const cuenta = cuentaDeRasgueo(r.patron);
+              const reparto = partesDeCompas({ acordes: r.compases[0].acordes.join(' '), rasgueo: r.patron })
+                .map((p) => `${p.nombre}: ${cuenta[p.inicio]} a ${cuenta[p.inicio + p.corcheas - 1]}`)
+                .join('  ·  ');
+              const compases = r.compases.map((c) => c.acordes.join(' ')).filter((a, i, todos) => todos.indexOf(a) === i).join('  ·  ');
+              return (
+                <View key={r.patron} style={styles.rasgueo}>
+                  {rasgueos.length > 1 && <Text style={styles.rasgueoCompases}>{compases}</Text>}
+                  <Rasgueo rasgueo={{ nombre: compases, golpes: r.golpes, cuenta }} />
+                  {dosAcordes && (
+                    <Text style={styles.ayuda}>
+                      Cada acorde tiene su parte del rasgueo. {reparto}.
+                    </Text>
+                  )}
+                </View>
+              );
+            })}
+            {!!cancion.notaRasgueo && <Text style={styles.texto}>{cancion.notaRasgueo}</Text>}
             <Text style={styles.ayuda}>{REFERENCIAS_RASGUEO}</Text>
           </ScrollView>
 
@@ -221,16 +278,6 @@ export function CancionScreen({ route, navigation }) {
                 Directo a tempo: los acordes avanzan por el mástil y rasgueás cada uno cuando llega a la línea.
               </Text>
             </TouchableOpacity>
-
-            <Text style={styles.subtitulo}>Velocidad para tocarla</Text>
-            <Opciones
-              valor={velocidad}
-              onCambiar={setVelocidad}
-              opciones={[
-                { valor: VELOCIDADES.lenta, titulo: `Lenta (${Math.round(original.bpm * VELOCIDADES.lenta)} BPM)` },
-                { valor: VELOCIDADES.original, titulo: `Original (${original.bpm} BPM)` },
-              ]}
-            />
 
             {original.capo > 0 && (
               <View style={styles.capo}>
@@ -275,7 +322,8 @@ const styles = StyleSheet.create({
   compases: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   compas: { flexDirection: 'row', gap: 8, minWidth: 54, minHeight: 40, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
   compasAcorde: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
-  rasgueo: { color: '#fff', fontSize: 20, fontWeight: 'bold', letterSpacing: 1 },
+  rasgueo: { gap: 4 },
+  rasgueoCompases: { color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 'bold' },
   eleccion: { padding: 12, borderRadius: 14, backgroundColor: 'rgba(76,82,217,0.85)', gap: 4 },
   eleccionTitulo: { color: '#fff', fontSize: 17, fontWeight: 'bold' },
   eleccionTexto: { color: 'rgba(255,255,255,0.9)', fontSize: 13, lineHeight: 18 },

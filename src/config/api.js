@@ -1,6 +1,6 @@
 // Reemplazar por la URL del backend de cada uno (SIEMPRE terminando en /api)
-const SERVER_URL = 'http://192.168.0.232:3000/api'; // IP gasti
-//const SERVER_URL = 'https://corroding-confused-polka.ngrok-free.dev'; // ngrok gasti
+// const SERVER_URL = 'http://192.168.0.232:3000/api'; // IP gasti
+const SERVER_URL = 'https://corroding-confused-polka.ngrok-free.dev/api'; // ngrok gasti
 //const SERVER_URL = 'https://compile-upturned-greedily.ngrok-free.dev/api'; // Ngrok Juanma
 //const SERVER_URL = 'https://national-retake-exquisite.ngrok-free.dev/api'; // IP IVO
 
@@ -36,4 +36,8 @@ export const ENDPOINTS = {
   completarLeccion: (perfilId, cursoId, leccionId) =>
     `${BASE_URL}/cursos/perfil/${perfilId}/curso/${cursoId}/lecciones/${leccionId}/completar`,
   completarCurso: (perfilId, cursoId) => `${BASE_URL}/cursos/perfil/${perfilId}/curso/${cursoId}/completar`,
+
+  // Canciones
+  canciones: `${BASE_URL}/canciones`,
+  cancion: (id) => `${BASE_URL}/canciones/${encodeURIComponent(id)}`,
 };

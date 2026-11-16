@@ -1,13 +1,15 @@
 // Archivo: src/screens/CancionesScreen.js
 // Catálogo de canciones para tocar con lo aprendido. Se puede buscar por título o artista
-// y filtrar las fáciles (solo usan los acordes del curso "Acordes").
-import { useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+// y filtrar las fáciles (solo usan los acordes del curso "Acordes"). Las canciones vienen del backend.
+import { useCallback, useMemo, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Background } from '../components/Background';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { CANCIONES } from '../data/canciones';
-import { acordesDeCancion, filtrarCanciones, nivelDeCancion } from '../utils/canciones';
+import { Button } from '../components/Button';
+import { cancionesService } from '../services/cancionesService';
+import { acordesDeCancion, filtrarCanciones, nivelDeCancion, rasgueosDeCancion, textoDeRasgueo } from '../utils/canciones';
 
 const FILTROS = [
   { id: null, titulo: 'Todas' },
@@ -18,6 +20,8 @@ const FILTROS = [
 function TarjetaCancion({ cancion, onPress }) {
   const nivel = nivelDeCancion(cancion);
   const acordes = acordesDeCancion(cancion);
+  const rasgueos = rasgueosDeCancion(cancion);
+  const rasgueo = rasgueos.length === 1 ? textoDeRasgueo(rasgueos[0].patron) : `${rasgueos.length} patrones`;
   return (
     <TouchableOpacity
       style={styles.tarjeta}
@@ -37,7 +41,7 @@ function TarjetaCancion({ cancion, onPress }) {
         {acordes.map((a) => <Text key={a} style={styles.acorde}>{a}</Text>)}
       </View>
       <Text style={styles.datos}>
-        ~{cancion.bpm} BPM  •  Rasgueo: {cancion.rasgueo}{cancion.capo ? `  •  Capo ${cancion.capo}` : ''}
+        ~{cancion.bpm} BPM  •  Rasgueo: {rasgueo}{cancion.capo ? `  •  Capo ${cancion.capo}` : ''}
       </Text>
     </TouchableOpacity>
   );
@@ -47,7 +51,29 @@ export function CancionesScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [busqueda, setBusqueda] = useState('');
   const [nivel, setNivel] = useState(null);
-  const canciones = useMemo(() => filtrarCanciones(CANCIONES, busqueda, nivel), [busqueda, nivel]);
+  const [todas, setTodas] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
+  const [intento, setIntento] = useState(0);
+  const canciones = useMemo(() => filtrarCanciones(todas, busqueda, nivel), [todas, busqueda, nivel]);
+
+  // Se pide cada vez que se vuelve a la pantalla: así llegan los cambios del backend (tempo, rasgueo…)
+  useFocusEffect(useCallback(() => {
+    let cancelado = false;
+    (async () => {
+      setCargando(true);
+      setError(null);
+      try {
+        const datos = await cancionesService.listar();
+        if (!cancelado) setTodas(datos);
+      } catch (e) {
+        if (!cancelado) setError(e.message);
+      } finally {
+        if (!cancelado) setCargando(false);
+      }
+    })();
+    return () => { cancelado = true; };
+  }, [intento]));
 
   return (
     <Background>
@@ -91,11 +117,20 @@ export function CancionesScreen({ navigation }) {
           columnWrapperStyle={styles.columnas}
           contentContainerStyle={[styles.lista, { paddingBottom: Math.max(insets.bottom, 16) }]}
           keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) => <TarjetaCancion cancion={item} onPress={() => navigation.navigate('Cancion', { id: item.id })} />}
-          ListEmptyComponent={<Text style={styles.vacio}>No encontramos canciones con esa búsqueda.</Text>}
+          renderItem={({ item }) => <TarjetaCancion cancion={item} onPress={() => navigation.navigate('Cancion', { id: item.id, cancion: item })} />}
+          ListEmptyComponent={
+            cargando ? <ActivityIndicator color="#fff" size="large" style={styles.cargando} />
+              : error ? (
+                <View style={styles.errorCaja}>
+                  <Text style={styles.vacio}>{error}</Text>
+                  <Button title="Reintentar" onPress={() => setIntento((n) => n + 1)} />
+                </View>
+              )
+                : <Text style={styles.vacio}>{todas.length ? 'No encontramos canciones con esa búsqueda.' : 'Todavía no hay canciones.'}</Text>
+          }
           ListFooterComponent={
             <Text style={styles.nota}>
-              Las fáciles usan solo los acordes del curso "Acordes" (Em, Am, D, A, E, C, G y B7). Las intermedias suman otros, como los de cejilla.
+              Las fáciles se tocan con un golpe por acorde y solo usan los acordes del curso "Acordes" (Em, Am, D, A, E, C, G y B7). Las intermedias tienen rasgueo o suman otros acordes, como los de cejilla.
             </Text>
           }
         />
@@ -125,6 +160,8 @@ const styles = StyleSheet.create({
   acordes: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   acorde: { color: '#fff', fontSize: 13, fontWeight: 'bold', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, overflow: 'hidden', backgroundColor: 'rgba(76,82,217,0.6)' },
   datos: { color: 'rgba(255,255,255,0.75)', fontSize: 12 },
+  cargando: { marginTop: 30 },
+  errorCaja: { alignItems: 'center', gap: 12 },
   vacio: { color: '#fff', textAlign: 'center', marginTop: 30, fontSize: 15 },
   nota: { color: 'rgba(255,255,255,0.7)', fontSize: 12, textAlign: 'center', marginTop: 6 },
 });
