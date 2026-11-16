@@ -8,13 +8,13 @@ import { CENTS_AFINADA_POR_DEFECTO, MS_ESTABLE_POR_DEFECTO, compararAfinacion, s
 // cuerdas: [{ cuerda, nota, frecuencia }] en el orden en que se afinan.
 // Si cambian las notas (otra afinación), la guía vuelve a empezar desde la primera.
 export function useAfinacionGuiada({ cuerdas, toleranciaCents = CENTS_AFINADA_POR_DEFECTO, msEstable = MS_ESTABLE_POR_DEFECTO }) {
-  const { estado, frecuencia } = useAfinador();
   const orden = cuerdas.map((c) => c.cuerda);
   const [cuerdaElegida, setCuerdaElegida] = useState(orden[0]);
   const [afinadas, setAfinadas] = useState([]);
   const [terminado, setTerminado] = useState(false);
 
   const objetivo = cuerdas.find((c) => c.cuerda === cuerdaElegida) ?? null;
+  const { estado, frecuencia } = useAfinador(objetivo?.frecuencia ?? null);
   const resultado = frecuencia && objetivo
     ? { cuerda: objetivo.cuerda, nota: objetivo.nota, ...compararAfinacion(frecuencia, objetivo.frecuencia, toleranciaCents) }
     : null;

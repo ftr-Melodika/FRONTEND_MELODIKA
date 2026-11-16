@@ -93,7 +93,7 @@ export function armarLineaDeTiempo(config) {
 
 // ───────────────────────── Detección de golpes ─────────────────────────
 
-// Filtro pasa-bajos de 2do orden (Butterworth), para quedarse con el cuerpo del sonido de la guitarra
+// Filtro pasa-bajos de 2do orden (Butterworth)
 function crearPasaBajos(frecuenciaCorte, sampleRate) {
   const w = (2 * Math.PI * frecuenciaCorte) / sampleRate;
   const alfa = Math.sin(w) / Math.SQRT2;
@@ -131,29 +131,34 @@ function crearPasaAltos(frecuenciaCorte, sampleRate) {
 
 const MS_BLOQUE = 5; // Resolución de la detección
 // El volumen se mide en una ventana de 20 ms (4 bloques), más larga que una vibración de la cuerda
-// más grave (12 ms): con ventanas más cortas el volumen sube y baja con la propia onda y una
-// cuerda que sigue sonando parece una seguidilla de golpes.
+// más grave (12 ms): con ventanas más cortas el volumen sube y baja con la propia onda y un
+// sonido que sigue parece una seguidilla de golpes.
 const BLOQUES_VENTANA = 4;
 const BLOQUES_HISTORIA = 8; // 40 ms: con qué se compara cada ventana para ver si el sonido "subió de golpe"
+// El ruido del ambiente es el momento más silencioso del último segundo y medio (6 tramos de 250 ms):
+// entre un golpe y otro el sonido siempre vuelve a bajar hasta ahí.
+const BLOQUES_TRAMO_RUIDO = 50;
+const TRAMOS_RUIDO = 6;
 
-// Qué parte del sonido se escucha para encontrar los golpes:
-// - agudos: el "chasquido" del ataque (púa, rasgueo, aplauso). Una cuerda que sigue sonando casi
-//   no tiene agudos, así que cada golpe nuevo se destaca aunque la anterior siga sonando fuerte.
-//   Es la mejor opción, pero el clic del metrónomo también es agudo: solo sirve sin clic.
-// - graves: el cuerpo del sonido, por debajo de 900 Hz. Se usa cuando suena el clic, que casi no
-//   pasa el filtro. Detecta peor un golpe sobre una cuerda que sigue sonando.
-// `piso` es el volumen mínimo de un golpe (bajo: en iOS el micrófono llega sin ajuste automático) y
-// `saltoDb` cuánto tiene que subir de golpe. En graves el salto de una púa sobre una cuerda que
-// sigue sonando es chico, así que el umbral es menor.
+// En estos ejercicios no se reconocen notas: un golpe es un sonido FUERTE que aparece de golpe
+// (un aplauso, un golpe en la mesa, un rasgueo con ganas). Tiene que cumplir tres cosas:
+// - superar `piso`, un volumen mínimo alto: hablar bajo, rozar una cuerda o apoyar el celular no cuentan;
+// - quedar `sobreRuidoDb` por encima del ruido del ambiente (con música o un ventilador se pide más);
+// - haber subido `saltoDb` en unos pocos milisegundos (un sonido fuerte pero parejo no es un golpe).
+// Qué parte del sonido se mide:
+// - todo: el volumen de todo el sonido (sin los graves de mover o apoyar el celular). Sin clic.
+// - bajoClic: solo por debajo de 1400 Hz. Se usa cuando suena el clic del metrónomo (3 a 4 kHz),
+//   que queda unos 44 dB más bajo y no se cuenta. Un aplauso pierde algo de volumen (unos 7 dB),
+//   por eso el piso es menor: con los dos hace falta el mismo aplauso (un pico de ~9% del máximo del micrófono).
 const BANDAS = {
-  agudos: { crear: (sr) => crearPasaAltos(1500, sr), piso: 0.0008, saltoDb: 5 },
-  graves: { crear: (sr) => crearPasaBajos(900, sr), piso: 0.004, saltoDb: 3 },
+  todo: { crear: (sr) => [crearPasaAltos(150, sr)], piso: 0.02 },
+  bajoClic: { crear: (sr) => [crearPasaAltos(150, sr), crearPasaBajos(1400, sr), crearPasaBajos(1400, sr), crearPasaBajos(1400, sr)], piso: 0.006 },
 };
 
-// Detecta el comienzo de cada golpe en el audio del micrófono: un salto brusco de energía.
+// Detecta el comienzo de cada golpe en el audio del micrófono: un salto brusco de volumen.
 // agregar(muestras, tInicioMs, sampleRate) recibe audio mono y devuelve los tiempos (ms) de los
 // golpes nuevos. nivel() devuelve el volumen reciente (0 a 1), para mostrar un medidor.
-export function crearDetectorGolpes({ banda = 'graves', saltoDb = BANDAS[banda].saltoDb, piso = BANDAS[banda].piso, refractarioMs = 70 } = {}) {
+export function crearDetectorGolpes({ banda = 'bajoClic', piso = BANDAS[banda].piso, saltoDb = 8, sobreRuidoDb = 12, refractarioMs = 70 } = {}) {
   let sampleRate = null;
   let filtros = null;
   let tamBloque = 0;
@@ -163,9 +168,13 @@ export function crearDetectorGolpes({ banda = 'graves', saltoDb = BANDAS[banda].
   let inicioBloqueMs = null;
   const ventana = []; // Energía de los últimos bloques
   const historia = []; // Energía de las últimas ventanas
+  const tramosRuido = []; // La ventana más silenciosa de cada tramo ya terminado
+  let minimoTramo = Infinity;
+  let bloquesTramo = 0;
   let ultimoGolpe = -Infinity;
   let nivelReciente = 0;
   const factorSalto = 10 ** (saltoDb / 10);
+  const factorSobreRuido = 10 ** (sobreRuidoDb / 10);
   const pisoEnergia = piso * piso;
 
   return {
@@ -173,16 +182,21 @@ export function crearDetectorGolpes({ banda = 'graves', saltoDb = BANDAS[banda].
     agregar(muestras, tInicioMs, sr) {
       if (sr !== sampleRate) {
         sampleRate = sr;
-        // Dos filtros en cadena: con 'graves', el clic de 3-4 kHz queda unos 40 dB más bajo
-        const f1 = BANDAS[banda].crear(sr);
-        const f2 = BANDAS[banda].crear(sr);
-        filtros = (x) => f2(f1(x));
+        const cadena = BANDAS[banda].crear(sr);
+        filtros = (x) => {
+          let y = x;
+          for (let k = 0; k < cadena.length; k++) y = cadena[k](y);
+          return y;
+        };
         tamBloque = Math.max(1, Math.round((sr * MS_BLOQUE) / 1000));
         suma = 0;
         sumaCruda = 0;
         cuenta = 0;
         ventana.length = 0;
         historia.length = 0;
+        tramosRuido.length = 0;
+        minimoTramo = Infinity;
+        bloquesTramo = 0;
       }
       const golpes = [];
       const msPorMuestra = 1000 / sampleRate;
@@ -204,13 +218,22 @@ export function crearDetectorGolpes({ banda = 'graves', saltoDb = BANDAS[banda].
         cuenta = 0;
         const energia = ventana.reduce((s, e) => s + e, 0) / ventana.length;
         const minimoReciente = historia.length ? Math.min(...historia) : Infinity;
-        const subio = energia > pisoEnergia && energia > minimoReciente * factorSalto;
-        if (subio && inicioBloqueMs - ultimoGolpe >= refractarioMs) {
+        const ruido = Math.min(minimoTramo, ...tramosRuido); // Infinity hasta haber escuchado algo
+        const fuerte = energia > pisoEnergia && energia > ruido * factorSobreRuido;
+        if (fuerte && energia > minimoReciente * factorSalto && inicioBloqueMs - ultimoGolpe >= refractarioMs) {
           golpes.push(inicioBloqueMs);
           ultimoGolpe = inicioBloqueMs;
         }
         historia.push(energia);
         if (historia.length > BLOQUES_HISTORIA) historia.shift();
+        if (ventana.length === BLOQUES_VENTANA) minimoTramo = Math.min(minimoTramo, energia);
+        bloquesTramo++;
+        if (bloquesTramo >= BLOQUES_TRAMO_RUIDO) {
+          tramosRuido.push(minimoTramo);
+          if (tramosRuido.length > TRAMOS_RUIDO) tramosRuido.shift();
+          minimoTramo = Infinity;
+          bloquesTramo = 0;
+        }
       }
       return golpes;
     },

@@ -4,8 +4,8 @@ import assert from 'node:assert';
 import { AFINACIONES, CUERDAS_AFINADOR, compararConCuerda, crearAfinador, cuerdasDeAfinacion, detectarFrecuencia } from './afinador.js';
 
 const AMPLITUDES = [1, 0.7, 0.45, 0.3, 0.2, 0.12];
-const TASA_ANALISIS = 12000;
-const MUESTRAS_ANALISIS = 2400;
+const TASA_ANALISIS = 24000;
+const MUESTRAS_ANALISIS = 4800;
 
 // Cuerda con armónicos, y graves atenuados como en un celular. `fundamental` atenúa aún más la nota base.
 function sintetizar(frecuencia, sr, n, { fundamental = 1, ruido = 0.002 } = {}) {
@@ -113,6 +113,137 @@ test('afina con el celular lejos, con la cuerda muy baja', () => {
     assert.ok(ultima.frecuencia, `no detectó la nota (${sr} Hz)`);
     assert.ok(Math.abs(centsEntre(ultima.frecuencia, real)) <= 3);
   }
+});
+
+// Con ruido de ambiente casi tan fuerte como la cuerda: el filtro deja afuera el ruido agudo
+test('afina aunque haya mucho ruido de ambiente', () => {
+  for (const { cuerda, frecuencia } of CUERDAS_AFINADOR) {
+    const afinador = crearAfinador();
+    const real = conDesafinacion(frecuencia, -11);
+    const audio = sintetizar(real, 48000, 48000, { ruido: 0.12 });
+    const { ultima } = escuchar(afinador, audio, 48000);
+    assert.ok(ultima.frecuencia, `no detectó la cuerda ${cuerda}`);
+    assert.ok(Math.abs(centsEntre(ultima.frecuencia, real)) <= 2, `cuerda ${cuerda}: midió ${ultima.frecuencia.toFixed(2)} Hz en vez de ${real.toFixed(2)} Hz`);
+  }
+});
+
+test('con ruido moderado la lectura no se mueve más de medio cent', () => {
+  for (const { cuerda, frecuencia } of CUERDAS_AFINADOR) {
+    const afinador = crearAfinador();
+    const { ultima } = escuchar(afinador, sintetizar(frecuencia, 48000, 48000, { ruido: 0.01 }), 48000);
+    assert.ok(Math.abs(centsEntre(ultima.frecuencia, frecuencia)) <= 0.5, `cuerda ${cuerda}: midió ${ultima.frecuencia.toFixed(3)} Hz`);
+  }
+});
+
+test('el ruido de ambiente, aunque sea fuerte, no se lee como una nota', () => {
+  for (const nivel of [0.01, 0.1, 0.5]) {
+    let semilla = 5;
+    let grave = 0;
+    // Blanco más uno grave (como un ventilador o el viento), los dos pasan por el filtro
+    const ruido = new Float32Array(48000 * 2).map(() => {
+      semilla = (semilla * 1664525 + 1013904223) % 4294967296;
+      const azar = semilla / 4294967296 - 0.5;
+      grave = 0.99 * grave + azar * 0.1;
+      return (azar + grave) * nivel;
+    });
+    const afinador = crearAfinador();
+    let ahora = 0;
+    for (let i = 0; i + 1024 <= ruido.length; i += 1024) {
+      ahora += (1024 / 48000) * 1000;
+      const lectura = afinador.agregarBuffer(ruido.subarray(i, i + 1024), 1, 48000, ahora);
+      if (lectura) assert.strictEqual(lectura.frecuencia, null, `con ruido de nivel ${nivel} leyó ${lectura.frecuencia} Hz`);
+    }
+  }
+});
+
+// ---- Con la cuerda a afinar avisada (apuntar) ----
+
+const frecuenciaDeCuerda = (cuerda) => CUERDAS_AFINADOR.find((c) => c.cuerda === cuerda).frecuencia;
+
+// Varias cuerdas sonando a la vez: [[frecuencia, volumen], ...]
+function mezclar(partes, sr, n) {
+  const mezcla = new Float32Array(n);
+  partes.forEach(([frecuencia, volumen], k) => {
+    const audio = sintetizar(frecuencia, sr, n, { ruido: k === 0 ? 0.002 : 0 });
+    for (let i = 0; i < n; i++) mezcla[i] += audio[i] * volumen;
+  });
+  return mezcla;
+}
+
+// En la guía, al llegar a una cuerda las anteriores siguen sonando, y más fuerte que las finas
+for (const [cuerda, otras] of [[1, [2, 3]], [1, [4, 3, 2]], [2, [3]], [2, [4, 3]], [3, [5, 4]], [5, [6]]]) {
+  test(`afina la cuerda ${cuerda} aunque sigan sonando más fuerte las cuerdas ${otras.join(', ')}`, () => {
+    for (const sr of [48000, 44100]) {
+      const real = conDesafinacion(frecuenciaDeCuerda(cuerda), 12);
+      const audio = mezclar([[real, 0.3], ...otras.map((o) => [frecuenciaDeCuerda(o), 0.6])], sr, sr * 1.5);
+      const afinador = crearAfinador();
+      afinador.apuntar(frecuenciaDeCuerda(cuerda));
+      const { ultima } = escuchar(afinador, audio, sr);
+      assert.ok(ultima.frecuencia, `no detectó la nota (${sr} Hz)`);
+      assert.ok(Math.abs(centsEntre(ultima.frecuencia, real)) <= 3, `midió ${ultima.frecuencia.toFixed(2)} Hz en vez de ${real.toFixed(2)} Hz (${sr} Hz)`);
+    }
+  });
+}
+
+test('con la cuerda avisada mide cada cuerda sola con medio cent de error', () => {
+  for (const { cuerda, frecuencia } of CUERDAS_AFINADOR) {
+    for (const cents of [-40, -6, 0, 9, 35]) {
+      const real = conDesafinacion(frecuencia, cents);
+      const afinador = crearAfinador();
+      afinador.apuntar(frecuencia);
+      const { ultima } = escuchar(afinador, sintetizar(real, 48000, 48000 * 1.5), 48000);
+      assert.ok(ultima.frecuencia, `no detectó la cuerda ${cuerda}`);
+      assert.ok(Math.abs(centsEntre(ultima.frecuencia, real)) <= 0.5, `cuerda ${cuerda} a ${cents} cents: midió ${ultima.frecuencia.toFixed(3)} Hz en vez de ${real.toFixed(3)} Hz`);
+    }
+  }
+});
+
+test('con la cuerda avisada igual lee una cuerda muy desafinada, en la octava de la nota buscada', () => {
+  const objetivo = frecuenciaDeCuerda(1);
+  for (const cents of [-400, 300]) {
+    const real = conDesafinacion(objetivo, cents);
+    const afinador = crearAfinador();
+    afinador.apuntar(objetivo);
+    const { ultima } = escuchar(afinador, sintetizar(real, 48000, 48000), 48000);
+    assert.ok(ultima.frecuencia, 'no detectó la nota');
+    assert.ok(Math.abs(centsEntre(ultima.frecuencia, real)) <= 2, `midió ${ultima.frecuencia.toFixed(2)} Hz en vez de ${real.toFixed(2)} Hz`);
+  }
+  // La 6ta leída una octava arriba (el micrófono capta poco su nota base) se informa en su octava
+  const sexta = frecuenciaDeCuerda(6);
+  const afinador = crearAfinador();
+  afinador.apuntar(sexta);
+  const { ultima } = escuchar(afinador, sintetizar(sexta * 2, 48000, 48000), 48000);
+  assert.ok(Math.abs(centsEntre(ultima.frecuencia, sexta)) <= 2, `midió ${ultima.frecuencia.toFixed(2)} Hz`);
+});
+
+test('con la cuerda avisada, el ruido de ambiente tampoco se lee como una nota', () => {
+  for (const { cuerda, frecuencia } of CUERDAS_AFINADOR) {
+    let semilla = 11 + cuerda;
+    let grave = 0;
+    const ruido = new Float32Array(48000 * 4).map(() => {
+      semilla = (semilla * 1664525 + 1013904223) % 4294967296;
+      const azar = semilla / 4294967296 - 0.5;
+      grave = 0.99 * grave + azar * 0.1;
+      return (azar + grave) * 0.1;
+    });
+    const afinador = crearAfinador();
+    afinador.apuntar(frecuencia);
+    let ahora = 0;
+    for (let i = 0; i + 1024 <= ruido.length; i += 1024) {
+      ahora += (1024 / 48000) * 1000;
+      const lectura = afinador.agregarBuffer(ruido.subarray(i, i + 1024), 1, 48000, ahora);
+      if (lectura) assert.strictEqual(lectura.frecuencia, null, `buscando la cuerda ${cuerda} leyó ${lectura.frecuencia} Hz`);
+    }
+  }
+});
+
+test('al cambiar de cuerda no queda la lectura de la anterior', () => {
+  const afinador = crearAfinador();
+  afinador.apuntar(frecuenciaDeCuerda(2));
+  const { ultima, ahora } = escuchar(afinador, sintetizar(frecuenciaDeCuerda(2), 48000, 48000), 48000);
+  assert.ok(ultima.frecuencia);
+  afinador.apuntar(frecuenciaDeCuerda(1));
+  assert.strictEqual(escuchar(afinador, new Float32Array(48000), 48000, ahora).ultima.frecuencia, null);
 });
 
 test('las afinaciones dan las notas esperadas de la 6ta a la 1ra', () => {

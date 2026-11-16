@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
+import { readFileSync } from 'node:fs';
 import { obtenerRitmo, armarLineaDeTiempo, crearDetectorGolpes, evaluarGolpes, cuentaDelCompas, curvaDeLuz, tramosDeLuces, OPACIDAD_LUZ_APAGADA } from './ritmo.js';
 
 const leccion = (practica) => ({ practica: { tipo: 'ritmo', compas: 4, etapas: [{ bpm: 60, compases: 4 }], ...practica } });
@@ -61,99 +62,131 @@ test('cuenta del compás', () => {
 });
 
 // ───── crearDetectorGolpes (con audio sintético) ─────
+// En los ejercicios de tempo no se reconocen notas: cuenta como golpe un sonido fuerte y repentino.
 
 const SR = 48000;
-// Audio de `ms` de largo con "púas" (tono grave con caída) en `golpes` y "clics" agudos en `clics`
-function audio(ms, { golpes = [], clics = [], ruido = 0.001 }) {
-  const n = Math.round((SR * ms) / 1000);
-  const x = new Float32Array(n);
-  let semilla = 1;
-  const azar = () => ((semilla = (semilla * 16807) % 2147483647) / 2147483647) * 2 - 1;
-  for (let i = 0; i < n; i++) x[i] = ruido * azar();
-  const muestra = (tMs) => Math.round((SR * tMs) / 1000);
-  // Cuerda 5 al aire: cada púa vuelve a hacer vibrar la cuerda desde el principio (reemplaza a la
-  // anterior) y trae unos milisegundos de ruido del ataque de la púa
-  const orden = [...golpes].sort((a, b) => a - b);
-  orden.forEach((tMs, k) => {
-    const i0 = muestra(tMs);
-    const fin = k + 1 < orden.length ? muestra(orden[k + 1]) : n;
-    for (let i = i0; i < fin; i++) {
-      const t = (i - i0) / SR;
-      x[i] += 0.3 * Math.exp(-t / 0.4) * Math.sin(2 * Math.PI * 110 * t) + (t < 0.003 ? 0.2 * azar() : 0);
-    }
-  });
-  // El clic del metrónomo, igual que en scripts/generarClics.mjs (ataque de 1 ms)
-  clics.forEach((tMs) => {
-    const i0 = muestra(tMs);
-    for (let i = i0; i < n; i++) {
-      const t = (i - i0) / SR;
-      x[i] += 0.6 * Math.min(1, t / 0.001) * Math.exp(-t / 0.008) * Math.sin(2 * Math.PI * 3200 * t);
+
+function generador(semilla) {
+  let s = semilla;
+  return () => ((s = (s * 16807) % 2147483647) / 2147483647) * 2 - 1;
+}
+
+function silencio(ms, ruido = 0.001) {
+  const azar = generador(1);
+  return new Float32Array(Math.round((SR * ms) / 1000)).map(() => ruido * azar());
+}
+
+// Un aplauso: ruido que dura unos milisegundos, con casi toda su fuerza entre 700 y 2800 Hz
+function aplausos(ms, tiempos, amplitud, { ruido = 0.001, caidaMs = 10 } = {}) {
+  const x = silencio(ms, ruido);
+  const azar = generador(7);
+  tiempos.forEach((tMs) => {
+    const i0 = Math.round((SR * tMs) / 1000);
+    let grave = 0;
+    let agudo = 0;
+    for (let i = i0; i < Math.min(x.length, i0 + SR * 0.25); i++) {
+      const blanco = azar();
+      agudo += 0.35 * (blanco - agudo); // Saca lo más agudo
+      grave += 0.09 * (agudo - grave); // Lo más grave, para restarlo
+      x[i] += amplitud * 2 * (agudo - grave) * Math.exp(-(i - i0) / ((SR * caidaMs) / 1000));
     }
   });
   return x;
 }
 
+// El clic del metrónomo tal como suena en la app (assets/sonidos), captado fuerte por el micrófono
+function leerClic(nombre) {
+  const wav = readFileSync(new URL(`../../assets/sonidos/${nombre}`, import.meta.url));
+  const tasa = wav.readUInt32LE(24);
+  const inicio = wav.indexOf('data') + 8;
+  const original = Array.from({ length: (wav.length - inicio) / 2 }, (_, i) => wav.readInt16LE(inicio + i * 2) / 32768);
+  // A la frecuencia de muestreo de las pruebas
+  return Float32Array.from({ length: Math.floor((original.length * SR) / tasa) }, (_, i) => {
+    const pos = (i * tasa) / SR;
+    const k = Math.floor(pos);
+    return original[k] + ((original[k + 1] ?? 0) - original[k]) * (pos - k);
+  });
+}
+const CLIC = leerClic('clic.wav');
+const CLIC_FUERTE = leerClic('clic-fuerte.wav');
+
+function conClics(x, tiempos) {
+  tiempos.forEach((tMs, k) => {
+    const clic = k % 4 === 0 ? CLIC_FUERTE : CLIC;
+    const i0 = Math.round((SR * tMs) / 1000);
+    for (let i = 0; i < clic.length && i0 + i < x.length; i++) x[i0 + i] += clic[i];
+  });
+  return x;
+}
+
 // Pasa el audio al detector en bloques, como llega del micrófono
-function detectar(x, bloque = 1024, opciones) {
+function detectar(x, opciones, bloque = 1024) {
   const detector = crearDetectorGolpes(opciones);
   const tiempos = [];
   for (let i = 0; i < x.length; i += bloque) tiempos.push(...detector.agregar(x.subarray(i, i + bloque), (i / SR) * 1000, SR));
   return tiempos;
 }
 
-test('detecta cada púa con menos de 10 ms de error', () => {
-  const golpes = [200, 700, 1200, 1700, 2200];
-  const detectados = detectar(audio(2600, { golpes }));
-  assert.strictEqual(detectados.length, golpes.length, `detectó ${detectados}`);
-  detectados.forEach((t, i) => assert.ok(Math.abs(t - golpes[i]) < 10, `${t} vs ${golpes[i]}`));
-});
+const BANDAS = ['todo', 'bajoClic'];
 
-test('detecta un golpe nuevo aunque la cuerda anterior siga sonando', () => {
-  const golpes = [100, 350, 600];
-  assert.strictEqual(detectar(audio(900, { golpes })).length, 3);
-});
-
-test('el clic agudo del metrónomo no cuenta como golpe', () => {
-  assert.deepStrictEqual(detectar(audio(2000, { clics: [100, 600, 1100, 1600] })), []);
-});
-
-test('con clic y guitarra juntos detecta solo la guitarra', () => {
-  const golpes = [300, 1300];
-  const detectados = detectar(audio(2000, { golpes, clics: [300, 800, 1300, 1800] }));
-  assert.strictEqual(detectados.length, 2, `detectó ${detectados}`);
-});
-
-test('el silencio y el ruido de fondo no dan golpes', () => {
-  assert.deepStrictEqual(detectar(audio(1500, { ruido: 0.003 })), []);
-  assert.deepStrictEqual(detectar(audio(1500, { ruido: 0.003 }), 1024, { banda: 'agudos' }), []);
-});
-
-// Un aplauso o un golpe en la mesa: ruido de banda ancha que dura unos milisegundos
-function aplausos(ms, tiempos, amplitud) {
-  const x = audio(ms, {});
-  let semilla = 7;
-  const azar = () => ((semilla = (semilla * 16807) % 2147483647) / 2147483647) * 2 - 1;
-  tiempos.forEach((tMs) => {
-    const i0 = Math.round((SR * tMs) / 1000);
-    for (let i = i0; i < Math.min(x.length, i0 + SR * 0.06); i++) x[i] += amplitud * Math.exp(-(i - i0) / (SR * 0.01)) * azar();
+for (const banda of BANDAS) {
+  test(`cuenta cada aplauso con menos de 10 ms de error (${banda})`, () => {
+    const tiempos = [300, 800, 1300, 1800, 2300];
+    for (const amplitud of [0.15, 0.4, 0.9]) {
+      const detectados = detectar(aplausos(2700, tiempos, amplitud), { banda });
+      assert.strictEqual(detectados.length, tiempos.length, `con amplitud ${amplitud} detectó ${detectados.map(Math.round)}`);
+      detectados.forEach((t, i) => assert.ok(Math.abs(t - tiempos[i]) < 10, `${t} vs ${tiempos[i]}`));
+    }
   });
-  return x;
+
+  test(`aplausos seguidos (semicorcheas a 120 BPM) se cuentan de a uno (${banda})`, () => {
+    const tiempos = Array.from({ length: 12 }, (_, i) => 300 + i * 125);
+    const detectados = detectar(aplausos(2000, tiempos, 0.4), { banda });
+    assert.strictEqual(detectados.length, tiempos.length, `detectó ${detectados.map(Math.round)}`);
+  });
+
+  test(`los sonidos suaves no cuentan (${banda})`, () => {
+    // Un aplauso muy flojo o lejano, como rozar una cuerda o apoyar algo en la mesa
+    assert.deepStrictEqual(detectar(aplausos(2000, [300, 800, 1300], 0.01), { banda }), []);
+    // Ruido de fondo, bajo y alto (un ventilador, la calle)
+    assert.deepStrictEqual(detectar(silencio(3000, 0.003), { banda }), []);
+    assert.deepStrictEqual(detectar(silencio(3000, 0.08), { banda }), []);
+  });
+
+  test(`con ruido de ambiente fuerte, un aplauso fuerte se sigue contando y uno apenas más fuerte que el ruido no (${banda})`, () => {
+    const tiempos = [600, 1100, 1600];
+    assert.strictEqual(detectar(aplausos(2000, tiempos, 0.9, { ruido: 0.05 }), { banda }).length, 3);
+    assert.deepStrictEqual(detectar(aplausos(2000, tiempos, 0.06, { ruido: 0.05 }), { banda }), []);
+  });
+
+  test(`un aplauso con eco largo cuenta una sola vez (${banda})`, () => {
+    const detectados = detectar(aplausos(1500, [300], 0.5, { caidaMs: 80 }), { banda });
+    assert.strictEqual(detectados.length, 1, `detectó ${detectados.map(Math.round)}`);
+  });
+
+  test(`un sonido fuerte que sigue sonando cuenta una sola vez (${banda})`, () => {
+    const x = silencio(3000);
+    for (let i = Math.round(SR * 0.3); i < x.length; i++) x[i] += 0.4 * Math.sin((2 * Math.PI * 440 * i) / SR);
+    const detectados = detectar(x, { banda });
+    assert.strictEqual(detectados.length, 1, `detectó ${detectados.map(Math.round)}`);
+  });
 }
 
-test('sin clic (banda agudos) detecta aplausos', () => {
-  const tiempos = [200, 700, 1200, 1700];
-  const detectados = detectar(aplausos(2000, tiempos, 0.3), 1024, { banda: 'agudos' });
-  assert.strictEqual(detectados.length, 4, `detectó ${detectados}`);
-  detectados.forEach((t, i) => assert.ok(Math.abs(t - tiempos[i]) < 10));
+test('el clic del metrónomo no cuenta como golpe', () => {
+  const clics = [200, 700, 1200, 1700, 2200, 2700, 3200, 3700];
+  assert.deepStrictEqual(detectar(conClics(silencio(4200), clics)), []);
 });
 
-test('detecta golpes suaves (micrófono de iOS sin ajuste de volumen)', () => {
-  const tiempos = [200, 700, 1200];
-  assert.strictEqual(detectar(aplausos(1500, tiempos, 0.02), 1024, { banda: 'agudos' }).length, 3);
+test('con el clic sonando cuenta solo los aplausos, caigan o no sobre el clic', () => {
+  const clics = [200, 700, 1200, 1700, 2200, 2700, 3200, 3700];
+  const tiempos = [1200, 1700, 2450, 2700, 3200];
+  const detectados = detectar(conClics(aplausos(4200, tiempos, 0.4), clics));
+  assert.strictEqual(detectados.length, tiempos.length, `detectó ${detectados.map(Math.round)}`);
+  detectados.forEach((t, i) => assert.ok(Math.abs(t - tiempos[i]) < 10, `${t} vs ${tiempos[i]}`));
 });
 
 test('el medidor de nivel sube con un golpe y baja en silencio', () => {
-  const detector = crearDetectorGolpes({ banda: 'agudos' });
+  const detector = crearDetectorGolpes({ banda: 'todo' });
   const x = aplausos(400, [100], 0.3);
   detector.agregar(x.subarray(0, Math.round(SR * 0.15)), 0, SR);
   const conGolpe = detector.nivel();
@@ -210,60 +243,6 @@ test('sin golpes: nada a tiempo', () => {
   assert.strictEqual(r.aciertos, 0);
   assert.ok(!r.aprobado);
   assert.strictEqual(r.desviacionMs, null);
-});
-
-// Cuerda 6 al aire tocada a tempo, como en la lección 1.2: cada púa suma vibración sobre la que
-// sigue sonando (sustain largo). Los armónicos agudos se apagan más rápido que la fundamental,
-// y el ataque de la púa es un chasquido corto y suave.
-function cuerdaQueSigueSonando(ms, tiempos, { ataque = 0.03, amplitud = 0.3 } = {}) {
-  const n = Math.round((SR * ms) / 1000);
-  const x = new Float32Array(n);
-  let semilla = 3;
-  const azar = () => ((semilla = (semilla * 16807) % 2147483647) / 2147483647) * 2 - 1;
-  tiempos.forEach((tMs) => {
-    const i0 = Math.round((SR * tMs) / 1000);
-    for (let i = i0; i < n; i++) {
-      const t = (i - i0) / SR;
-      let v = 0;
-      for (let k = 1; k <= 12; k++) v += (amplitud / k) * Math.exp(-t / (3 / k)) * Math.sin(2 * Math.PI * 82.4 * k * t);
-      if (t < 0.002) v += ataque * azar();
-      x[i] += v;
-    }
-  });
-  for (let i = 0; i < n; i++) x[i] += 0.0005 * azar();
-  return x;
-}
-
-test('cuerda 6 a 60 BPM sonando todo el tiempo: con agudos detecta los 8 golpes', () => {
-  const tiempos = [200, 1200, 2200, 3200, 4200, 5200, 6200, 7200];
-  const detectados = detectar(cuerdaQueSigueSonando(8000, tiempos), 1024, { banda: 'agudos' });
-  assert.strictEqual(detectados.length, tiempos.length, `detectó ${detectados.map(Math.round)}`);
-  detectados.forEach((t, i) => assert.ok(Math.abs(t - tiempos[i]) < 10, `${t} vs ${tiempos[i]}`));
-});
-
-test('púa suave sobre la cuerda que suena (sin chasquido casi): igual la detecta con agudos', () => {
-  const tiempos = [200, 1200, 2200, 3200];
-  const detectados = detectar(cuerdaQueSigueSonando(4000, tiempos, { ataque: 0.005, amplitud: 0.1 }), 1024, { banda: 'agudos' });
-  assert.strictEqual(detectados.length, tiempos.length, `detectó ${detectados.map(Math.round)}`);
-});
-
-test('corcheas a 120 BPM sobre la cuerda que suena: detecta cada una', () => {
-  const tiempos = Array.from({ length: 8 }, (_, i) => 200 + i * 250);
-  const detectados = detectar(cuerdaQueSigueSonando(2500, tiempos), 1024, { banda: 'agudos' });
-  assert.strictEqual(detectados.length, tiempos.length, `detectó ${detectados.map(Math.round)}`);
-});
-
-test('una sola púa que sigue sonando no genera golpes de más', () => {
-  assert.strictEqual(detectar(cuerdaQueSigueSonando(3000, [200]), 1024, { banda: 'agudos' }).length, 1);
-});
-
-test('con clic (banda graves): detecta la cuerda 6 sonando todo el tiempo y no cuenta el clic', () => {
-  const tiempos = [200, 1200, 2200, 3200, 4200, 5200, 6200, 7200];
-  const x = cuerdaQueSigueSonando(8000, tiempos);
-  const conClic = audio(8000, { clics: tiempos.map((t) => t + 500) });
-  for (let i = 0; i < x.length; i++) x[i] += conClic[i];
-  const detectados = detectar(x);
-  assert.strictEqual(detectados.length, tiempos.length, `detectó ${detectados.map(Math.round)}`);
 });
 
 // ───── Luces del metrónomo ─────

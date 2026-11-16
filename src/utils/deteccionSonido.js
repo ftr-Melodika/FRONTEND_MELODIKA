@@ -154,7 +154,7 @@ export function reducir(muestras, factor, destino = null) {
 // y en Hermes (el motor de la app, sin JIT) eso pesa mucho en un celular de gama media.
 const tablasPorTamano = new Map();
 
-function tablasFft(n) {
+export function tablasFft(n) {
   let tablas = tablasPorTamano.get(n);
   if (tablas) return tablas;
   const mitad = n / 2;
@@ -178,8 +178,9 @@ function tablasFft(n) {
   return tablas;
 }
 
-// FFT compleja en el lugar, de tamaño n/2, con los senos y cosenos de la tabla de tamaño n
-function fftCompleja(re, im, { mitad, cos, sen, inversion }) {
+// FFT compleja en el lugar, de tamaño n/2, con los senos y cosenos de la tabla de tamaño n.
+// También la usa el afinador (afinador.js) para medir el período de la onda.
+export function fftCompleja(re, im, { mitad, cos, sen, inversion }) {
   for (let i = 1; i < mitad; i++) {
     const j = inversion[i];
     if (i < j) {

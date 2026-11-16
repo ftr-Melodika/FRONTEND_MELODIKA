@@ -80,12 +80,13 @@ export function useRitmo(config, { conSonido: pedidoConSonido = true } = {}) {
   const golpesRelativos = () => golpesDelMicrofono.current.map((t) => t + (desfaseReloj.current ?? 0) - t0.current);
 
   const empezar = () => {
-    // Con el clic sonando se escuchan solo los graves (el clic es agudo); sin clic, los agudos del ataque
+    // Se cuenta por volumen, no por notas (ver crearDetectorGolpes). Con el clic sonando se mide
+    // solo por debajo del clic, que es agudo; sin clic, todo el sonido.
     // Después de un golpe se ignora lo que llegue antes de la mitad del tiempo hasta el próximo:
-    // una cuerda que sigue sonando puede parecer más de un golpe
+    // el eco de un aplauso o una cuerda que sigue sonando pueden parecer más de un golpe
     const separacion = Math.min(...linea.golpes.slice(1).map((g, i) => g.t - linea.golpes[i].t));
     const refractarioMs = Math.min(300, Math.max(70, Number.isFinite(separacion) ? separacion * 0.5 : 70));
-    detector.current = crearDetectorGolpes({ banda: conSonido ? 'graves' : 'agudos', refractarioMs });
+    detector.current = crearDetectorGolpes({ banda: conSonido ? 'bajoClic' : 'todo', refractarioMs });
     golpesDelMicrofono.current = [];
     setGolpesDetectados(0);
     setNivel(0);

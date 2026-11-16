@@ -235,7 +235,7 @@ export function RitmoStep({ ritmo, onBack, onFinish, finishing }) {
         {escuchando && !sinMicrofono ? <Escucha nivel={nivel} golpesDetectados={golpesDetectados} /> : null}
         {fase === 'listo' ? (
           <Text style={styles.aviso}>
-            👏 Aplaudí: la app escucha los aplausos mucho mejor que la guitarra.
+            👏 Aplaudí fuerte: la app cuenta los golpes de sonido, no las notas. Los sonidos suaves no cuentan.
             {!CLIC_DISPONIBLE ? ' En iPhone el metrónomo es visual: seguí las luces (el 1 se prende en amarillo).' : ''}
           </Text>
         ) : null}
