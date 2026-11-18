@@ -7,26 +7,28 @@ import { Button } from '../components/Button';
 import { AuthContext } from '../context/AuthContext';
 import { DatePickerField } from '../components/form/DatePickerField';
 import { DropdownField } from '../components/form/DropdownField';
+import { PaisField } from '../components/form/PaisField';
+import { ModoZurdoField } from '../components/form/ModoZurdoField';
+import { OPCIONES_GENERO } from '../data/generos';
+import { useAlturaTeclado } from '../hooks/useAlturaTeclado';
 import { AvatarPicker } from '../components/form/AvatarPicker';
 
 // 👇 Importamos nuestro servicio especialista
 import { perfilesService } from '../services/perfilesService';
 import { FUENTE_TITULO } from '../theme/fuentes';
 
-const GENDER_OPTIONS = [
-  { label: 'Masculino', value: 'Masculino' },
-  { label: 'Femenino', value: 'Femenino' },
-  { label: 'No binario', value: 'No binario' }
-];
 
 export function CreateUserScreen({ navigation }) {
   const { actualizarPerfil } = useContext(AuthContext);
+  // Lo que ocupa el teclado se suma al final del formulario, para poder bajar hasta el último campo
+  const alturaTeclado = useAlturaTeclado();
 
   const [nombre, setNombre] = useState('');
   const [username, setUsername] = useState('');
   const [pais, setPais] = useState('');
   const [fotoUrl, setFotoUrl] = useState('');
   const [gender, setGender] = useState('');
+  const [esZurdo, setEsZurdo] = useState(false);
   const [birthdayISO, setBirthdayISO] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -46,14 +48,14 @@ export function CreateUserScreen({ navigation }) {
         fecha_nacimiento: birthdayISO, 
         pais: pais.trim() || null, 
         avatarUrl: fotoUrl.trim() || null, 
-        genero: gender || null
+        genero: gender || null,
+        esZurdo,
       });
       
-      Alert.alert('¡Excelente!', `El perfil de ${nuevoPerfil.nombre} está listo.`);
-      
-      // Guardamos en contexto global y navegamos
+      // Guardamos en contexto global y navegamos. En Cursos lo recibe "Tocá cualquier cuerda para
+      // comenzar" (ver PrimeraCuerdaModal), que hace de bienvenida: no hace falta otra alerta.
       await actualizarPerfil(nuevoPerfil);
-      navigation.replace('Home');
+      navigation.replace('Home', { bienvenida: true });
 
     } catch (error) {
       // El servicio ya filtró el error a un mensaje legible
@@ -65,7 +67,12 @@ export function CreateUserScreen({ navigation }) {
 
   return (
     <Background>
-      <ScrollView style={{flex: 1}} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 + alturaTeclado }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
 
         <View style={[styles.glassCard, { width: cardWidth }]}>
           <Button 
@@ -80,8 +87,9 @@ export function CreateUserScreen({ navigation }) {
           <InputField placeholder="Nombre completo" value={nombre} onChangeText={setNombre} />
           <InputField placeholder="Nombre de usuario" value={username} onChangeText={setUsername} />
           <DatePickerField onDateChange={setBirthdayISO} />
-          <InputField placeholder="País (opcional)" value={pais} onChangeText={setPais} />
-          <DropdownField label="Género" options={GENDER_OPTIONS} value={gender} onSelect={setGender} />
+          <PaisField value={pais} onSelect={setPais} />
+          <DropdownField label="Género" options={OPCIONES_GENERO} value={gender} onSelect={setGender} />
+          <ModoZurdoField value={esZurdo} onChange={setEsZurdo} />
           <Button title="Crear perfil" onPress={handleCreateUser} loading={loading} />
         </View>
       </ScrollView>

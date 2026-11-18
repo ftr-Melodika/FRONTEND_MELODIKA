@@ -3,6 +3,7 @@ import { memo } from 'react';
 import { View, Text, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { detectarCejillas, enCejilla } from '../../utils/cejilla';
+import { estilosZurdo, useZurdo } from '../../hooks/useZurdo';
 
 // El alto del mástil se adapta a la pantalla (en un celular horizontal no entran 220px + botones)
 const ALTO_MAXIMO = 220;
@@ -47,7 +48,7 @@ export function dedoSugerido(traste, primerTraste = Math.max(1, traste - CANT_TR
 }
 
 // Punto lleno sobre un traste (con el número de dedo), o anillo vacío si la cuerda se toca al aire
-function Punto({ cuerda, traste, dedo, tamano, separacion, primerTraste, correcto, resaltar }) {
+function Punto({ cuerda, traste, dedo, tamano, separacion, primerTraste, correcto, resaltar, espejo }) {
   const atenuado = !!resaltar && cuerda !== resaltar;
   const alAire = traste === 0;
   const top = alturaDeCuerda(cuerda, separacion) - tamano / 2;
@@ -68,13 +69,13 @@ function Punto({ cuerda, traste, dedo, tamano, separacion, primerTraste, correct
         atenuado && styles.atenuado,
       ]}
     >
-      {alAire || !dedo ? null : <Text style={[styles.puntoTexto, { fontSize: Math.round(tamano * 0.52) }]}>{String(dedo)}</Text>}
+      {alAire || !dedo ? null : <Text style={[styles.puntoTexto, { fontSize: Math.round(tamano * 0.52) }, espejo]}>{String(dedo)}</Text>}
     </View>
   );
 }
 
 // Cejilla: una barra sobre el traste que cubre todas las cuerdas que aprieta el dedo, con su número
-function Cejilla({ dedo, traste, desde, hasta, tamano, separacion, primerTraste, correcto, resaltar }) {
+function Cejilla({ dedo, traste, desde, hasta, tamano, separacion, primerTraste, correcto, resaltar, espejo }) {
   const atenuado = !!resaltar && (resaltar > desde || resaltar < hasta);
   const top = alturaDeCuerda(desde, separacion) - tamano / 2;
   const height = alturaDeCuerda(hasta, separacion) - alturaDeCuerda(desde, separacion) + tamano;
@@ -89,7 +90,7 @@ function Cejilla({ dedo, traste, desde, hasta, tamano, separacion, primerTraste,
         atenuado && styles.atenuado,
       ]}
     >
-      <Text style={[styles.puntoTexto, { fontSize: Math.round(tamano * 0.52) }]}>{String(dedo)}</Text>
+      <Text style={[styles.puntoTexto, { fontSize: Math.round(tamano * 0.52) }, espejo]}>{String(dedo)}</Text>
     </View>
   );
 }
@@ -128,10 +129,14 @@ function Marcador({ traste, primerTraste, separacion, tamano }) {
 // actualizan la pantalla varias veces por segundo. `posiciones` y `onElegir` deben ser estables.
 // `cejillas` (de cejillasDeSecuencia) muestra la cejilla de la lección en un paso de nota suelta,
 // cuando esa nota la aprieta la cejilla. Debe ser estable, como `posiciones`.
+// Con el modo zurdo (ver useZurdo) todo el mástil se ve como en un espejo: las cuerdas al aire a la
+// derecha y los trastes hacia la izquierda. Los textos se vuelven a dar vuelta para que se lean.
 // `resaltar` (número de cuerda), junto con `posiciones`: muestra el acorde entero pero remarca solo
 // esa cuerda y atenúa el resto. Es para tocar un acorde cuerda por cuerda.
 export const GuitarNeck = memo(function GuitarNeck({ targetNumber, cuerda, dotLeft, dotBottom, posiciones, onElegir, correcto, cejillas: cejillasLeccion, resaltar }) {
   const { height } = useWindowDimensions();
+  const zurdo = useZurdo();
+  const espejo = zurdo ? estilosZurdo.espejo : null;
   const altoMastil = Math.round(Math.min(ALTO_MAXIMO, Math.max(ALTO_MINIMO, height * 0.42)));
   const altoMadera = altoMastil - ALTO_PIE;
   const hayObjetivo = targetNumber !== null && targetNumber !== undefined && targetNumber !== '';
@@ -157,11 +162,11 @@ export const GuitarNeck = memo(function GuitarNeck({ targetNumber, cuerda, dotLe
   const conCejuela = primerTraste === 1;
 
   const cuerdasActivas = posiciones ? posiciones.map((p) => Number(p.cuerda)) : [Number(cuerda)];
-  const puntoProps = { tamano, separacion, primerTraste, correcto, resaltar: posiciones ? resaltar : undefined };
+  const puntoProps = { tamano, separacion, primerTraste, correcto, resaltar: posiciones ? resaltar : undefined, espejo };
   const tamanoMarcador = Math.max(6, Math.round(separacion * 0.38));
 
   return (
-    <View style={[styles.contenedor, { height: altoMastil }]}>
+    <View style={[styles.contenedor, { height: altoMastil }, espejo]}>
       <View style={[styles.fila, { height: altoMadera }]}>
 
         {/* Número de cada cuerda, fuera de la madera */}
@@ -172,7 +177,7 @@ export const GuitarNeck = memo(function GuitarNeck({ targetNumber, cuerda, dotLe
             return (
               <View key={num} style={[styles.etiquetaFila, { height: separacion }]}>
                 <Text
-                  style={[styles.cuerdaNumero, muda && styles.cuerdaMuda, activa && styles.cuerdaNumeroActiva]}
+                  style={[styles.cuerdaNumero, muda && styles.cuerdaMuda, activa && styles.cuerdaNumeroActiva, espejo]}
                   accessibilityLabel={muda ? `Cuerda ${num}: no se toca` : `Cuerda ${num}`}
                 >
                   {muda ? '✕' : num}
@@ -210,7 +215,7 @@ export const GuitarNeck = memo(function GuitarNeck({ targetNumber, cuerda, dotLe
           {/* Indicador Visual Dinámico */}
           {conManual ? (
             <View style={[styles.punto, { width: tamano, height: tamano, borderRadius: tamano / 2, left: dotLeft, bottom: dotBottom }]}>
-              {puntos[0]?.dedo ? <Text style={[styles.puntoTexto, { fontSize: Math.round(tamano * 0.52) }]}>{String(puntos[0].dedo)}</Text> : null}
+              {puntos[0]?.dedo ? <Text style={[styles.puntoTexto, { fontSize: Math.round(tamano * 0.52) }, espejo]}>{String(puntos[0].dedo)}</Text> : null}
             </View>
           ) : (
             <>
@@ -251,9 +256,9 @@ export const GuitarNeck = memo(function GuitarNeck({ targetNumber, cuerda, dotLe
 
       {/* Número de cada traste, debajo de las cuerdas */}
       <View style={styles.pie}>
-        <Text style={[styles.pieTexto, { width: ANCHO_AL_AIRE + ANCHO_CEJUELA }]} numberOfLines={1}>Aire</Text>
+        <Text style={[styles.pieTexto, { width: ANCHO_AL_AIRE + ANCHO_CEJUELA }, espejo]} numberOfLines={1}>Aire</Text>
         {trastes.map((numero) => (
-          <Text key={numero} style={[styles.pieTexto, styles.traste]} numberOfLines={1}>Traste {numero}</Text>
+          <Text key={numero} style={[styles.pieTexto, styles.traste, espejo]} numberOfLines={1}>Traste {numero}</Text>
         ))}
       </View>
     </View>

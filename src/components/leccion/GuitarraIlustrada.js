@@ -3,6 +3,7 @@
 // cada parte son exactas. Las lecciones las piden por clave en practica.imagen (o en cada pregunta).
 // Los marcadores usan coordenadas de 0 a 1 sobre la imagen (x a lo ancho, y a lo alto).
 import { Image, View, StyleSheet } from 'react-native';
+import { estilosZurdo, useZurdo } from '../../hooks/useZurdo';
 import Svg, { Circle, Defs, G, Line, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 
 const ANCHO = 1000;
@@ -130,8 +131,11 @@ export function proporcionImagen({ imagen, recorte } = {}) {
 // Dibuja la imagen pedida (o nada si la clave no existe) con el marcador encima.
 // `imagen` es una clave de IMAGENES o la URL de una foto. `recorte` ({ x, y, ancho, alto } de 0 a 1,
 // con x e y en el centro) muestra solo esa parte del dibujo, como si se acercara la cámara.
+// En modo zurdo (ver useZurdo) el dibujo, con su marcador, se ve espejado: el mástil a la derecha.
+// Las fotos se muestran tal cual.
 export function GuitarraIlustrada({ imagen = 'guitarra-acustica', marcador, recorte, colorMarcador = '#ffd35c', style }) {
   const proporcion = { aspectRatio: proporcionImagen({ imagen, recorte }) };
+  const zurdo = useZurdo();
 
   if (esFoto(imagen)) {
     return (
@@ -148,7 +152,7 @@ export function GuitarraIlustrada({ imagen = 'guitarra-acustica', marcador, reco
     : [0, 0, ANCHO, ALTO];
   const descripcion = recorte ? 'Acercamiento a una parte de la guitarra' : 'Dibujo de una guitarra con una parte marcada';
   return (
-    <View style={[styles.contenedor, proporcion, style]} accessibilityRole="image" accessibilityLabel={descripcion}>
+    <View style={[styles.contenedor, proporcion, style, zurdo && estilosZurdo.espejo]} accessibilityRole="image" accessibilityLabel={descripcion}>
       <Svg width="100%" height="100%" viewBox={caja.join(' ')}>
         <Dibujo />
         {marcador && <Marcador marcador={marcador} color={colorMarcador} />}

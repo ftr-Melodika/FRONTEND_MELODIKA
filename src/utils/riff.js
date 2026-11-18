@@ -6,7 +6,7 @@
 // Sale de una práctica de secuencia que además trae el ritmo:
 //   { tipo: 'secuencia', pasos: [nota, nota, …], tempo: { bpm: 80, duraciones: [1.5, 0.5, …] } }
 // `duraciones` dice cuántos pulsos dura cada nota (hasta que llega la siguiente): 1 = negra, 0.5 = corchea.
-import { midiDePosicion } from './deteccionSonido.js';
+import { midiDePosicion, nombreDeMidi } from './deteccionSonido.js';
 
 const BPM_MIN = 30;
 const BPM_MAX = 240;
@@ -92,4 +92,54 @@ export function resumir(resultados) {
   const total = resultados.length;
   const aciertos = resultados.filter((r) => r === true).length;
   return { total, aciertos, aprobado: total > 0 && aciertos / total >= APROBAR };
+}
+
+// ───────────────────────── Práctica de un tropiezo ─────────────────────────
+// Si se traba siempre en el mismo acorde (o nota), se frena y se practica aparte:
+// la segunda vez que vuelve atrás por él, o la tercera vez que lo erra.
+export const RETROCESOS_PARA_PRACTICAR = 2;
+export const ERRORES_PARA_PRACTICAR = 3;
+
+// Identifica un acorde por su nombre y una nota por su cuerda y traste (se repiten en el recorrido)
+export const claveDeNota = (nota) => (nota.tipo === 'acorde' ? `acorde:${nota.nombre}` : `nota:${nota.cuerda}-${nota.traste}`);
+
+// Lo que se practica: un acorde, cuerda por cuerda (de la más grave a la más aguda) y después entero;
+// una nota, sola. Son consignas de la práctica de siempre (ver PracticaConDeteccion).
+export function secuenciaDePractica(nota) {
+  if (nota.tipo === 'acorde') {
+    const cuerdas = nota.posiciones
+      .map((pos, i) => ({ pos, midi: nota.midis[i] }))
+      .sort((a, b) => b.pos.cuerda - a.pos.cuerda)
+      .map(({ pos, midi }) => ({ tipo: 'nota', nombre: nombreDeMidi(midi), posiciones: [pos], midis: [midi] }));
+    return [...cuerdas, { tipo: 'acorde', nombre: nota.nombre, posiciones: nota.posiciones, midis: nota.midis }];
+  }
+  const pos = { cuerda: nota.cuerda, traste: nota.traste, ...(nota.dedo != null ? { dedo: nota.dedo } : {}) };
+  return [{ tipo: 'nota', nombre: nombreDeMidi(nota.midi), posiciones: [pos], midis: [nota.midi] }];
+}
+
+// Qué hacer cuando pasan notas sin sonar. `nuevosErrores` son los índices que se acaban de errar;
+// `errores` y `retrocesos` cuentan por clave (ver claveDeNota) y se actualizan acá.
+// Devuelve null (seguir), { accion: 'retroceder', desde } o { accion: 'practicar', desde, nota }.
+export function decidirTropiezo(notas, resultados, nuevosErrores, errores, retrocesos) {
+  for (const i of nuevosErrores) {
+    const clave = claveDeNota(notas[i]);
+    errores[clave] = (errores[clave] || 0) + 1;
+  }
+  const trabado = nuevosErrores.find((i) => errores[claveDeNota(notas[i])] >= ERRORES_PARA_PRACTICAR);
+  const volverA = dondeRetroceder(resultados);
+  if (volverA !== null) {
+    const clave = claveDeNota(notas[volverA]);
+    retrocesos[clave] = (retrocesos[clave] || 0) + 1;
+    if (retrocesos[clave] >= RETROCESOS_PARA_PRACTICAR) return { accion: 'practicar', desde: volverA, nota: notas[volverA] };
+  }
+  if (trabado !== undefined) return { accion: 'practicar', desde: trabado, nota: notas[trabado] };
+  if (volverA !== null) return { accion: 'retroceder', desde: volverA };
+  return null;
+}
+
+// Después de practicar, ese acorde (o nota) vuelve a empezar de cero
+export function olvidarTropiezo(nota, errores, retrocesos) {
+  const clave = claveDeNota(nota);
+  delete errores[clave];
+  delete retrocesos[clave];
 }

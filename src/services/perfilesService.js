@@ -15,6 +15,8 @@ export function normalizarPerfil(perfil) {
     fechaNacimiento: fecha ? String(fecha).slice(0, 10) : null,
     xp: Number(perfil.xp) || 0,
     racha: Number(perfil.racha) || 0,
+    // Modo zurdo: espeja mástiles, riffs, videos y dibujos (ver useZurdo). Apagado si no viene.
+    esZurdo: (perfil.esZurdo ?? perfil.es_zurdo) === true,
   };
 }
 

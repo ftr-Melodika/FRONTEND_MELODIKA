@@ -11,7 +11,7 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { Icono } from '../components/icono/Icono';
 import { Button } from '../components/Button';
 import { GuitarNeck } from '../components/leccion/GuitarNeck';
-import { PracticaConDeteccion } from '../components/leccion/PracticeStep';
+import { PracticaConDeteccion } from '../components/leccion/PracticaConDeteccion';
 import { RiffStep } from '../components/leccion/RiffStep';
 import { Rasgueo } from '../components/canciones/Rasgueo';
 import { REFERENCIAS_RASGUEO } from '../data/canciones';

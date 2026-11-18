@@ -1,16 +1,21 @@
 // Archivo: src/components/leccion/RiffStep.js
 // El riff en movimiento: las notas avanzan de derecha a izquierda sobre las cuerdas, en cuadrados
 // con el número de traste, y hay que tocar cada una cuando pasa por la línea amarilla.
-// Si se erra mucho, el mástil se frena y vuelve a donde se empezó a errar.
+// Si se erra mucho, el mástil se frena y vuelve a donde se empezó a errar. Si se traba siempre en el
+// mismo acorde (o nota), se abre la práctica de ese acorde y, al hacerla bien, sigue desde ahí.
+// En modo zurdo (ver useZurdo) el mástil se ve espejado: la línea queda a la derecha y las notas
+// avanzan hacia la derecha. Los textos se vuelven a dar vuelta para que se lean.
 // En las canciones avanzan acordes: un rectángulo con el nombre (cifrado americano) que cubre las
 // cuerdas que se tocan. Detrás vienen los golpes del rasgueo, más transparentes y con su flecha,
 // en el tiempo en que se tocan: son una guía, lo que se evalúa es el acorde.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Easing, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Button } from '../Button';
+import { PracticaConDeteccion } from './PracticaConDeteccion';
 import { useRiff } from '../../hooks/useRiff';
+import { estilosZurdo, useZurdo } from '../../hooks/useZurdo';
 import { nombreDeMidi } from '../../utils/deteccionSonido';
-import { APROBAR } from '../../utils/riff';
+import { APROBAR, secuenciaDePractica } from '../../utils/riff';
 
 const CUERDAS = [6, 5, 4, 3, 2, 1]; // De arriba hacia abajo, como el mástil del resto de la app
 const GROSOR = { 1: 1.5, 2: 1.8, 3: 2.2, 4: 2.6, 5: 3.1, 6: 3.6 };
@@ -22,6 +27,7 @@ const ANCHO_ACORDE = 48;
 const ANCHO_GOLPE = 34; // Entra entre corchea y corchea (55 px) con aire; en semicorcheas se achica
 const PX_POR_PULSO = 110;
 const SEGUNDOS_PARA_SALTEAR = 20;
+const MS_FESTEJO_PRACTICA = 1200; // Lo que se ve el "¡Bien!" de la práctica antes de volver a tocar
 
 const MENSAJE_MICROFONO = {
   'sin-permiso': 'Necesitamos el micrófono para escuchar tus notas. Activalo en los ajustes del celular.',
@@ -32,7 +38,7 @@ const MENSAJE_MICROFONO = {
 const altoCuerda = ALTO / CUERDAS.length;
 const centroCuerda = (cuerda) => altoCuerda * (CUERDAS.indexOf(cuerda) + 0.5);
 
-function Nota({ nota, resultado, pxPorMs }) {
+function Nota({ nota, resultado, pxPorMs, espejo }) {
   if (nota.tipo === 'acorde') {
     const arriba = centroCuerda(nota.cuerdaGrave) - TAMANO_NOTA / 2;
     const abajo = centroCuerda(nota.cuerdaAguda) + TAMANO_NOTA / 2;
@@ -51,7 +57,7 @@ function Nota({ nota, resultado, pxPorMs }) {
               { width: anchoGolpe, left: X_LINEA + (nota.t + g.t) * pxPorMs - anchoGolpe / 2, top: arriba, height: abajo - arriba },
             ]}
           >
-            <Text style={[styles.golpeTexto, angosto && styles.golpeTextoAngosto]}>{g.golpe}</Text>
+            <Text style={[styles.golpeTexto, angosto && styles.golpeTextoAngosto, espejo]}>{g.golpe}</Text>
           </View>
         ))}
         {/* El acorde va al final para quedar encima si un golpe lo toca */}
@@ -63,7 +69,7 @@ function Nota({ nota, resultado, pxPorMs }) {
             { left: X_LINEA + nota.t * pxPorMs - ANCHO_ACORDE / 2, top: arriba, height: abajo - arriba },
           ]}
         >
-          <Text style={styles.acordeTexto} numberOfLines={1} adjustsFontSizeToFit>{nota.nombre}</Text>
+          <Text style={[styles.acordeTexto, espejo]} numberOfLines={1} adjustsFontSizeToFit>{nota.nombre}</Text>
         </View>
       </>
     );
@@ -77,13 +83,13 @@ function Nota({ nota, resultado, pxPorMs }) {
         { left: X_LINEA + nota.t * pxPorMs - TAMANO_NOTA / 2, top: centroCuerda(nota.cuerda) - TAMANO_NOTA / 2 },
       ]}
     >
-      <Text style={styles.notaTexto}>{nota.traste}</Text>
+      <Text style={[styles.notaTexto, espejo]}>{nota.traste}</Text>
     </View>
   );
 }
 
 // Las notas, en una tira que se desplaza con una animación nativa (no depende del reloj de JavaScript)
-function Tira({ recorrido, resultados, tramo, pxPorMs }) {
+function Tira({ recorrido, resultados, tramo, pxPorMs, espejo }) {
   const desplazamiento = useRef(new Animated.Value(0)).current;
   const fin = recorrido.duracion + 1500;
 
@@ -108,8 +114,45 @@ function Tira({ recorrido, resultados, tramo, pxPorMs }) {
 
   return (
     <Animated.View style={[styles.tira, { transform: [{ translateX: desplazamiento }] }]} pointerEvents="none">
-      {recorrido.notas.map((nota, i) => <Nota key={i} nota={nota} resultado={resultados[i]} pxPorMs={pxPorMs} />)}
+      {recorrido.notas.map((nota, i) => <Nota key={i} nota={nota} resultado={resultados[i]} pxPorMs={pxPorMs} espejo={espejo} />)}
     </Animated.View>
+  );
+}
+
+// La práctica de un acorde (o nota) donde se trabó: cuerda por cuerda y después entero.
+// Al hacerla bien vuelve sola a la canción; también se puede volver sin terminarla.
+function ModalPractica({ nota, onVolver }) {
+  const secuencia = useMemo(() => secuenciaDePractica(nota), [nota]);
+  const [listo, setListo] = useState(false);
+
+  useEffect(() => {
+    if (!listo) return undefined;
+    const espera = setTimeout(onVolver, MS_FESTEJO_PRACTICA);
+    return () => clearTimeout(espera);
+  }, [listo]);
+
+  const esAcorde = nota.tipo === 'acorde';
+  const nombre = esAcorde ? nota.nombre : secuencia[0].nombre;
+  return (
+    <View style={styles.tarjetaPractica}>
+      <Text style={styles.tituloPractica}>Practiquemos {esAcorde ? `el acorde ${nombre}` : `la nota ${nombre}`}</Text>
+      <Text style={styles.ayudaPractica}>
+        {listo
+          ? '¡Bien! Volvemos a la canción…'
+          : esAcorde
+            ? 'Te trabaste acá. Tocá cada cuerda por separado y después el acorde completo.'
+            : 'Te trabaste acá. Tocá esta nota y seguimos.'}
+      </Text>
+      <PracticaConDeteccion
+        secuencia={secuencia}
+        permitirSaltear={false}
+        textoAtras="Volver a la canción"
+        onBack={onVolver}
+        textoFinal="Seguir tocando"
+        onFinish={onVolver}
+        onCompletar={() => setListo(true)}
+      />
+    </View>
   );
 }
 
@@ -145,8 +188,9 @@ export function RiffStep({
   velocidad, velocidades, onCambiarVelocidad,
 }) {
   const [puedeSaltear, setPuedeSaltear] = useState(false);
-  const { fase, estado, empezar, detener, recorrido, tramo, resultados, resumen, retrocesos } = useRiff(riff);
+  const { fase, estado, empezar, detener, recorrido, tramo, resultados, resumen, retrocesos, practica, volverDePracticar } = useRiff(riff);
   const pxPorMs = PX_POR_PULSO / riff.msPulso;
+  const espejo = useZurdo() ? estilosZurdo.espejo : null;
 
   useEffect(() => {
     const espera = setTimeout(() => setPuedeSaltear(true), SEGUNDOS_PARA_SALTEAR * 1000);
@@ -154,7 +198,7 @@ export function RiffStep({
   }, []);
 
   const sinMicrofono = !!MENSAJE_MICROFONO[estado];
-  const enMarcha = fase === 'preparando' || fase === 'tocando' || fase === 'retrocediendo';
+  const enMarcha = fase === 'preparando' || fase === 'tocando' || fase === 'retrocediendo' || fase === 'practicando';
   const aprobado = fase === 'terminado' && resumen.aprobado;
   const proxima = useMemo(() => recorrido.notas[resultados.findIndex((r) => r === null)] ?? null, [recorrido, resultados]);
   const esCancion = riff.notas[0]?.tipo === 'acorde';
@@ -167,10 +211,11 @@ export function RiffStep({
   if (sinMicrofono) estadoTexto = MENSAJE_MICROFONO[estado];
   else if (fase === 'listo') {
     estadoTexto = esCancion
-      ? `Tocá "Empezar". Los acordes avanzan hacia la izquierda: armá cada uno y rasgueá cuando llegue a la línea amarilla. La progresión se repite ${vueltas} veces.`
-      : `Tocá "Empezar". Las notas avanzan hacia la izquierda: tocá cada una cuando llegue a la línea amarilla. El riff se toca ${vueltas} veces.`;
+      ? `Tocá "Empezar". Los acordes avanzan hacia la ${espejo ? 'derecha' : 'izquierda'}: armá cada uno y rasgueá cuando llegue a la línea amarilla. La progresión se repite ${vueltas} veces.`
+      : `Tocá "Empezar". Las notas avanzan hacia la ${espejo ? 'derecha' : 'izquierda'}: tocá cada una cuando llegue a la línea amarilla. El riff se toca ${vueltas} veces.`;
   } else if (fase === 'preparando') estadoTexto = 'Abriendo el micrófono…';
   else if (fase === 'retrocediendo') estadoTexto = '↩ Volvamos a donde empezaste a errar';
+  else if (fase === 'practicando') estadoTexto = esCancion ? 'Practiquemos ese acorde un momento' : 'Practiquemos esa nota un momento';
   else if (fase === 'tocando') {
     if (!proxima) estadoTexto = `${resumen.aciertos} ${elementos} acertados`;
     else if (proxima.tipo === 'acorde') estadoTexto = `Próximo acorde: ${proxima.nombre}  •  ${resumen.aciertos} acertados`;
@@ -201,11 +246,11 @@ export function RiffStep({
           ) : null}
         </View>
 
-        <View style={styles.fila}>
+        <View style={[styles.fila, espejo]}>
           <View style={styles.etiquetas}>
             {CUERDAS.map((c) => (
               <View key={c} style={[styles.etiquetaFila, { height: altoCuerda }]}>
-                <Text style={[styles.etiqueta, cuerdasProximas.includes(c) && fase === 'tocando' && styles.etiquetaActiva]}>{c}</Text>
+                <Text style={[styles.etiqueta, cuerdasProximas.includes(c) && fase === 'tocando' && styles.etiquetaActiva, espejo]}>{c}</Text>
               </View>
             ))}
           </View>
@@ -214,7 +259,7 @@ export function RiffStep({
               <View key={c} style={[styles.cuerda, { top: centroCuerda(c) - GROSOR[c] / 2, height: GROSOR[c] }, c > 3 && styles.cuerdaEntorchada]} />
             ))}
             <View style={styles.linea} />
-            <Tira recorrido={recorrido} resultados={resultados} tramo={tramo} pxPorMs={pxPorMs} />
+            <Tira recorrido={recorrido} resultados={resultados} tramo={tramo} pxPorMs={pxPorMs} espejo={espejo} />
           </View>
         </View>
 
@@ -230,6 +275,18 @@ export function RiffStep({
         {secundario}
         {principal}
       </View>
+
+      <Modal
+        visible={!!practica}
+        transparent
+        animationType="fade"
+        onRequestClose={volverDePracticar}
+        supportedOrientations={['landscape', 'landscape-left', 'landscape-right', 'portrait']}
+      >
+        <View style={styles.fondoPractica}>
+          {practica ? <ModalPractica nota={practica.nota} onVolver={volverDePracticar} /> : null}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -270,6 +327,10 @@ const styles = StyleSheet.create({
   estado: { color: 'rgba(255,255,255,0.9)', fontSize: 14, textAlign: 'center', paddingHorizontal: 12 },
   estadoError: { color: '#ff9aa5' },
   estadoRetroceso: { color: '#ffd35c', fontWeight: 'bold' },
+  fondoPractica: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: 16 },
+  tarjetaPractica: { width: '100%', maxWidth: 760, height: '100%', maxHeight: 420, padding: 14, borderRadius: 18, backgroundColor: '#2b2660', gap: 6 },
+  tituloPractica: { color: '#fff', fontSize: 18, fontWeight: 'bold', textAlign: 'center' },
+  ayudaPractica: { color: 'rgba(255,255,255,0.85)', fontSize: 13, textAlign: 'center' },
   btnRow: { flexDirection: 'row', width: '100%', justifyContent: 'space-between', gap: 15, paddingTop: 4 },
   btnHalf: { flex: 1 },
   btnTerminar: { backgroundColor: '#4c52d9' },

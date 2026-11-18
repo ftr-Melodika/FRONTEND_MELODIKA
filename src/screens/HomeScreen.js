@@ -12,13 +12,14 @@ import { HeaderHome } from '../components/home/HeaderHome';
 import { CourseMap } from '../components/home/CourseMap';
 import { CourseList } from '../components/home/CourseList';
 import { LoadingModal } from '../components/LoadingModal';
+import { PrimeraCuerdaModal } from '../components/PrimeraCuerdaModal';
 
 import { leccionesService } from '../services/leccionesService';
 import { amistadesService } from '../services/amistadesService';
 
 const INTERVALO_NOTIFICACIONES_MS = 30000;
 
-export function HomeScreen({ navigation }) {
+export function HomeScreen({ navigation, route }) {
   // Nos traemos el perfil inyectado desde el contexto
   const { userData: cuenta, perfil, refrescarPerfil } = useContext(AuthContext);
   const insets = useSafeAreaInsets();
@@ -27,6 +28,8 @@ export function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [solicitudesPendientes, setSolicitudesPendientes] = useState(0);
+  // Recién creado el perfil: "Tocá cualquier cuerda para comenzar" (una sola vez)
+  const [bienvenida, setBienvenida] = useState(!!route?.params?.bienvenida);
   // null = lista de cursos; un id = los ejercicios de ese curso
   const [cursoElegido, setCursoElegido] = useState(null);
 
@@ -83,6 +86,12 @@ export function HomeScreen({ navigation }) {
       };
     }, [perfilId])
   );
+
+  const cerrarBienvenida = useCallback(() => {
+    setBienvenida(false);
+    // Para que no vuelva a aparecer si la pantalla se vuelve a montar con los mismos parámetros
+    navigation.setParams({ bienvenida: false });
+  }, [navigation]);
 
   const volverACursos = useCallback(() => {
     cursoElegidoRef.current = null;
@@ -169,6 +178,8 @@ export function HomeScreen({ navigation }) {
         onClose={() => setIsMenuOpen(false)}
       />
       <LoadingModal visible={loading} text="Cargando tu progreso..." />
+      {/* Después de la carga: dos modales a la vez no se ven bien */}
+      <PrimeraCuerdaModal visible={bienvenida && !loading} onCerrar={cerrarBienvenida} />
     </Background>
   );
 }

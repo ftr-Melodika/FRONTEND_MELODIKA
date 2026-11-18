@@ -1,12 +1,13 @@
 // Archivo: src/hooks/useRiff.js
 // El riff en movimiento: lleva el reloj del recorrido, escucha qué nota suena y marca cada nota
-// como acertada o errada cuando pasa por la línea. Si se erra mucho, vuelve atrás.
+// como acertada o errada cuando pasa por la línea. Si se erra mucho, vuelve atrás; si se traba
+// siempre en el mismo acorde (o nota), se frena para practicarlo aparte y después sigue desde ahí.
 // En las canciones cada "nota" del recorrido es un acorde (tipo 'acorde', con sus midis).
 // El audio se procesa en el celular: no se guarda ni se envía a ningún lado.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMicrofono } from './useMicrofono';
 import { crearDetector, compararAcorde, compararNota } from '../utils/deteccionSonido';
-import { armarRecorrido, dondeRetroceder, enVentana, finDeVentana, resumir, MS_DESPUES } from '../utils/riff';
+import { armarRecorrido, decidirTropiezo, enVentana, finDeVentana, olvidarTropiezo, resumir, MS_DESPUES } from '../utils/riff';
 
 // Antes de la primera nota: el detector mide el ruido del lugar (~1,5 s) y las notas se acercan
 export const MS_ENTRADA = 2500;
@@ -14,9 +15,11 @@ export const MS_ENTRADA = 2500;
 export const MS_ENTRADA_RETOMAR = 2000;
 const MS_AVISO_RETROCESO = 1300; // Lo que se ve el aviso "volvamos" antes de retomar
 const MS_RELOJ = 30;
+const MS_CAMBIO_MICROFONO = 400; // Al volver de practicar, deja que la práctica suelte el micrófono
 const LECTURAS_RECIENTES = 4; // Un rasgueo hace sonar las cuerdas de a una: se juntan las últimas lecturas
 
-// fase: 'listo' | 'preparando' (abriendo el micrófono) | 'tocando' | 'retrocediendo' | 'terminado'
+// fase: 'listo' | 'preparando' (abriendo el micrófono) | 'tocando' | 'retrocediendo'
+//   | 'practicando' (frenado: se practica `practica.nota` aparte, con su propio micrófono) | 'terminado'
 // tramo: { desde (ms del recorrido), inicio (Date.now() en que se pasa por `desde`) } para animar
 // resultados: true / false / null por nota
 export function useRiff(riff) {
@@ -25,6 +28,8 @@ export function useRiff(riff) {
   const [tramo, setTramo] = useState(null);
   const [resultados, setResultados] = useState(() => recorrido.notas.map(() => null));
   const [retrocesos, setRetrocesos] = useState(0);
+  // { nota, desde }: el acorde (o nota) que se practica y el índice desde donde se retoma
+  const [practica, setPractica] = useState(null);
 
   // Cambian decenas de veces por segundo: no deben provocar renders
   const detector = useRef(null);
@@ -34,6 +39,11 @@ export function useRiff(riff) {
   const desfase = useRef(null);
   const enMarcha = useRef(false);
   const recientes = useRef([]);
+  const practicaActual = useRef(null); // Lo mismo que `practica`, para no depender del render
+  const esperaVolver = useRef(null); // El regreso de la práctica, por si se para antes
+  const desdePendiente = useRef(null); // Desde dónde arranca cuando el micrófono esté listo
+  const errores = useRef({}); // Por acorde o nota (ver claveDeNota)
+  const retrocesosPorClave = useRef({});
 
   const posicion = (ahora = Date.now()) => (reloj.current ? reloj.current.desde + (ahora - reloj.current.inicio) : -Infinity);
 
@@ -72,7 +82,8 @@ export function useRiff(riff) {
     if (cambio) publicar();
   };
 
-  const estado = useMicrofono(procesarBuffer, fase !== 'listo' && fase !== 'terminado');
+  // Mientras se practica aparte, la práctica usa su propio micrófono
+  const estado = useMicrofono(procesarBuffer, fase !== 'listo' && fase !== 'terminado' && fase !== 'practicando');
 
   const arrancarDesde = (desde) => {
     reloj.current = { desde, inicio: Date.now() };
@@ -81,32 +92,59 @@ export function useRiff(riff) {
     setFase('tocando');
   };
 
-  const empezar = () => {
+  // Abre el micrófono de cero y arranca desde `desde` (ms del recorrido) cuando escuche
+  const preparar = (desde) => {
     // El objetivo del detector no importa: se usan las notas oídas (fundamentales) de cada lectura
     const primera = recorrido.notas[0];
     detector.current = crearDetector({ tipo: 'nota', nombre: '', posiciones: [], midis: [primera.midi ?? primera.midis[0]] });
     recientes.current = [];
     muestras.current = 0;
     desfase.current = null;
-    marcas.current = recorrido.notas.map(() => null);
-    publicar();
-    setRetrocesos(0);
     reloj.current = null;
     enMarcha.current = false;
+    desdePendiente.current = desde;
     setFase('preparando');
   };
 
+  const empezar = () => {
+    marcas.current = recorrido.notas.map(() => null);
+    publicar();
+    setRetrocesos(0);
+    practicaActual.current = null;
+    setPractica(null);
+    errores.current = {};
+    retrocesosPorClave.current = {};
+    preparar(-MS_ENTRADA);
+  };
+
+  // Termina la práctica (bien hecha o salteada) y vuelve a donde estaba, con tiempo para verlo venir
+  const volverDePracticar = () => {
+    // Puede llegar dos veces (el botón y el regreso automático): solo cuenta la primera
+    const actual = practicaActual.current;
+    if (!actual) return;
+    practicaActual.current = null;
+    olvidarTropiezo(actual.nota, errores.current, retrocesosPorClave.current);
+    const desde = recorrido.notas[actual.desde].t - MS_ENTRADA;
+    setPractica(null);
+    esperaVolver.current = setTimeout(() => preparar(desde), MS_CAMBIO_MICROFONO);
+  };
+
   const detener = () => {
+    clearTimeout(esperaVolver.current);
     enMarcha.current = false;
     detector.current = null;
     reloj.current = null;
     setTramo(null);
+    practicaActual.current = null;
+    setPractica(null);
     setFase('listo');
   };
 
+  useEffect(() => () => clearTimeout(esperaVolver.current), []);
+
   // Cuando el micrófono ya escucha, arranca el recorrido
   useEffect(() => {
-    if (fase === 'preparando' && estado === 'escuchando') arrancarDesde(-MS_ENTRADA);
+    if (fase === 'preparando' && estado === 'escuchando') arrancarDesde(desdePendiente.current ?? -MS_ENTRADA);
   }, [fase, estado]);
 
   // Las notas que pasaron sin sonar son errores; si hay muchos, se vuelve atrás
@@ -114,27 +152,37 @@ export function useRiff(riff) {
     if (fase !== 'tocando') return undefined;
     const intervalo = setInterval(() => {
       const t = posicion();
-      let cambio = false;
+      const nuevosErrores = [];
       recorrido.notas.forEach((nota, i) => {
         if (marcas.current[i] === null && t > finDeVentana(nota)) {
           marcas.current[i] = false;
-          cambio = true;
+          nuevosErrores.push(i);
         }
       });
-      if (cambio) {
+      if (nuevosErrores.length) {
         publicar();
-        const volverA = dondeRetroceder(marcas.current);
-        if (volverA !== null) {
+        const tropiezo = decidirTropiezo(recorrido.notas, marcas.current, nuevosErrores, errores.current, retrocesosPorClave.current);
+        if (tropiezo) {
           // Se borran los resultados desde ahí: esas notas se vuelven a tocar
+          const volverA = tropiezo.desde;
           enMarcha.current = false;
           for (let i = volverA; i < marcas.current.length; i++) marcas.current[i] = null;
           publicar();
+          setTramo({ desde: t, inicio: null }); // Quieto donde quedó
+          if (tropiezo.accion === 'practicar') {
+            // Se suelta el micrófono para que lo use la práctica
+            detector.current = null;
+            reloj.current = null;
+            practicaActual.current = { nota: tropiezo.nota, desde: volverA };
+            setPractica(practicaActual.current);
+            setFase('practicando');
+            return;
+          }
           setRetrocesos((r) => r + 1);
           setFase('retrocediendo');
           setTimeout(() => {
             if (reloj.current) arrancarDesde(recorrido.notas[volverA].t - MS_ENTRADA_RETOMAR);
           }, MS_AVISO_RETROCESO);
-          setTramo({ desde: t, inicio: null }); // Quieto donde quedó
           return;
         }
       }
@@ -148,5 +196,5 @@ export function useRiff(riff) {
   }, [fase, recorrido]);
 
   const resumen = useMemo(() => resumir(resultados), [resultados]);
-  return { fase, estado, empezar, detener, recorrido, tramo, resultados, resumen, retrocesos };
+  return { fase, estado, empezar, detener, recorrido, tramo, resultados, resumen, retrocesos, practica, volverDePracticar };
 }

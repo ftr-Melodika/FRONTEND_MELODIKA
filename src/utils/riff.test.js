@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { obtenerRiff, armarRecorrido, enVentana, dondeRetroceder, resumir, MS_ANTES, MS_DESPUES } from './riff.js';
+import {
+  obtenerRiff, armarRecorrido, enVentana, dondeRetroceder, resumir, MS_ANTES, MS_DESPUES,
+  claveDeNota, decidirTropiezo, olvidarTropiezo, secuenciaDePractica,
+} from './riff.js';
 
 const nota = (cuerda, traste, dedo) => ({ tipo: 'nota', nombre: 'x', posiciones: [traste ? { cuerda, traste, dedo } : { cuerda, traste }] });
 // Seven Nation Army
@@ -61,4 +64,60 @@ test('dondeRetroceder: solo se decide después de un error', () => {
 test('resumir: aprueba con el 75 %', () => {
   assert.deepStrictEqual(resumir([true, true, true, false]), { total: 4, aciertos: 3, aprobado: true });
   assert.deepStrictEqual(resumir([true, true, false, false]), { total: 4, aciertos: 2, aprobado: false });
+});
+
+// ───────── Práctica de un tropiezo ─────────
+
+const acorde = (nombre) => ({
+  tipo: 'acorde', nombre,
+  posiciones: [{ cuerda: 4, traste: 2, dedo: 2 }, { cuerda: 6, traste: 0 }, { cuerda: 5, traste: 2, dedo: 1 }],
+  midis: [52, 40, 47],
+});
+
+test('secuenciaDePractica: un acorde, cuerda por cuerda (de la 6 a la 1) y después entero', () => {
+  const sec = secuenciaDePractica(acorde('Em'));
+  assert.deepStrictEqual(sec.map((p) => p.tipo), ['nota', 'nota', 'nota', 'acorde']);
+  assert.deepStrictEqual(sec.slice(0, 3).map((p) => p.posiciones[0].cuerda), [6, 5, 4]);
+  assert.deepStrictEqual(sec.slice(0, 3).map((p) => p.midis[0]), [40, 47, 52]);
+  assert.strictEqual(sec[3].nombre, 'Em');
+});
+
+test('secuenciaDePractica: una nota, sola', () => {
+  const sec = secuenciaDePractica({ tipo: 'nota', cuerda: 4, traste: 2, dedo: 2, midi: 52 });
+  assert.strictEqual(sec.length, 1);
+  assert.deepStrictEqual(sec[0].midis, [52]);
+  assert.deepStrictEqual(sec[0].posiciones, [{ cuerda: 4, traste: 2, dedo: 2 }]);
+});
+
+test('decidirTropiezo: la 1ra vez vuelve atrás; la 2da en el mismo acorde, practica', () => {
+  const notas = ['Em', 'C', 'G', 'D', 'Em', 'C', 'G', 'D'].map(acorde);
+  const errores = {};
+  const retrocesos = {};
+  // Erra C, G y D seguidos: vuelve a C
+  let r = [true, false, false, false, null, null, null, null];
+  assert.deepStrictEqual(decidirTropiezo(notas, r, [3], errores, retrocesos), { accion: 'retroceder', desde: 1 });
+  // Vuelve a errar desde C: ahora practica C
+  r = [true, false, false, false, null, null, null, null];
+  const d = decidirTropiezo(notas, r, [3], errores, retrocesos);
+  assert.strictEqual(d.accion, 'practicar');
+  assert.strictEqual(d.desde, 1);
+  assert.strictEqual(d.nota.nombre, 'C');
+});
+
+test('decidirTropiezo: errar el mismo acorde 3 veces, aunque no sea seguido, practica', () => {
+  const notas = ['Em', 'C', 'Em', 'C', 'Em', 'C'].map(acorde);
+  const errores = {};
+  const retrocesos = {};
+  assert.strictEqual(decidirTropiezo(notas, [false, null, null, null, null, null], [0], errores, retrocesos), null);
+  assert.strictEqual(decidirTropiezo(notas, [false, true, false, null, null, null], [2], errores, retrocesos), null);
+  const d = decidirTropiezo(notas, [false, true, false, true, false, null], [4], errores, retrocesos);
+  assert.deepStrictEqual({ accion: d.accion, desde: d.desde }, { accion: 'practicar', desde: 4 });
+  // Después de practicarlo, vuelve a contar de cero
+  olvidarTropiezo(d.nota, errores, retrocesos);
+  assert.strictEqual(errores[claveDeNota(d.nota)], undefined);
+});
+
+test('claveDeNota: los acordes por nombre, las notas por cuerda y traste', () => {
+  assert.strictEqual(claveDeNota(acorde('G')), 'acorde:G');
+  assert.strictEqual(claveDeNota({ tipo: 'nota', cuerda: 3, traste: 0 }), 'nota:3-0');
 });

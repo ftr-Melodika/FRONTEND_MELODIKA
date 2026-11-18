@@ -6,22 +6,23 @@ import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
 import { DatePickerField } from '../components/form/DatePickerField';
 import { DropdownField } from '../components/form/DropdownField';
+import { PaisField } from '../components/form/PaisField';
+import { ModoZurdoField } from '../components/form/ModoZurdoField';
+import { OPCIONES_GENERO } from '../data/generos';
+import { useAlturaTeclado } from '../hooks/useAlturaTeclado';
 import { AvatarPicker } from '../components/form/AvatarPicker';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { perfilesService } from '../services/perfilesService';
 import { AuthContext } from '../context/AuthContext';
 import { FUENTE_TITULO } from '../theme/fuentes';
 
-const GENDER_OPTIONS = [
-  { label: 'Masculino', value: 'Masculino' },
-  { label: 'Femenino', value: 'Femenino' },
-  { label: 'No binario', value: 'No binario' }
-];
 
 export function EditUserScreen({ route, navigation }) {
   // Recibimos el perfil desde la navegación
   const { perfilAEditar } = route.params;
   const { perfil: perfilActivo, actualizarPerfil, quitarPerfil } = useContext(AuthContext);
+  // Lo que ocupa el teclado se suma al final del formulario, para poder bajar hasta el último campo
+  const alturaTeclado = useAlturaTeclado();
   const esPerfilActivo = perfilActivo?.id === perfilAEditar?.id;
   // Si venimos desde el menú (Configuración) volvemos al Home; si no, a la selección de perfiles
   const vieneDeSelectUser = navigation.getState()?.routes?.some((r) => r.name === 'SelectUser');
@@ -32,6 +33,7 @@ export function EditUserScreen({ route, navigation }) {
   const [fotoUrl, setFotoUrl] = useState(perfilAEditar?.avatarUrl || '');
   const [gender, setGender] = useState(perfilAEditar?.genero || '');
   const [esPublico, setEsPublico] = useState(perfilAEditar?.esPublico ?? true);
+  const [esZurdo, setEsZurdo] = useState(perfilAEditar?.esZurdo === true);
   
   // Guardamos la fecha original si existe
   const [birthdayISO, setBirthdayISO] = useState(perfilAEditar?.fechaNacimiento || '');
@@ -43,6 +45,7 @@ export function EditUserScreen({ route, navigation }) {
   // Si el usuario ya tocó el interruptor, su elección manda sobre lo que llegue.
   const privacidadTocadaRef = useRef(false);
   const privacidadConfirmadaRef = useRef(false);
+  const zurdoTocadoRef = useRef(false);
   const perfilId = perfilAEditar?.id;
 
   useEffect(() => {
@@ -50,6 +53,7 @@ export function EditUserScreen({ route, navigation }) {
     (async () => {
       try {
         const perfilReal = await perfilesService.obtenerPerfil(perfilId);
+        if (!cancelado && perfilReal && !zurdoTocadoRef.current) setEsZurdo(perfilReal.esZurdo === true);
         if (cancelado || typeof perfilReal?.esPublico !== 'boolean') return;
         privacidadConfirmadaRef.current = true;
         if (!privacidadTocadaRef.current) setEsPublico(perfilReal.esPublico);
@@ -82,6 +86,7 @@ export function EditUserScreen({ route, navigation }) {
         pais: pais.trim() || null,
         avatarUrl: fotoUrl.trim() || null,
         genero: gender || null,
+        esZurdo,
       };
       // No mandamos un valor que no sabemos si es real: podría pisar la privacidad con una copia vieja
       const enviaPrivacidad = privacidadTocadaRef.current || privacidadConfirmadaRef.current;
@@ -160,7 +165,12 @@ export function EditUserScreen({ route, navigation }) {
 
   return (
     <Background>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 + alturaTeclado }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={[styles.glassCard, { width: cardWidth }]}>
           {vieneDeSelectUser ? (
             <>
@@ -188,8 +198,9 @@ export function EditUserScreen({ route, navigation }) {
             style={[styles.input, { opacity: 0.6 }]} 
           />
           <DatePickerField onDateChange={setBirthdayISO} initialValue={perfilAEditar?.fechaNacimiento} />
-          <InputField placeholder="País (opcional)" value={pais} onChangeText={setPais} />
-          <DropdownField label="Género" options={GENDER_OPTIONS} value={gender} onSelect={setGender} />
+          <PaisField value={pais} onSelect={setPais} />
+          <DropdownField label="Género" options={OPCIONES_GENERO} value={gender} onSelect={setGender} />
+          <ModoZurdoField value={esZurdo} onChange={(valor) => { zurdoTocadoRef.current = true; setEsZurdo(valor); }} />
 
           <View style={styles.privacidad}>
             <View style={styles.privacidadTextos}>
