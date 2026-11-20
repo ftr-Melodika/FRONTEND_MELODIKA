@@ -5,12 +5,14 @@ import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
 import { AuthContext } from '../context/AuthContext'; 
 import { authService } from '../services/authService';
+import { googleAuthService } from '../services/googleAuthService';
 import { FUENTE_TITULO } from '../theme/fuentes';
 
 export function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingGoogle, setLoadingGoogle] = useState(false);
   const { login } = useContext(AuthContext); 
 
   const handleLogin = async () => {
@@ -23,6 +25,18 @@ export function LoginScreen({ navigation }) {
       Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoadingGoogle(true);
+    try {
+      const data = await googleAuthService.login();
+      if (data) await login(data.token, data.cuenta, data.refreshToken, data.expiresAt);
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    } finally {
+      setLoadingGoogle(false);
     }
   };
 
@@ -44,7 +58,7 @@ export function LoginScreen({ navigation }) {
           <Button title="Crea tu cuenta" variant="link" onPress={() => navigation.navigate('Register')} />
         </View>
 
-        <Button title="Inicia sesión con Google" variant="secondary" onPress={() => Alert.alert('Melodika', 'El inicio con Google estará disponible próximamente.')} />
+        <Button title="Inicia sesión con Google" variant="secondary" onPress={handleGoogleLogin} loading={loadingGoogle} />
       </View>
       </ScrollView>
     </Background>
