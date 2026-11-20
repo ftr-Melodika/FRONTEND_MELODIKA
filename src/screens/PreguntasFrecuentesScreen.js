@@ -17,7 +17,7 @@ const PREGUNTAS = [
   },
   {
     pregunta: '¿Cómo funciona la racha?',
-    respuesta: 'Cada día que completás al menos una lección, tu racha suma un día. Si pasan más de 3 días sin practicar, la racha vuelve a empezar.',
+    respuesta: 'Cada día que completás al menos una lección, tu racha suma un día. Si pasa más de un día sin que completes una lección, la racha vuelve a cero.',
   },
   {
     pregunta: '¿Qué es la XP?',
