@@ -6,9 +6,13 @@ const SERVER_URL = 'https://compile-upturned-greedily.ngrok-free.dev/api'; // Ng
 
 export const BASE_URL = `${SERVER_URL}`;
 
+// Dirección pública del proyecto de Supabase (no es un secreto): de acá sale la pantalla de Google
+export const SUPABASE_URL = 'https://vfjyxlggrwqwavokuqfe.supabase.co';
+
 export const ENDPOINTS = {
   // Cuentas
   login: `${BASE_URL}/cuentas/login`,
+  cuentaActual: `${BASE_URL}/cuentas/yo`,
   refresh: `${BASE_URL}/cuentas/refresh`,
   register: `${BASE_URL}/cuentas/registrar`,
 
