@@ -21,7 +21,7 @@ const PREGUNTAS = [
   },
   {
     pregunta: '¿Qué es la XP?',
-    respuesta: 'Son puntos de experiencia que ganás al completar lecciones. Se usan para el ranking global y para desbloquear logros. Repetir una lección ya completada no suma XP de nuevo.',
+    respuesta: 'Son puntos de experiencia que ganás al completar lecciones. Se usan para los rankings de tus grupos y para desbloquear logros. Repetir una lección ya completada no suma XP de nuevo.',
   },
   {
     pregunta: '¿Puedo tener varios perfiles?',

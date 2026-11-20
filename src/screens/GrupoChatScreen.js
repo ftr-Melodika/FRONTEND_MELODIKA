@@ -10,6 +10,7 @@ import { LoadingModal } from '../components/LoadingModal';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { AuthContext } from '../context/AuthContext';
 import { gruposService } from '../services/gruposService';
+import { rankingsService } from '../services/rankingsService';
 
 const INTERVALO_MS = 5000;
 const MAXIMO_CARACTERES = 1000;
@@ -45,6 +46,18 @@ export function GrupoChatScreen({ route, navigation }) {
   const [uniendo, setUniendo] = useState(false);
   const [saliendo, setSaliendo] = useState(false);
   const [confirmandoSalida, setConfirmandoSalida] = useState(false);
+  const [ranking, setRanking] = useState({ activo: false, unido: false });
+  const [accionRanking, setAccionRanking] = useState(false);
+
+  // Si el ranking falla no tiramos abajo el chat: simplemente no se muestran las acciones de ranking
+  const cargarRanking = useCallback(async () => {
+    try {
+      const r = await rankingsService.deGrupo(miId, grupoId);
+      setRanking({ activo: r.activo, unido: r.unido });
+    } catch (e) {
+      setRanking({ activo: false, unido: false });
+    }
+  }, [miId, grupoId]);
 
   // La consulta periódica lee siempre el último mensaje conocido, sin reiniciar el intervalo
   const ultimoIdRef = useRef(null);
@@ -76,6 +89,7 @@ export function GrupoChatScreen({ route, navigation }) {
           setGrupo(detalle);
           setHayMasAnteriores(hayMas);
           setMensajes(recordarUltimo(lista));
+          if (detalle?.unido) cargarRanking();
         } catch (e) {
           if (!cancelado) setError(e.message);
         } finally {
@@ -83,7 +97,7 @@ export function GrupoChatScreen({ route, navigation }) {
         }
       })();
       return () => { cancelado = true; };
-    }, [cargarTodo])
+    }, [cargarTodo, cargarRanking])
   );
 
   // Depende de "unido" para arrancar también cuando el usuario se une desde esta misma pantalla
@@ -159,6 +173,39 @@ export function GrupoChatScreen({ route, navigation }) {
     }
   };
 
+  // Crea el ranking y manda la invitación al grupo; quien invita queda adentro
+  const invitarARanking = async () => {
+    setAccionRanking(true);
+    setErrorEnvio(null);
+    try {
+      await rankingsService.invitar(miId, grupoId);
+      await cargarRanking();
+      // La invitación llega como mensaje del chat: la pedimos ya, sin esperar los 5 segundos
+      const params = ultimoIdRef.current ? { despues: ultimoIdRef.current } : undefined;
+      const { mensajes: nuevos } = await gruposService.mensajes(miId, grupoId, params);
+      if (nuevos.length > 0) setMensajes((actuales) => recordarUltimo(combinar(actuales, nuevos)));
+    } catch (e) {
+      setErrorEnvio(e.message);
+    } finally {
+      setAccionRanking(false);
+    }
+  };
+
+  const aceptarRanking = async () => {
+    setAccionRanking(true);
+    setErrorEnvio(null);
+    try {
+      await rankingsService.aceptar(miId, grupoId);
+      await cargarRanking();
+    } catch (e) {
+      setErrorEnvio(e.message);
+    } finally {
+      setAccionRanking(false);
+    }
+  };
+
+  const verRanking = () => navigation.navigate('RankingGrupo', { grupoId, nombre: grupo?.nombre || nombreInicial });
+
   const salir = async () => {
     setSaliendo(true);
     setErrorEnvio(null);
@@ -176,6 +223,20 @@ export function GrupoChatScreen({ route, navigation }) {
   const invertidos = [...mensajes].reverse();
 
   const renderMensaje = ({ item }) => {
+    if (item.tipo === 'invitacion_ranking') {
+      const quien = item.esMio ? 'Invitaste al grupo' : `${item.remitente?.nombre || 'Alguien'} invitó al grupo`;
+      return (
+        <View style={styles.invitacion}>
+          <Text style={styles.invitacionTitulo}>Ranking del grupo</Text>
+          <Text style={styles.invitacionTexto}>{quien} a competir por XP.</Text>
+          {ranking.unido ? (
+            <Button title="Ver ranking" variant="secondary" onPress={verRanking} style={styles.invitacionBoton} />
+          ) : (
+            <Button title="Aceptar" onPress={aceptarRanking} loading={accionRanking} style={styles.invitacionBoton} />
+          )}
+        </View>
+      );
+    }
     const nombre = item.remitente?.nombre || 'Usuario eliminado';
     return (
       <View style={[styles.burbuja, item.esMio ? styles.burbujaMia : styles.burbujaOtro]}>
@@ -267,6 +328,11 @@ export function GrupoChatScreen({ route, navigation }) {
                     </TouchableOpacity>
                   )}
                 />
+                {ranking.unido ? (
+                  <Button title="Ver ranking" variant="secondary" onPress={verRanking} style={styles.botonSalir} />
+                ) : !ranking.activo ? (
+                  <Button title="Invitar a ranking" onPress={invitarARanking} loading={accionRanking} style={styles.botonSalir} />
+                ) : null}
                 {confirmandoSalida ? (
                   <Button title="Confirmar salida" variant="danger" onPress={salir} loading={saliendo} style={styles.botonSalir} />
                 ) : (
@@ -300,6 +366,10 @@ const styles = StyleSheet.create({
   remitente: { color: '#a3fba3', fontSize: 12, fontWeight: 'bold', marginBottom: 2 },
   contenido: { color: '#fff', fontSize: 15, lineHeight: 20 },
   hora: { color: 'rgba(255,255,255,0.6)', fontSize: 10, alignSelf: 'flex-end', marginTop: 2 },
+  invitacion: { alignSelf: 'center', width: '78%', borderRadius: 14, padding: 12, marginBottom: 8, backgroundColor: 'rgba(163,251,163,0.12)', borderWidth: 1, borderColor: '#a3fba3', alignItems: 'center' },
+  invitacionTitulo: { color: '#a3fba3', fontSize: 15, fontWeight: 'bold' },
+  invitacionTexto: { color: '#fff', fontSize: 14, textAlign: 'center', marginVertical: 4 },
+  invitacionBoton: { width: 160, minHeight: 40, paddingVertical: 6, marginVertical: 0, marginTop: 6 },
   anteriores: { alignSelf: 'center', marginVertical: 8 },
   redactor: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginTop: 6 },
   entrada: { flex: 1, minHeight: 44, maxHeight: 100, backgroundColor: 'rgba(255, 255, 255, 0.15)', borderColor: 'rgba(255, 255, 255, 0.3)', borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, color: '#fff', fontSize: 15 },

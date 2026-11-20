@@ -87,13 +87,4 @@ export const perfilesService = {
       throw new Error(getErrorMessage(error));
     }
   },
-
-  obtenerRanking: async () => {
-    try {
-      const response = await axiosClient.get(ENDPOINTS.ranking);
-      return response.data?.data?.ranking || [];
-    } catch (error) {
-      throw new Error(getErrorMessage(error));
-    }
-  },
 };

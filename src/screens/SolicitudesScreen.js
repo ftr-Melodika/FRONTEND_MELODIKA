@@ -14,8 +14,8 @@ import { amistadesService } from '../services/amistadesService';
 
 const VACIO = {
   recibidas: 'No tenés solicitudes pendientes.',
-  enviadas: 'No enviaste solicitudes. Buscá músicos en el ranking global.',
-  amigos: 'Todavía no tenés amigos. Buscá músicos en el ranking global.',
+  enviadas: 'No enviaste solicitudes. Buscá músicos en tus grupos.',
+  amigos: 'Todavía no tenés amigos. Buscá músicos en tus grupos.',
 };
 
 export function SolicitudesScreen({ navigation }) {

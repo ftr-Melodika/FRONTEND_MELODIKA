@@ -5,6 +5,7 @@ import { AuthContext } from '../context/AuthContext';
 import { LoadingModal } from '../components/LoadingModal'; // 👈 El nuevo modal
 import { ProgresoScreen } from '../screens/ProgresoScreen';
 import { RankingScreen } from '../screens/RankingScreen';
+import { RankingGrupoScreen } from '../screens/RankingGrupoScreen';
 import { LogrosScreen } from '../screens/LogrosScreen';
 import { PreguntasFrecuentesScreen } from '../screens/PreguntasFrecuentesScreen';
 import { PracticaScreen } from '../screens/PracticaScreen';
@@ -62,6 +63,7 @@ export function AppNavigator() {
             <Stack.Screen name="Leccion" component={LeccionScreen} />
             <Stack.Screen name="Progreso" component={ProgresoScreen} />
             <Stack.Screen name="Ranking" component={RankingScreen} />
+            <Stack.Screen name="RankingGrupo" component={RankingGrupoScreen} />
             <Stack.Screen name="Logros" component={LogrosScreen} />
             <Stack.Screen name="PreguntasFrecuentes" component={PreguntasFrecuentesScreen} />
             <Stack.Screen name="Practica" component={PracticaScreen} />
