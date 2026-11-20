@@ -95,7 +95,7 @@ export function SideMenu({ visible, onClose }) {
             <AccordotionItem
               title="Perfil"
               icon="usuario"
-              defaultOpen={['EditUser', 'Logros', 'Progreso', 'Ranking'].includes(pantallaActual)}
+              defaultOpen={['EditUser', 'AjustesCuenta', 'Logros', 'Progreso', 'Ranking'].includes(pantallaActual)}
             >
               <SubMenuItem
                 title="Configuración"
@@ -103,6 +103,7 @@ export function SideMenu({ visible, onClose }) {
                 isActive={pantallaActual === 'EditUser'}
                 onPress={() => irA('EditUser', { perfilAEditar: perfil })}
               />
+              <SubMenuItem title="Ajustes de cuenta" icon="candado" isActive={pantallaActual === 'AjustesCuenta'} onPress={() => irA('AjustesCuenta')} />
               <SubMenuItem title="Logros y recompensas" icon="trofeo" isActive={pantallaActual === 'Logros'} onPress={() => irA('Logros')} />
               <SubMenuItem title="Progreso" icon="barras" isActive={pantallaActual === 'Progreso'} onPress={() => irA('Progreso')} />
               <SubMenuItem title="Ranking" icon="medalla1" isActive={pantallaActual === 'Ranking'} onPress={() => irA('Ranking')} />

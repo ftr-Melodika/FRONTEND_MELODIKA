@@ -2,6 +2,7 @@
 
 import { Icono } from '../components/icono/Icono';
 import { useState, useEffect, useContext } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { View, Text, StyleSheet, Alert, ScrollView } from 'react-native';
 import { Background } from '../components/Background';
 import { AuthContext } from '../context/AuthContext';
@@ -16,8 +17,11 @@ const MAX_PERFILES = 4;
 
 export function SelectUserScreen({ navigation, route }) {
   const { logout, actualizarPerfil } = useContext(AuthContext);
-  const [perfiles, setPerfiles] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Si ya se vieron los perfiles (caché), aparecen al instante y se actualizan en segundo plano
+  const queryClient = useQueryClient();
+  const enCache = queryClient.getQueryData(['perfiles']);
+  const [perfiles, setPerfiles] = useState(Array.isArray(enCache) ? enCache : []);
+  const [loading, setLoading] = useState(!enCache);
   
   // 👇 1. NUEVO ESTADO: Controla si estamos administrando perfiles
   const [isEditMode, setIsEditMode] = useState(false); 
@@ -32,26 +36,28 @@ export function SelectUserScreen({ navigation, route }) {
   // 2. Efecto para reaccionar a los cambios que vienen de EditUserScreen
   useEffect(() => {
     if (route?.params?.perfilActualizado) {
-      setPerfiles((prevPerfiles) => 
-        prevPerfiles.map((p) => p.id === route.params.perfilActualizado.id ? route.params.perfilActualizado : p)
-      );
+      const actualizar = (lista) => lista.map((p) => p.id === route.params.perfilActualizado.id ? route.params.perfilActualizado : p);
+      setPerfiles(actualizar);
+      queryClient.setQueryData(['perfiles'], (lista) => (Array.isArray(lista) ? actualizar(lista) : lista));
       // Limpiamos el parámetro para que no se vuelva a ejecutar
       navigation.setParams({ perfilActualizado: undefined });
     }
 
     if (route?.params?.perfilEliminadoId) {
-      setPerfiles((prevPerfiles) => 
-        prevPerfiles.filter((p) => p.id !== route.params.perfilEliminadoId)
-      );
+      const quitar = (lista) => lista.filter((p) => p.id !== route.params.perfilEliminadoId);
+      setPerfiles(quitar);
+      queryClient.setQueryData(['perfiles'], (lista) => (Array.isArray(lista) ? quitar(lista) : lista));
       navigation.setParams({ perfilEliminadoId: undefined });
     }
   }, [route?.params?.perfilActualizado, route?.params?.perfilEliminadoId]);
 
   async function fetchPerfiles() {
-    setLoading(true);
+    if (!enCache) setLoading(true);
     try {
       const perfilesData = await perfilesService.obtenerPerfiles();
-      setPerfiles(Array.isArray(perfilesData) ? perfilesData : []);
+      const lista = Array.isArray(perfilesData) ? perfilesData : [];
+      queryClient.setQueryData(['perfiles'], lista);
+      setPerfiles(lista);
     } catch (error) {
       // Si la sesión murió de verdad, axiosClient ya cerró la sesión y la app volvió al login.
       // Cualquier otro error (sin internet, servidor caído) no cierra la sesión.

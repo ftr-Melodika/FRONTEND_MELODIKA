@@ -1,44 +1,25 @@
 import { Icono, TextoConIcono, COLORES_ICONO } from '../components/icono/Icono';
-import { useCallback, useContext, useState } from 'react';
+import { useContext } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Background } from '../components/Background';
 import { LoadingModal } from '../components/LoadingModal';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { Button } from '../components/Button';
 import { AuthContext } from '../context/AuthContext';
-import { leccionesService } from '../services/leccionesService';
+import { useResumen, useActualizarAlEnfocar, mensajeError } from '../hooks/useConsultas';
 import { FUENTE_TITULO } from '../theme/fuentes';
 
 export function ProgresoScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { perfil } = useContext(AuthContext);
 
-  const [resumen, setResumen] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useFocusEffect(
-    useCallback(() => {
-      let cancelado = false;
-      async function cargar() {
-        if (!perfil?.id) return;
-        setLoading(true);
-        setError(null);
-        try {
-          const datos = await leccionesService.obtenerResumen(perfil.id);
-          if (!cancelado) setResumen(datos);
-        } catch (e) {
-          if (!cancelado) setError(e.message);
-        } finally {
-          if (!cancelado) setLoading(false);
-        }
-      }
-      cargar();
-      return () => { cancelado = true; };
-    }, [perfil?.id])
-  );
+  // Con caché: si ya se vio, aparece al instante y se actualiza en segundo plano
+  const consulta = useResumen(perfil?.id);
+  useActualizarAlEnfocar(consulta);
+  const resumen = consulta.data ?? null;
+  const loading = consulta.isPending;
+  const error = mensajeError(consulta);
 
   const stats = {
     xp: resumen?.xp ?? perfil?.xp ?? 0,

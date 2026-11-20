@@ -1,5 +1,6 @@
 import { TextoConIcono, COLORES_ICONO } from '../icono/Icono';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { Image } from 'expo-image'; // Decodifica fuera del hilo principal y guarda las fotos en caché
 import { FUENTE_TITULO } from '../../theme/fuentes';
 
 export function SideMenuHeader({ perfil }) {

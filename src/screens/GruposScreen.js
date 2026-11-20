@@ -13,6 +13,8 @@ import { CrearGrupo } from '../components/grupos/CrearGrupo';
 import { EntradaCodigo } from '../components/grupos/EntradaCodigo';
 import { AuthContext } from '../context/AuthContext';
 import { gruposService } from '../services/gruposService';
+import { ListaSkeleton } from '../components/Skeleton';
+import { useMisGrupos, useActualizarAlEnfocar, mensajeError } from '../hooks/useConsultas';
 
 const nombreConCandado = (grupo) => `${grupo.esPrivado ? '🔒 ' : ''}${grupo.nombre}`;
 
@@ -25,29 +27,15 @@ const APARTADOS = [
 const textoMiembros = (n) => `${n ?? 0} ${n === 1 ? 'miembro' : 'miembros'}`;
 
 function MisGrupos({ miId, onAbrir, onBuscar }) {
-  const [grupos, setGrupos] = useState([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState(null);
-
-  useFocusEffect(
-    useCallback(() => {
-      let cancelado = false;
-      (async () => {
-        try {
-          const datos = await gruposService.misGrupos(miId);
-          if (!cancelado) { setGrupos(datos); setError(null); }
-        } catch (e) {
-          if (!cancelado) setError(e.message);
-        } finally {
-          if (!cancelado) setCargando(false);
-        }
-      })();
-      return () => { cancelado = true; };
-    }, [miId])
-  );
+  // Con caché: si ya se vieron, aparecen al instante y se actualizan en segundo plano
+  const consulta = useMisGrupos(miId);
+  useActualizarAlEnfocar(consulta);
+  const grupos = consulta.data ?? [];
+  const cargando = consulta.isPending;
+  const error = mensajeError(consulta);
 
   if (error) return <Text style={styles.error}>{error}</Text>;
-  if (cargando) return <Text style={styles.vacio}>Cargando tus grupos...</Text>;
+  if (cargando) return <ListaSkeleton cantidad={4} alto={62} />;
   if (grupos.length === 0) {
     return (
       <View style={styles.vacioCaja}>
@@ -62,6 +50,8 @@ function MisGrupos({ miId, onAbrir, onBuscar }) {
       data={grupos}
       keyExtractor={(g) => String(g.id)}
       contentContainerStyle={styles.lista}
+      initialNumToRender={10}
+      windowSize={5}
       renderItem={({ item }) => (
         <TouchableOpacity style={styles.fila} onPress={() => onAbrir(item)} activeOpacity={0.7}>
           <View style={styles.textos}>

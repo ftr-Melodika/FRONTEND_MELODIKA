@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { Background } from '../components/Background';
 import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
 import { Checkbox } from '../components/form/Checkbox'; // 👈 Checkbox importado
 import { authService } from '../services/authService';
+import { AuthContext } from '../context/AuthContext';
+import { REQUISITOS_PASSWORD, passwordValida } from '../utils/password';
+import { useAlturaTeclado } from '../hooks/useAlturaTeclado';
 import { FUENTE_TITULO } from '../theme/fuentes';
 
 export function RegisterScreen({ navigation }) {
@@ -16,21 +19,31 @@ export function RegisterScreen({ navigation }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { login } = useContext(AuthContext);
+  const alturaTeclado = useAlturaTeclado();
 
   const handleRegister = async () => {
     if (!nombre || !apellido || !telefono || !email || !password || !confirmPassword) return Alert.alert('Error', 'Faltan campos.');
     if (!/^\+?\d{10,15}$/.test(telefono.trim())) return Alert.alert('Error', 'El teléfono debe tener entre 10 y 15 números (sin espacios ni guiones).');
     // Comparamos versiones recortadas para evitar espacios accidentales
     if (String(password).trim() !== String(confirmPassword).trim()) return Alert.alert('Error', 'Las contraseñas no coinciden.');
+    if (!passwordValida(password)) return Alert.alert('Contraseña no válida', REQUISITOS_PASSWORD);
     if (!acceptTerms) return Alert.alert('Error', 'Debes aceptar los términos y condiciones.');
 
     setLoading(true);
     try {
       await authService.registrar(nombre.trim(), apellido.trim(), telefono.trim(), email.trim(), password);
-      Alert.alert('¡Éxito!', 'Cuenta creada correctamente. Ya podés iniciar sesión.');
-      navigation.navigate('Login');
     } catch (error) {
-      Alert.alert('Error en Registro', error.message);
+      setLoading(false);
+      return Alert.alert('Error en Registro', error.message);
+    }
+    // Cuenta creada: se entra directo, sin pasar por el inicio de sesión
+    try {
+      const data = await authService.login(email.trim(), password);
+      await login(data.token, data.cuenta, data.refreshToken, data.expiresAt);
+    } catch (error) {
+      Alert.alert('Cuenta creada', 'Tu cuenta se creó, pero no pudimos iniciar sesión automáticamente. Iniciá sesión con tus datos.');
+      navigation.navigate('Login');
     } finally {
       setLoading(false);
     }
@@ -39,7 +52,7 @@ export function RegisterScreen({ navigation }) {
   return (
     <Background>
       <View style={styles.glassCard}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { paddingBottom: 16 + alturaTeclado }]} keyboardShouldPersistTaps="handled">
           <Button 
             title="Volver" icono="volver" 
             variant="back" 
@@ -53,6 +66,7 @@ export function RegisterScreen({ navigation }) {
           <InputField placeholder="Teléfono (ej: 1123456789)" value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" />
           <InputField placeholder="Correo electrónico" value={email} onChangeText={setEmail} keyboardType="email-address" />
           <InputField placeholder="Contraseña" secureTextEntry={true} value={password} onChangeText={setPassword} />
+          <Text style={styles.requisitos}>{REQUISITOS_PASSWORD}</Text>
           <InputField placeholder="Confirmar contraseña" secureTextEntry={true} value={confirmPassword} onChangeText={setConfirmPassword} />
 
           {/* 👇 Checkbox limpio */}
@@ -75,5 +89,6 @@ const styles = StyleSheet.create({
   backButtonInside: { alignSelf: 'flex-start' },
   glassCard: { alignSelf: 'center', width: '70%', maxWidth: 560, maxHeight: '90%', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 25, borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1, paddingHorizontal: 25, paddingVertical: 2 },
   scrollContent: { paddingVertical: 16 },
+  requisitos: { color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: -4, marginBottom: 10 },
   title: { fontSize: 26, color: '#fff', textAlign: 'center', marginBottom: 15, fontFamily: FUENTE_TITULO, fontWeight: 'bold' },
 });

@@ -149,7 +149,8 @@ export function LeccionScreen({ route, navigation }) {
             icono={fin.icono}
             siguiente={siguiente}
             onSiguiente={irASiguiente}
-            onVolver={() => navigation.goBack()}
+            onVolver={fin.cursoCompletado ? () => navigation.navigate('Home', { verCursos: true }) : () => navigation.goBack()}
+            textoVolver={fin.cursoCompletado ? 'Volver a los cursos' : 'Volver al curso'}
           />
         </View>
       </Background>

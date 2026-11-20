@@ -2,6 +2,7 @@
 import axiosClient from '../api/axiosClient';
 import { ENDPOINTS } from '../config/api';
 import { getErrorMessage } from '../utils/errorUtils';
+import { invalidar } from '../api/queryClient';
 
 // El backend devuelve la entidad Perfil en camelCase (avatarUrl, fechaNacimiento...).
 // Normalizamos acá para que las pantallas siempre lean los mismos nombres.
@@ -64,6 +65,7 @@ export const perfilesService = {
   crearPerfil: async (datosPerfil) => {
     try {
       const response = await axiosClient.post(ENDPOINTS.crearPerfil, aBodyBackend(datosPerfil));
+      invalidar('perfiles');
       return normalizarPerfil(response.data.data);
     } catch (error) {
       throw new Error(getErrorMessage(error));
@@ -73,6 +75,7 @@ export const perfilesService = {
   editarPerfil: async (id, datosActualizados) => {
     try {
       const response = await axiosClient.put(ENDPOINTS.perfilPorId(id), aBodyBackend(datosActualizados));
+      invalidar('perfiles');
       return normalizarPerfil(response.data.data);
     } catch (error) {
       throw new Error(getErrorMessage(error));
@@ -82,6 +85,7 @@ export const perfilesService = {
   eliminarPerfil: async (id) => {
     try {
       const response = await axiosClient.delete(ENDPOINTS.perfilPorId(id));
+      invalidar('perfiles');
       return response.data;
     } catch (error) {
       throw new Error(getErrorMessage(error));

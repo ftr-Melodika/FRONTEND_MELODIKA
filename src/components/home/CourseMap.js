@@ -56,10 +56,16 @@ export function CourseMap({ lecciones, onLeccionPress }) {
                 <Icono nombre={leccion.omitida ? 'adelante' : leccion.estado === 'completada' ? 'check' : leccion.estado === 'disponible' ? 'guitarra' : 'candado'} tamano={36} />
               </TouchableOpacity>
 
-              <View style={[styles.nodeCard, esActual && styles.nodeCardActual]}>
+              <TouchableOpacity
+                style={[styles.nodeCard, esActual && styles.nodeCardActual]}
+                onPress={() => onLeccionPress(leccion)}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={leccion.titulo}
+              >
                 <Text style={styles.nodeTitle} numberOfLines={2}>{leccion.titulo}</Text>
                 <Text style={styles.nodeSubtitle} numberOfLines={1}>{leccion.tipo} • {leccion.xp} XP</Text>
-              </View>
+              </TouchableOpacity>
             </View>
           );
         })}

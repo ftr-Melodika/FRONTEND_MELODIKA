@@ -1,16 +1,16 @@
 // Archivo: src/screens/SolicitudesScreen.js
 // Portal social: aceptar o rechazar solicitudes, ver las enviadas y la lista de amigos.
-import { useCallback, useContext, useState } from 'react';
+import { useContext, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Background } from '../components/Background';
 import { Button } from '../components/Button';
-import { LoadingModal } from '../components/LoadingModal';
+import { ListaSkeleton } from '../components/Skeleton';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { AvatarUsuario } from '../components/AvatarUsuario';
 import { AuthContext } from '../context/AuthContext';
 import { amistadesService } from '../services/amistadesService';
+import { useSolicitudes, useAmigos, useActualizarAlEnfocar } from '../hooks/useConsultas';
 
 const VACIO = {
   recibidas: 'No tenés solicitudes pendientes.',
@@ -24,46 +24,30 @@ export function SolicitudesScreen({ navigation }) {
   const miId = perfil?.id;
 
   const [pestana, setPestana] = useState('recibidas');
-  const [listas, setListas] = useState({ recibidas: [], enviadas: [], amigos: [] });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // Con caché: si ya se vieron, aparecen al instante y se actualizan en segundo plano.
+  // Al aceptar, rechazar o cancelar, el servicio vence la caché y las listas se piden de nuevo solas.
+  const consultaSolicitudes = useSolicitudes(miId);
+  const consultaAmigos = useAmigos(miId);
+  useActualizarAlEnfocar(consultaSolicitudes);
+  useActualizarAlEnfocar(consultaAmigos);
+  const listas = {
+    recibidas: consultaSolicitudes.data?.recibidas ?? [],
+    enviadas: consultaSolicitudes.data?.enviadas ?? [],
+    amigos: consultaAmigos.data ?? [],
+  };
+  const loading = consultaSolicitudes.isPending || consultaAmigos.isPending;
+  const [errorAccion, setErrorAccion] = useState(null);
+  const errorConsulta = [consultaSolicitudes, consultaAmigos].find((c) => c.isError && c.data === undefined)?.error.message;
+  const error = errorAccion || errorConsulta || null;
   const [procesandoId, setProcesandoId] = useState(null);
-
-  const pedirListas = useCallback(async () => {
-    const [solicitudes, amigos] = await Promise.all([
-      amistadesService.obtenerSolicitudes(miId),
-      amistadesService.obtenerAmigos(miId),
-    ]);
-    return { ...solicitudes, amigos };
-  }, [miId]);
-
-  useFocusEffect(
-    useCallback(() => {
-      let cancelado = false;
-      (async () => {
-        setLoading(true);
-        setError(null);
-        try {
-          const datos = await pedirListas();
-          if (!cancelado) setListas(datos);
-        } catch (e) {
-          if (!cancelado) setError(e.message);
-        } finally {
-          if (!cancelado) setLoading(false);
-        }
-      })();
-      return () => { cancelado = true; };
-    }, [pedirListas])
-  );
 
   const ejecutar = async (amistadId, accion) => {
     setProcesandoId(amistadId);
-    setError(null);
+    setErrorAccion(null);
     try {
       await accion();
-      setListas(await pedirListas());
     } catch (e) {
-      setError(e.message);
+      setErrorAccion(e.message);
     } finally {
       setProcesandoId(null);
     }
@@ -133,6 +117,7 @@ export function SolicitudesScreen({ navigation }) {
         {!!error && <Text style={styles.error}>{error}</Text>}
         {!loading && !error && listas[pestana].length === 0 && <Text style={styles.vacio}>{VACIO[pestana]}</Text>}
 
+        {loading && <ListaSkeleton cantidad={4} alto={60} />}
         <FlatList
           data={listas[pestana]}
           keyExtractor={(item) => String(item.amistadId)}
@@ -140,7 +125,6 @@ export function SolicitudesScreen({ navigation }) {
           contentContainerStyle={styles.lista}
         />
       </View>
-      <LoadingModal visible={loading} text="Buscando solicitudes..." />
     </Background>
   );
 }

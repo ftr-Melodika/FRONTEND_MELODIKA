@@ -1,44 +1,27 @@
 // Archivo: src/screens/RankingScreen.js
 // Los rankings en los que participo, uno por grupo. Ya no hay ranking global:
 // se entra aceptando la invitación que alguien manda al chat de un grupo.
-import { useCallback, useContext, useState } from 'react';
+import { useContext } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Background } from '../components/Background';
 import { Button } from '../components/Button';
-import { LoadingModal } from '../components/LoadingModal';
+import { ListaSkeleton } from '../components/Skeleton';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { AuthContext } from '../context/AuthContext';
-import { rankingsService } from '../services/rankingsService';
+import { useMisRankings, useActualizarAlEnfocar, mensajeError } from '../hooks/useConsultas';
 
 const textoParticipantes = (n) => `${n ?? 0} ${n === 1 ? 'participante' : 'participantes'}`;
 
 export function RankingScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { perfil } = useContext(AuthContext);
-  const [rankings, setRankings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useFocusEffect(
-    useCallback(() => {
-      let cancelado = false;
-      (async () => {
-        setLoading(true);
-        setError(null);
-        try {
-          const datos = await rankingsService.misRankings(perfil?.id);
-          if (!cancelado) setRankings(datos);
-        } catch (e) {
-          if (!cancelado) setError(e.message);
-        } finally {
-          if (!cancelado) setLoading(false);
-        }
-      })();
-      return () => { cancelado = true; };
-    }, [perfil?.id])
-  );
+  // Con caché: si ya se vio, aparece al instante y se actualiza en segundo plano
+  const consulta = useMisRankings(perfil?.id);
+  useActualizarAlEnfocar(consulta);
+  const rankings = consulta.data ?? [];
+  const loading = consulta.isPending;
+  const error = mensajeError(consulta);
 
   const abrir = (item) => navigation.navigate('RankingGrupo', { grupoId: item.grupoId, nombre: item.grupoNombre });
 
@@ -57,10 +40,13 @@ export function RankingScreen({ navigation }) {
           </View>
         )}
 
+        {loading && <ListaSkeleton cantidad={4} alto={62} />}
         <FlatList
           data={rankings}
           keyExtractor={(item) => String(item.grupoId)}
           contentContainerStyle={{ paddingBottom: 20 }}
+          initialNumToRender={10}
+          windowSize={5}
           renderItem={({ item }) => (
             <TouchableOpacity style={styles.fila} onPress={() => abrir(item)} activeOpacity={0.7}>
               <View style={styles.textos}>
@@ -72,7 +58,6 @@ export function RankingScreen({ navigation }) {
           )}
         />
       </View>
-      <LoadingModal visible={loading} text="Cargando rankings..." />
     </Background>
   );
 }

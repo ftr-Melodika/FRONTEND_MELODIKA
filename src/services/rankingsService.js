@@ -3,6 +3,14 @@
 import axiosClient from '../api/axiosClient';
 import { ENDPOINTS } from '../config/api';
 import { getErrorMessage } from '../utils/errorUtils';
+import { invalidar } from '../api/queryClient';
+
+// Para lo que cambia datos: después de que sale bien, los rankings en caché vencen
+async function modificar(llamada) {
+  const datos = await pedir(llamada);
+  invalidar('rankings', 'rankingGrupo');
+  return datos;
+}
 
 async function pedir(llamada) {
   try {
@@ -31,11 +39,11 @@ export const rankingsService = {
 
   // Crea el ranking del grupo, suma a quien invita y manda la invitación al chat
   invitar: (miPerfilId, grupoId) =>
-    pedir(() => axiosClient.post(ENDPOINTS.rankingGrupo(miPerfilId, grupoId))),
+    modificar(() => axiosClient.post(ENDPOINTS.rankingGrupo(miPerfilId, grupoId))),
 
   aceptar: (miPerfilId, grupoId) =>
-    pedir(() => axiosClient.post(`${ENDPOINTS.rankingGrupo(miPerfilId, grupoId)}/aceptar`)),
+    modificar(() => axiosClient.post(`${ENDPOINTS.rankingGrupo(miPerfilId, grupoId)}/aceptar`)),
 
   salir: (miPerfilId, grupoId) =>
-    pedir(() => axiosClient.delete(`${ENDPOINTS.rankingGrupo(miPerfilId, grupoId)}/salir`)),
+    modificar(() => axiosClient.delete(`${ENDPOINTS.rankingGrupo(miPerfilId, grupoId)}/salir`)),
 };

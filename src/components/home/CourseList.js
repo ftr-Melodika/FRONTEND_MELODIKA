@@ -3,7 +3,6 @@
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { Icono, COLORES_ICONO } from '../icono/Icono';
-import { capitalizar } from '../../services/leccionesService';
 
 // La lista de cursos del backend puede traer el avance o no: si no viene, no se muestra la barra
 function avanceDe(curso) {
@@ -33,7 +32,7 @@ function Anillo({ tam, fraccion, children }) {
   );
 }
 
-function TarjetaCurso({ curso, onPress, actual }) {
+function TarjetaCurso({ curso, numero, onPress, actual }) {
   const bloqueado = !curso.desbloqueado;
   const avance = avanceDe(curso);
   const estado = curso.completado ? 'Completado' : bloqueado ? 'Bloqueado' : avance?.hechas ? 'En curso' : 'Disponible';
@@ -60,17 +59,20 @@ function TarjetaCurso({ curso, onPress, actual }) {
           <View style={styles.icono}>{icono}</View>
         );
       })()}
-      <Text style={[styles.nombre, actual && styles.nombreActual]} numberOfLines={2}>{curso.nombre}</Text>
-      {!!curso.nivel && <Text style={styles.nivel}>{capitalizar(curso.nivel)}</Text>}
+      <Text style={styles.numero}>CURSO {numero}</Text>
+      <View style={[styles.cajaNombre, actual && styles.cajaNombreActual]}>
+        <Text style={[styles.nombre, actual && styles.nombreActual]} numberOfLines={2}>{curso.nombre}</Text>
+      </View>
 
-      {avance && (
+      {actual && !curso.completado && avance && (
         <View style={styles.barra}>
           <View style={[styles.barraLlena, { width: `${avance.porcentaje}%` }]} />
         </View>
       )}
-      <Text style={[styles.estado, curso.completado && styles.estadoCompletado]}>
-        {avance ? `${avance.hechas} de ${avance.total}  •  ${estado}` : estado}
-      </Text>
+      {actual && !curso.completado && (
+        <Text style={styles.estado}>{avance ? `${avance.hechas} de ${avance.total}  •  ${estado}` : estado}</Text>
+      )}
+      {bloqueado && <Text style={styles.estado}>Bloqueado</Text>}
     </TouchableOpacity>
   );
 }
@@ -82,8 +84,8 @@ export function CourseList({ cursos, onSelect }) {
     <View style={styles.seccion}>
       <Text style={styles.titulo}>Elegí un curso para ver sus ejercicios</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.lista}>
-        {cursos.map((curso) => (
-          <TarjetaCurso key={curso.id} curso={curso} onPress={onSelect} actual={curso === actual} />
+        {cursos.map((curso, i) => (
+          <TarjetaCurso key={curso.id} curso={curso} numero={i + 1} onPress={onSelect} actual={curso === actual} />
         ))}
       </ScrollView>
     </View>
@@ -94,14 +96,17 @@ const styles = StyleSheet.create({
   seccion: { flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: 25, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)', paddingTop: 14, overflow: 'hidden' },
   titulo: { color: '#fff', fontSize: 15, fontWeight: 'bold', textAlign: 'center', marginBottom: 6 },
   lista: { alignItems: 'center', paddingHorizontal: 20, gap: 16, flexGrow: 1, justifyContent: 'center' },
-  tarjeta: { width: 200, minHeight: 190, borderRadius: 18, padding: 14, alignItems: 'center', backgroundColor: 'rgba(76, 82, 217, 0.55)', borderWidth: 2, borderColor: '#b28cff' },
+  tarjeta: { width: 180, minHeight: 160, borderRadius: 18, padding: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(76, 82, 217, 0.55)', borderWidth: 2, borderColor: '#b28cff' },
   tarjetaActual: { width: 240, minHeight: 230, padding: 18, borderColor: '#fff' },
   tarjetaCompletada: { backgroundColor: 'rgba(168, 132, 255, 0.45)', borderColor: '#fff' },
   tarjetaBloqueada: { backgroundColor: 'rgba(91, 82, 148, 0.6)', borderColor: 'rgba(255,255,255,0.3)', opacity: 0.75 },
   icono: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.15)', marginBottom: 8 },
-  nombre: { color: '#fff', fontSize: 16, fontWeight: 'bold', textAlign: 'center' },
-  nombreActual: { fontSize: 19 },
-  nivel: { color: '#fff', fontSize: 12, marginTop: 2 },
+  // Alto fijo de 2 líneas: así todas las tarjetas miden lo mismo tenga el título 1 o 2 líneas
+  cajaNombre: { height: 40, justifyContent: 'center' },
+  cajaNombreActual: { height: 48 },
+  nombre: { color: '#fff', fontSize: 16, lineHeight: 20, fontWeight: 'bold', textAlign: 'center' },
+  nombreActual: { fontSize: 19, lineHeight: 24 },
+  numero: { color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: 'bold', letterSpacing: 1, marginBottom: 2 },
   barra: { width: '100%', height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.2)', marginTop: 10, overflow: 'hidden' },
   barraLlena: { height: '100%', backgroundColor: '#a3fba3' },
   estado: { color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '600', marginTop: 8 },

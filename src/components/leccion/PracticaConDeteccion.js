@@ -10,6 +10,7 @@ import { cejillasDeSecuencia } from '../../utils/cejilla';
 import { acordesDeContexto } from '../../utils/acordes';
 
 const SEGUNDOS_PARA_SALTEAR = 20;
+const MS_AUTO_TERMINAR = 1200;
 const MS_FESTEJO = 300; // Lo que se ve el acierto antes de pasar a la consigna siguiente
 
 // Texto de una consigna: en una nota indica dónde pisar; en un acorde lo muestra el mástil
@@ -34,7 +35,7 @@ function Progreso({ total, actual, completo }) {
 // Fuera de una lección (en Canciones) no hay XP: se cambia el texto final y no se ofrece saltear.
 // `onCompletar` avisa apenas se hacen todas las consignas (sin esperar el botón final).
 export function PracticaConDeteccion({
-  onBack, onFinish, finishing, secuencia, textoFinal = 'Terminar Lección', permitirSaltear = true, onCompletar, textoAtras = 'Atrás',
+  onBack, onFinish, finishing, secuencia, textoFinal = 'Terminar Lección', permitirSaltear = true, onCompletar, textoAtras = 'Atrás', autoTerminar = false,
 }) {
   const [indice, setIndice] = useState(0);
   const [festejo, setFestejo] = useState(false);
@@ -73,6 +74,13 @@ export function PracticaConDeteccion({
   useEffect(() => {
     if (completo) onCompletar?.();
   }, [completo]);
+
+  // En una lección, al lograrlo se termina sola (un instante después, para que se vea el acierto)
+  useEffect(() => {
+    if (!autoTerminar || !(completo)) return undefined;
+    const espera = setTimeout(() => onFinish(), MS_AUTO_TERMINAR);
+    return () => clearTimeout(espera);
+  }, [autoTerminar, completo]);
 
   const titulo = completo
     ? (varias ? `¡Hiciste las ${secuencia.length} consignas!` : `¡Sonó ${objetivo.nombre}!`)

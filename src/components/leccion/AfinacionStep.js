@@ -10,7 +10,9 @@ import { useAfinacionGuiada } from '../../hooks/useAfinacionGuiada';
 
 const SEGUNDOS_PARA_SALTEAR = 45; // Afinar seis cuerdas lleva más que tocar una nota
 
-export function AfinacionStep({ afinacion, onBack, onFinish, finishing }) {
+const MS_AUTO_TERMINAR = 1200;
+
+export function AfinacionStep({ afinacion, onBack, onFinish, finishing, autoTerminar = false }) {
   const { cuerdas, toleranciaCents, msEstable } = afinacion;
   const { estado, frecuencia, resultado, cuerdaElegida, afinadas, terminado } = useAfinacionGuiada({ cuerdas, toleranciaCents, msEstable });
   const [puedeSaltear, setPuedeSaltear] = useState(false);
@@ -21,6 +23,14 @@ export function AfinacionStep({ afinacion, onBack, onFinish, finishing }) {
     const espera = setTimeout(() => setPuedeSaltear(true), SEGUNDOS_PARA_SALTEAR * 1000);
     return () => clearTimeout(espera);
   }, []);
+
+
+  // En una lección, al lograrlo se termina sola (un instante después, para que se vea el acierto)
+  useEffect(() => {
+    if (!autoTerminar || !(terminado)) return undefined;
+    const espera = setTimeout(() => onFinish(), MS_AUTO_TERMINAR);
+    return () => clearTimeout(espera);
+  }, [autoTerminar, terminado]);
 
   return (
     <View style={styles.container}>

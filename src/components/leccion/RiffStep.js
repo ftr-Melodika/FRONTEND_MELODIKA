@@ -183,8 +183,10 @@ function SelectorVelocidad({ opciones, valor, onCambiar, deshabilitado }) {
 
 // Fuera de una lección (en Canciones) no hay XP: se cambia el texto final y no se ofrece saltear.
 // Con `velocidades` (y `velocidad` + `onCambiarVelocidad`) se puede elegir la velocidad antes de tocar.
+const MS_AUTO_TERMINAR = 1200;
+
 export function RiffStep({
-  riff, onBack, onFinish, finishing, textoFinal = 'Terminar Lección', permitirSaltear = true,
+  riff, onBack, onFinish, finishing, textoFinal = 'Terminar Lección', permitirSaltear = true, autoTerminar = false,
   velocidad, velocidades, onCambiarVelocidad,
 }) {
   const [puedeSaltear, setPuedeSaltear] = useState(false);
@@ -200,6 +202,13 @@ export function RiffStep({
   const sinMicrofono = !!MENSAJE_MICROFONO[estado];
   const enMarcha = fase === 'preparando' || fase === 'tocando' || fase === 'retrocediendo' || fase === 'practicando';
   const aprobado = fase === 'terminado' && resumen.aprobado;
+
+  // En una lección, al lograrlo se termina sola (un instante después, para que se vea el acierto)
+  useEffect(() => {
+    if (!autoTerminar || !(aprobado)) return undefined;
+    const espera = setTimeout(() => onFinish(), MS_AUTO_TERMINAR);
+    return () => clearTimeout(espera);
+  }, [autoTerminar, aprobado]);
   const proxima = useMemo(() => recorrido.notas[resultados.findIndex((r) => r === null)] ?? null, [recorrido, resultados]);
   const esCancion = riff.notas[0]?.tipo === 'acorde';
   // Cuerdas que se resaltan a la izquierda: las de la próxima nota o acorde

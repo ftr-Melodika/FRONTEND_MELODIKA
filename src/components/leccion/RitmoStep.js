@@ -151,7 +151,9 @@ function Resultado({ resultado, aprobar, golpesDetectados }) {
   );
 }
 
-export function RitmoStep({ ritmo, onBack, onFinish, finishing }) {
+const MS_AUTO_TERMINAR = 1200;
+
+export function RitmoStep({ ritmo, onBack, onFinish, finishing, autoTerminar = false }) {
   const [quiereSonido, setQuiereSonido] = useState(true);
   const [puedeSaltear, setPuedeSaltear] = useState(false);
   const {
@@ -171,6 +173,13 @@ export function RitmoStep({ ritmo, onBack, onFinish, finishing }) {
   const escuchando = fase === 'preparando' || fase === 'tocando';
   const sinMicrofono = !!MENSAJE_MICROFONO[estado];
   const aprobado = fase === 'terminado' && resultado?.aprobado;
+
+  // En una lección, al lograrlo se termina sola (un instante después, para que se vea el acierto)
+  useEffect(() => {
+    if (!autoTerminar || !(aprobado)) return undefined;
+    const espera = setTimeout(() => onFinish(), MS_AUTO_TERMINAR);
+    return () => clearTimeout(espera);
+  }, [autoTerminar, aprobado]);
 
   const bpms = ritmo.etapas.map((e) => e.bpm);
   const tempo = bpms.every((b) => b === bpms[0]) ? `${bpms[0]} BPM` : bpms.join(' → ') + ' BPM';

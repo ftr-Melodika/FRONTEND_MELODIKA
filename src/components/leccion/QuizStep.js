@@ -2,7 +2,7 @@
 // Quiz de opción múltiple. Cada pregunta puede mostrar una imagen (con una parte marcada o un acercamiento);
 // si ni la pregunta ni el quiz traen imagen, la pregunta ocupa todo el ancho.
 // Al responder se ve si estuvo bien y por qué. Al final se puede repasar lo que se falló.
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { Button } from '../Button';
 import { GuitarraIlustrada, proporcionImagen } from './GuitarraIlustrada';
@@ -18,7 +18,9 @@ function encajar(area, proporcion) {
   return { width, height: width / proporcion };
 }
 
-export function QuizStep({ quiz, onBack, onFinish, finishing }) {
+const MS_AUTO_TERMINAR = 1200;
+
+export function QuizStep({ quiz, onBack, onFinish, finishing, autoTerminar = false }) {
   // Los índices de las preguntas que se están respondiendo: todas, o solo las falladas al repasar
   const [ronda, setRonda] = useState(() => quiz.preguntas.map((_, i) => i));
   const [posicion, setPosicion] = useState(0);
@@ -59,6 +61,16 @@ export function QuizStep({ quiz, onBack, onFinish, finishing }) {
     setPrimeraVuelta(false);
     setTerminado(false);
   };
+
+  // Con todo bien, la lección se termina sola; si hubo errores se elige entre repasar o terminar
+  const quizPerfecto = terminado && falladas.length === 0;
+
+  // En una lección, al lograrlo se termina sola (un instante después, para que se vea el acierto)
+  useEffect(() => {
+    if (!autoTerminar || !(quizPerfecto)) return undefined;
+    const espera = setTimeout(() => onFinish(), MS_AUTO_TERMINAR);
+    return () => clearTimeout(espera);
+  }, [autoTerminar, quizPerfecto]);
 
   if (terminado) {
     const total = quiz.preguntas.length;

@@ -38,18 +38,18 @@ export function PracticeStep({ onBack, onFinish, finishing, leccion }) {
   const riff = useMemo(() => obtenerRiff(leccion), [leccion]);
   const [aTempo, setATempo] = useState(false);
 
-  if (ritmo) return <RitmoStep ritmo={ritmo} onBack={onBack} onFinish={onFinish} finishing={finishing} />;
-  if (quiz) return <QuizStep quiz={quiz} onBack={onBack} onFinish={onFinish} finishing={finishing} />;
-  if (afinacion) return <AfinacionStep afinacion={afinacion} onBack={onBack} onFinish={onFinish} finishing={finishing} />;
+  if (ritmo) return <RitmoStep ritmo={ritmo} onBack={onBack} onFinish={onFinish} finishing={finishing} autoTerminar />;
+  if (quiz) return <QuizStep quiz={quiz} onBack={onBack} onFinish={onFinish} finishing={finishing} autoTerminar />;
+  if (afinacion) return <AfinacionStep afinacion={afinacion} onBack={onBack} onFinish={onFinish} finishing={finishing} autoTerminar />;
   // Se separan porque el hook del micrófono solo debe existir si hay algo que detectar
   if (!secuencia) return <PracticaLibre onBack={onBack} onFinish={onFinish} finishing={finishing} leccion={leccion} />;
-  if (riff && aTempo) return <RiffStep riff={riff} onBack={() => setATempo(false)} onFinish={onFinish} finishing={finishing} />;
+  if (riff && aTempo) return <RiffStep riff={riff} onBack={() => setATempo(false)} onFinish={onFinish} finishing={finishing} autoTerminar />;
   if (riff) {
     // Al completar las notas sigue el riff en movimiento; "Saltear" saltea la lección entera
     const alTerminarNotas = (opciones) => (opciones?.omitida ? onFinish(opciones) : setATempo(true));
     return <PracticaConDeteccion onBack={onBack} onFinish={alTerminarNotas} finishing={finishing} secuencia={secuencia} textoFinal="Ahora a tempo →" />;
   }
-  return <PracticaConDeteccion onBack={onBack} onFinish={onFinish} finishing={finishing} secuencia={secuencia} />;
+  return <PracticaConDeteccion onBack={onBack} onFinish={onFinish} finishing={finishing} secuencia={secuencia} autoTerminar />;
 }
 
 const styles = StyleSheet.create({

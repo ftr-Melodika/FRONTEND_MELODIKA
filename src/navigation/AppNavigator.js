@@ -1,7 +1,9 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
+import * as SplashScreen from 'expo-splash-screen';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthContext } from '../context/AuthContext';
+import { precargarImagenes } from '../utils/precarga';
 import { LoadingModal } from '../components/LoadingModal'; // 👈 El nuevo modal
 import { ProgresoScreen } from '../screens/ProgresoScreen';
 import { RankingScreen } from '../screens/RankingScreen';
@@ -24,6 +26,7 @@ import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
 import { CreateUserScreen } from '../screens/CreateUserScreen';
 import { SelectUserScreen } from '../screens/SelectUserScreen';
+import { AjustesCuentaScreen } from '../screens/AjustesCuentaScreen';
 import { EditUserScreen } from '../screens/EditUserScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { LeccionScreen } from '../screens/LeccionScreen';
@@ -49,6 +52,12 @@ export function AppNavigator() {
     hayPerfil: userToken !== null && !!perfil?.id,
   });
 
+  // Ya se leyó la sesión guardada: se puede mostrar la app
+  useEffect(() => {
+    // Se espera también al fondo: así la primera pantalla ya aparece con su imagen
+    if (!isLoading) precargarImagenes.then(() => SplashScreen.hideAsync()).catch(() => {});
+  }, [isLoading]);
+
   if (isLoading) {
     return (
       <Background>
@@ -71,6 +80,7 @@ export function AppNavigator() {
             <Stack.Screen name="SelectUser" component={SelectUserScreen} />
             <Stack.Screen name="CreateUser" component={CreateUserScreen} />
             <Stack.Screen name="EditUser" component={EditUserScreen} />
+            <Stack.Screen name="AjustesCuenta" component={AjustesCuentaScreen} />
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Leccion" component={LeccionScreen} />
             <Stack.Screen name="Progreso" component={ProgresoScreen} />

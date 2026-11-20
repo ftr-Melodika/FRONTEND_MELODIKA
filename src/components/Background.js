@@ -1,5 +1,7 @@
 import React from 'react';
-import { Image, View, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Image } from 'expo-image'; // Guarda la imagen ya decodificada: no se vuelve a cargar en cada pantalla
+import { IMAGEN_FONDO } from '../utils/precarga';
 
 // ImageBackground está deprecado desde React Native 0.88 (SDK 58):
 // se reemplaza por un View con una Image posicionada en absoluto detrás del contenido.
@@ -7,9 +9,12 @@ export function Background({ children, style }) {
   return (
     <View style={[styles.background, style]}>
       <Image
-        source={require('../../assets/background.png')}
+        source={IMAGEN_FONDO}
         style={styles.image}
-        resizeMode="stretch"
+        contentFit="fill"
+        transition={0}
+        cachePolicy="memory-disk"
+        priority="high"
       />
       <View style={styles.overlay} />
       <View style={styles.content}>{children}</View>
@@ -23,6 +28,8 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     overflow: 'hidden',
+    // Color parecido al de la imagen: mientras carga se ve este y no un fondo blanco
+    backgroundColor: '#4f54c8',
   },
   image: {
     position: 'absolute',

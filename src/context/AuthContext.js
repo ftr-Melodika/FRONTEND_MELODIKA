@@ -2,6 +2,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { perfilesService, normalizarPerfil } from '../services/perfilesService';
+import { limpiarCache } from '../api/queryClient';
 import { borrarSesion, cargarSesion, guardarSesion, refrescarSesion, registrarAlExpirarSesion } from '../api/tokenSesion';
 
 export const AuthContext = createContext();
@@ -72,6 +73,7 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(true);
     try {
       await borrarSesion();
+      await limpiarCache(); // Nada de la cuenta anterior puede quedar en la caché de datos
       await AsyncStorage.removeItem('userCuenta');
       await AsyncStorage.removeItem('userPerfil'); // Limpiamos el perfil al salir
       

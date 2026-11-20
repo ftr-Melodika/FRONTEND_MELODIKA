@@ -1,6 +1,7 @@
 // Archivo: src/components/ProfileAvatar.js
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image } from 'expo-image'; // Decodifica fuera del hilo principal y guarda las fotos en caché
 
 export function ProfileAvatar({ nombre, foto, isAddButton, onPress }) {
   // Si no hay nombre (es el botón de agregar) usamos el signo +

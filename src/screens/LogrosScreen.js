@@ -1,15 +1,14 @@
 // Archivo: src/screens/LogrosScreen.js
 // Los logros se calculan con los datos de progreso que ya da el backend (xp, racha, lecciones, cursos).
 import { Icono, COLORES_ICONO } from '../components/icono/Icono';
-import { useCallback, useContext, useState } from 'react';
+import { useContext } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Background } from '../components/Background';
 import { LoadingModal } from '../components/LoadingModal';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { AuthContext } from '../context/AuthContext';
-import { leccionesService } from '../services/leccionesService';
+import { useResumen, useActualizarAlEnfocar } from '../hooks/useConsultas';
 
 // Cada logro dice qué dato mira y cuánto hace falta para desbloquearlo
 const LOGROS = [
@@ -26,27 +25,10 @@ const LOGROS = [
 export function LogrosScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { perfil } = useContext(AuthContext);
-  const [resumen, setResumen] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useFocusEffect(
-    useCallback(() => {
-      let cancelado = false;
-      (async () => {
-        if (!perfil?.id) return;
-        setLoading(true);
-        try {
-          const datos = await leccionesService.obtenerResumen(perfil.id);
-          if (!cancelado) setResumen(datos);
-        } catch (e) {
-          console.log('Error cargando logros:', e.message);
-        } finally {
-          if (!cancelado) setLoading(false);
-        }
-      })();
-      return () => { cancelado = true; };
-    }, [perfil?.id])
-  );
+  const consulta = useResumen(perfil?.id);
+  useActualizarAlEnfocar(consulta);
+  const resumen = consulta.data ?? null;
+  const loading = consulta.isPending;
 
   const valores = {
     lecciones: resumen?.leccionesCompletadas ?? 0,

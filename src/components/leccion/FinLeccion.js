@@ -5,7 +5,7 @@ import { Icono, COLORES_ICONO } from '../icono/Icono';
 import { Button } from '../Button';
 import { FUENTE_TITULO } from '../../theme/fuentes';
 
-export function FinLeccion({ titulo, mensaje, icono = 'trofeo', siguiente, onSiguiente, onVolver }) {
+export function FinLeccion({ titulo, mensaje, icono = 'trofeo', siguiente, onSiguiente, onVolver, textoVolver = 'Volver al curso' }) {
   return (
     <View style={styles.container} accessibilityLiveRegion="polite">
       <Icono nombre={icono} tamano={64} acento={COLORES_ICONO.oro} />
@@ -14,7 +14,7 @@ export function FinLeccion({ titulo, mensaje, icono = 'trofeo', siguiente, onSig
       {siguiente && <Text style={styles.proxima} numberOfLines={1}>Sigue: {siguiente.titulo}</Text>}
 
       <View style={styles.botones}>
-        <Button title="Volver al curso" icono="volver" variant="secondary" onPress={onVolver} style={styles.boton} />
+        <Button title={textoVolver} icono="volver" variant="secondary" onPress={onVolver} style={styles.boton} />
         {siguiente && <Button title="Siguiente ejercicio" iconoDerecha="adelante" onPress={onSiguiente} style={[styles.boton, styles.botonSiguiente]} />}
       </View>
     </View>

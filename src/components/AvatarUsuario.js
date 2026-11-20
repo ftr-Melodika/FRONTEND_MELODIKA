@@ -1,7 +1,8 @@
 // Archivo: src/components/AvatarUsuario.js
 // Foto de un usuario, o su inicial si no tiene foto o no se pudo cargar.
 import { useState } from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { Image } from 'expo-image'; // Decodifica fuera del hilo principal y guarda las fotos en caché
 
 export function AvatarUsuario({ nombre, foto, tamano = 44 }) {
   const [fotoRota, setFotoRota] = useState(false);

@@ -3,6 +3,14 @@
 import axiosClient from '../api/axiosClient';
 import { ENDPOINTS } from '../config/api';
 import { getErrorMessage } from '../utils/errorUtils';
+import { invalidar } from '../api/queryClient';
+
+// Para lo que cambia datos: después de que sale bien, lo que está en caché con esos nombres vence
+async function modificar(llamada, ...claves) {
+  const datos = await pedir(llamada);
+  invalidar(...claves);
+  return datos;
+}
 
 async function pedir(llamada) {
   try {
@@ -23,21 +31,21 @@ export const gruposService = {
   // datos: { nombre, descripcion, miembroIds?, esPrivado? } (miembroIds: ids de amigos aceptados)
   // Un grupo privado vuelve con su código (8 letras o números) en `codigo`
   crear: (miPerfilId, datos) =>
-    pedir(() => axiosClient.post(ENDPOINTS.grupos(miPerfilId), datos)),
+    modificar(() => axiosClient.post(ENDPOINTS.grupos(miPerfilId), datos), 'misGrupos'),
 
   obtener: (miPerfilId, grupoId) =>
     pedir(() => axiosClient.get(ENDPOINTS.grupo(miPerfilId, grupoId))),
 
   // codigo: solo para grupos privados. Devuelve { grupoId, unido, grupo }
   unirse: (miPerfilId, grupoId, codigo) =>
-    pedir(() => axiosClient.post(`${ENDPOINTS.grupo(miPerfilId, grupoId)}/unirse`, codigo ? { codigo } : undefined)),
+    modificar(() => axiosClient.post(`${ENDPOINTS.grupo(miPerfilId, grupoId)}/unirse`, codigo ? { codigo } : undefined), 'misGrupos'),
 
   // Entrar a un grupo privado sabiendo solo su código. Devuelve { grupoId, unido, grupo }
   unirseConCodigo: (miPerfilId, codigo) =>
-    pedir(() => axiosClient.post(`${ENDPOINTS.grupos(miPerfilId)}/unirse-con-codigo`, { codigo })),
+    modificar(() => axiosClient.post(`${ENDPOINTS.grupos(miPerfilId)}/unirse-con-codigo`, { codigo }), 'misGrupos'),
 
   salir: (miPerfilId, grupoId) =>
-    pedir(() => axiosClient.delete(`${ENDPOINTS.grupo(miPerfilId, grupoId)}/salir`)),
+    modificar(() => axiosClient.delete(`${ENDPOINTS.grupo(miPerfilId, grupoId)}/salir`), 'misGrupos', 'rankings', 'rankingGrupo'),
 
   // params: { despues } para los nuevos, { antes } para la página anterior, o nada para los últimos
   mensajes: async (miPerfilId, grupoId, params) => {
@@ -46,5 +54,5 @@ export const gruposService = {
   },
 
   enviarMensaje: (miPerfilId, grupoId, contenido) =>
-    pedir(() => axiosClient.post(`${ENDPOINTS.grupo(miPerfilId, grupoId)}/mensajes`, { contenido })),
+    modificar(() => axiosClient.post(`${ENDPOINTS.grupo(miPerfilId, grupoId)}/mensajes`, { contenido }), 'misGrupos'),
 };

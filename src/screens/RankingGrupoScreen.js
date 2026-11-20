@@ -1,15 +1,15 @@
 // Archivo: src/screens/RankingGrupoScreen.js
 // Ranking de XP entre los miembros de un grupo que aceptaron la invitación.
 import { Icono, TextoConIcono, COLORES_ICONO } from '../components/icono/Icono';
-import { useCallback, useContext, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useContext } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Background } from '../components/Background';
-import { LoadingModal } from '../components/LoadingModal';
+import { ListaSkeleton } from '../components/Skeleton';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { AuthContext } from '../context/AuthContext';
-import { rankingsService } from '../services/rankingsService';
+import { useRankingGrupo, useActualizarAlEnfocar, mensajeError } from '../hooks/useConsultas';
 
 const MEDALLAS = [
   { nombre: 'medalla1', acento: COLORES_ICONO.oro },
@@ -21,28 +21,12 @@ export function RankingGrupoScreen({ route, navigation }) {
   const { grupoId, nombre: nombreGrupo } = route.params;
   const insets = useSafeAreaInsets();
   const { perfil } = useContext(AuthContext);
-  const [ranking, setRanking] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useFocusEffect(
-    useCallback(() => {
-      let cancelado = false;
-      (async () => {
-        setLoading(true);
-        setError(null);
-        try {
-          const datos = await rankingsService.deGrupo(perfil?.id, grupoId);
-          if (!cancelado) setRanking(datos.participantes);
-        } catch (e) {
-          if (!cancelado) setError(e.message);
-        } finally {
-          if (!cancelado) setLoading(false);
-        }
-      })();
-      return () => { cancelado = true; };
-    }, [perfil?.id, grupoId])
-  );
+  // Con caché: si ya se vio, aparece al instante y se actualiza en segundo plano
+  const consulta = useRankingGrupo(perfil?.id, grupoId);
+  useActualizarAlEnfocar(consulta);
+  const ranking = consulta.data?.participantes ?? [];
+  const loading = consulta.isPending;
+  const error = mensajeError(consulta);
 
   const renderItem = ({ item, index }) => {
     const posicion = item.posicion ?? index + 1;
@@ -83,14 +67,16 @@ export function RankingGrupoScreen({ route, navigation }) {
           <Text style={styles.mensaje}>Nadie aceptó la invitación todavía.</Text>
         )}
 
+        {loading && <ListaSkeleton cantidad={6} alto={54} />}
         <FlatList
           data={ranking}
           keyExtractor={(item, index) => String(item.id ?? item.username ?? index)}
           renderItem={renderItem}
           contentContainerStyle={{ paddingBottom: 20 }}
+          initialNumToRender={12}
+          windowSize={5}
         />
       </View>
-      <LoadingModal visible={loading} text="Cargando ranking..." />
     </Background>
   );
 }

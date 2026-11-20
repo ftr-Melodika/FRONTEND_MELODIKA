@@ -1,14 +1,14 @@
 // Archivo: src/screens/CancionesScreen.js
 // Catálogo de canciones para tocar con lo aprendido. Se puede buscar por título o artista
 // y filtrar las fáciles (solo usan los acordes del curso "Acordes"). Las canciones vienen del backend.
-import { useCallback, useMemo, useState } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
-import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Background } from '../components/Background';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { Button } from '../components/Button';
-import { cancionesService } from '../services/cancionesService';
+import { ListaSkeleton } from '../components/Skeleton';
+import { useCanciones, useActualizarAlEnfocar, mensajeError } from '../hooks/useConsultas';
 import { acordesDeCancion, filtrarCanciones, nivelDeCancion, rasgueosDeCancion, textoDeRasgueo } from '../utils/canciones';
 
 const FILTROS = [
@@ -51,29 +51,13 @@ export function CancionesScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [busqueda, setBusqueda] = useState('');
   const [nivel, setNivel] = useState(null);
-  const [todas, setTodas] = useState([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState(null);
-  const [intento, setIntento] = useState(0);
+  // Con caché: las canciones aparecen al instante y se actualizan en segundo plano (cambios de tempo, rasgueo…)
+  const consulta = useCanciones();
+  useActualizarAlEnfocar(consulta);
+  const todas = consulta.data ?? [];
+  const cargando = consulta.isPending;
+  const error = mensajeError(consulta);
   const canciones = useMemo(() => filtrarCanciones(todas, busqueda, nivel), [todas, busqueda, nivel]);
-
-  // Se pide cada vez que se vuelve a la pantalla: así llegan los cambios del backend (tempo, rasgueo…)
-  useFocusEffect(useCallback(() => {
-    let cancelado = false;
-    (async () => {
-      setCargando(true);
-      setError(null);
-      try {
-        const datos = await cancionesService.listar();
-        if (!cancelado) setTodas(datos);
-      } catch (e) {
-        if (!cancelado) setError(e.message);
-      } finally {
-        if (!cancelado) setCargando(false);
-      }
-    })();
-    return () => { cancelado = true; };
-  }, [intento]));
 
   return (
     <Background>
@@ -117,13 +101,15 @@ export function CancionesScreen({ navigation }) {
           columnWrapperStyle={styles.columnas}
           contentContainerStyle={[styles.lista, { paddingBottom: Math.max(insets.bottom, 16) }]}
           keyboardShouldPersistTaps="handled"
+          initialNumToRender={8}
+          windowSize={5}
           renderItem={({ item }) => <TarjetaCancion cancion={item} onPress={() => navigation.navigate('Cancion', { id: item.id, cancion: item })} />}
           ListEmptyComponent={
-            cargando ? <ActivityIndicator color="#fff" size="large" style={styles.cargando} />
+            cargando ? <ListaSkeleton cantidad={4} alto={92} style={styles.cargando} />
               : error ? (
                 <View style={styles.errorCaja}>
                   <Text style={styles.vacio}>{error}</Text>
-                  <Button title="Reintentar" onPress={() => setIntento((n) => n + 1)} />
+                  <Button title="Reintentar" onPress={() => consulta.refetch()} />
                 </View>
               )
                 : <Text style={styles.vacio}>{todas.length ? 'No encontramos canciones con esa búsqueda.' : 'Todavía no hay canciones.'}</Text>

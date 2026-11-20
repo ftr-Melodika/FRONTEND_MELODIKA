@@ -2,6 +2,7 @@
 import axiosClient from '../api/axiosClient';
 import { ENDPOINTS } from '../config/api';
 import { getErrorMessage } from '../utils/errorUtils';
+import { invalidar } from '../api/queryClient';
 
 // Datos de respaldo: solo se usan si el backend no responde o todavía no tiene cursos cargados,
 // para que la app se pueda mostrar igual. Están marcados con esMock para no mandarlos al backend.
@@ -114,27 +115,32 @@ export const leccionesService = {
     };
   },
 
-  // Devuelve todo lo que necesita el Home: lista de cursos, curso elegido y sus lecciones.
-  // Si no se pide un curso puntual, elegimos el primero desbloqueado que no esté completado.
+  // Lo que necesita el Home. Sin curso elegido solo trae la lista de cursos (es lo único que se ve);
+  // con curso elegido trae también sus ejercicios, pidiendo las dos cosas a la vez.
   obtenerMapa: async (perfilId, cursoIdElegido) => {
     try {
-      const cursos = await leccionesService.obtenerCursos(perfilId);
-      if (cursos.length === 0) {
-        return { cursos: [MOCK_CURSO], curso: MOCK_CURSO, lecciones: MOCK_LECCIONES, esMock: true };
+      if (!cursoIdElegido) {
+        const cursos = await leccionesService.obtenerCursos(perfilId);
+        if (cursos.length === 0) {
+          return { cursos: [MOCK_CURSO], curso: MOCK_CURSO, lecciones: MOCK_LECCIONES, esMock: true };
+        }
+        return { cursos, curso: null, lecciones: [], esMock: false };
       }
 
-      const cursoActual =
-        cursos.find((c) => c.id === cursoIdElegido) ||
-        cursos.find((c) => c.desbloqueado && !c.completado) ||
-        cursos[cursos.length - 1];
-
-      const detalle = await leccionesService.obtenerDetalleCurso(perfilId, cursoActual.id);
+      const [cursos, detalle] = await Promise.all([
+        leccionesService.obtenerCursos(perfilId),
+        leccionesService.obtenerDetalleCurso(perfilId, cursoIdElegido),
+      ]);
+      const cursoActual = cursos.find((c) => c.id === cursoIdElegido) || {};
       return { cursos, curso: { ...cursoActual, ...detalle }, lecciones: detalle.lecciones, esMock: false };
     } catch (error) {
-      console.log('Error cargando cursos:', getErrorMessage(error));
-      return { cursos: [MOCK_CURSO], curso: MOCK_CURSO, lecciones: MOCK_LECCIONES, esMock: true, error: getErrorMessage(error) };
+      // No se devuelve el mock acá: la caché lo guardaría como si fuera un dato real (ver mapaSinConexion)
+      throw new Error(getErrorMessage(error));
     }
   },
+
+  // Datos de respaldo para cuando el backend no responde y no hay nada guardado
+  mapaSinConexion: () => ({ cursos: [MOCK_CURSO], curso: MOCK_CURSO, lecciones: MOCK_LECCIONES, esMock: true }),
 
   // Resumen de progreso de todos los cursos (para la pantalla de Progreso y Logros).
   // Usa el endpoint /progreso del backend; si no existe (backend viejo) lo arma a mano.
@@ -178,6 +184,8 @@ export const leccionesService = {
     try {
       const cuerpo = omitida ? { omitida: true } : undefined;
       const response = await axiosClient.post(ENDPOINTS.completarLeccion(perfilId, cursoId, leccionId), cuerpo);
+      // El progreso, el XP y los rankings cambiaron: lo que está en la caché ya no vale
+      invalidar('mapa', 'resumen', 'rankings', 'rankingGrupo');
       return { ...response.data?.data, yaCompletada: false };
     } catch (error) {
       const mensaje = getErrorMessage(error);
@@ -192,6 +200,7 @@ export const leccionesService = {
   completarCurso: async (perfilId, cursoId) => {
     try {
       const response = await axiosClient.post(ENDPOINTS.completarCurso(perfilId, cursoId));
+      invalidar('mapa', 'resumen');
       return response.data;
     } catch (error) {
       throw new Error(getErrorMessage(error));

@@ -6,6 +6,7 @@ import { Button } from '../components/Button';
 import { AuthContext } from '../context/AuthContext'; 
 import { authService } from '../services/authService';
 import { googleAuthService } from '../services/googleAuthService';
+import { useAlturaTeclado } from '../hooks/useAlturaTeclado';
 import { FUENTE_TITULO } from '../theme/fuentes';
 
 export function LoginScreen({ navigation }) {
@@ -14,6 +15,7 @@ export function LoginScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const { login } = useContext(AuthContext); 
+  const alturaTeclado = useAlturaTeclado();
 
   const handleLogin = async () => {
     if (!email || !password) return Alert.alert('Error', 'Completá todo.');
@@ -42,7 +44,7 @@ export function LoginScreen({ navigation }) {
 
   return (
     <Background>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scroll} contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 + alturaTeclado }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
       <View style={styles.glassCard}>
         <Text style={styles.title}>Inicio de sesión</Text>
         

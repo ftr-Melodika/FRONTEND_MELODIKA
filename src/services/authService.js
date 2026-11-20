@@ -17,6 +17,23 @@ export const authService = {
     }
   },
 
+  cambiarPassword: async (passwordActual, passwordNueva) => {
+    try {
+      await axiosClient.put(ENDPOINTS.cambiarPassword, { passwordActual, passwordNueva });
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  },
+
+  // Borra la cuenta con todos sus perfiles y datos. Con email hace falta la contraseña; con Google no.
+  eliminarCuenta: async (password) => {
+    try {
+      await axiosClient.delete(ENDPOINTS.eliminarCuenta, { data: password ? { password } : {} });
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  },
+
   registrar: async (nombre, apellido, telefono, email, password) => {
     try {
       const response = await axiosClient.post(ENDPOINTS.register, {
