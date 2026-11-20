@@ -14,8 +14,8 @@ import { amistadesService } from '../services/amistadesService';
 
 const VACIO = {
   recibidas: 'No tenés solicitudes pendientes.',
-  enviadas: 'No enviaste solicitudes. Buscá músicos en tus grupos.',
-  amigos: 'Todavía no tenés amigos. Buscá músicos en tus grupos.',
+  enviadas: 'No enviaste solicitudes. Usá "Agregar amigo" o buscá músicos en tus grupos.',
+  amigos: 'Todavía no tenés amigos. Usá "Agregar amigo" o buscá músicos en tus grupos.',
 };
 
 export function SolicitudesScreen({ navigation }) {
@@ -112,7 +112,10 @@ export function SolicitudesScreen({ navigation }) {
   return (
     <Background>
       <View style={[styles.container, { paddingLeft: Math.max(insets.left, 20), paddingRight: Math.max(insets.right, 20) }]}>
-        <ScreenHeader title="Solicitudes y amigos" />
+        <ScreenHeader
+          title="Solicitudes y amigos"
+          right={<Button title="Agregar amigo" onPress={() => navigation.navigate('AgregarAmigo')} style={styles.botonAgregar} />}
+        />
 
         <View style={styles.pestanas}>
           {pestanas.map(({ id, titulo }) => (
@@ -157,5 +160,6 @@ const styles = StyleSheet.create({
   nombre: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
   username: { color: 'rgba(255,255,255,0.65)', fontSize: 13 },
   botones: { flexDirection: 'row', gap: 8 },
+  botonAgregar: { width: 160, minHeight: 40, paddingVertical: 6, marginVertical: 0 },
   boton: { width: 120, minHeight: 42, paddingVertical: 8, marginVertical: 4 },
 });

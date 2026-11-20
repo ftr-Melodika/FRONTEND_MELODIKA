@@ -10,7 +10,7 @@ import { cejillasDeSecuencia } from '../../utils/cejilla';
 import { acordesDeContexto } from '../../utils/acordes';
 
 const SEGUNDOS_PARA_SALTEAR = 20;
-const MS_FESTEJO = 700; // Lo que se ve el acierto antes de pasar a la consigna siguiente
+const MS_FESTEJO = 300; // Lo que se ve el acierto antes de pasar a la consigna siguiente
 
 // Texto de una consigna: en una nota indica dónde pisar; en un acorde lo muestra el mástil
 function describir(objetivo) {
