@@ -1,5 +1,7 @@
 // Archivo: src/screens/GrupoChatScreen.js
 // Chat de un grupo. Los mensajes nuevos se consultan cada 5 segundos mientras la pantalla está visible.
+// A la derecha, dos pestañas: los miembros (y el código, si el grupo es privado) y el ranking del grupo.
+// A un grupo privado se entra con su código.
 import { useCallback, useContext, useRef, useState } from 'react';
 import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -8,12 +10,18 @@ import { Background } from '../components/Background';
 import { Button } from '../components/Button';
 import { LoadingModal } from '../components/LoadingModal';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { EntradaCodigo } from '../components/grupos/EntradaCodigo';
 import { AuthContext } from '../context/AuthContext';
 import { gruposService } from '../services/gruposService';
 import { rankingsService } from '../services/rankingsService';
 
 const INTERVALO_MS = 5000;
 const MAXIMO_CARACTERES = 1000;
+const PESTANAS = [
+  { id: 'miembros', titulo: 'Miembros' },
+  { id: 'ranking', titulo: 'Ranking' },
+];
+const SIN_RANKING = { activo: false, unido: false, participantes: [] };
 
 // Agrega mensajes sin repetir: uno recién enviado también puede llegar en la consulta periódica
 function combinar(actuales, nuevos) {
@@ -46,16 +54,16 @@ export function GrupoChatScreen({ route, navigation }) {
   const [uniendo, setUniendo] = useState(false);
   const [saliendo, setSaliendo] = useState(false);
   const [confirmandoSalida, setConfirmandoSalida] = useState(false);
-  const [ranking, setRanking] = useState({ activo: false, unido: false });
+  const [ranking, setRanking] = useState(SIN_RANKING);
   const [accionRanking, setAccionRanking] = useState(false);
+  const [pestana, setPestana] = useState('miembros');
 
   // Si el ranking falla no tiramos abajo el chat: simplemente no se muestran las acciones de ranking
   const cargarRanking = useCallback(async () => {
     try {
-      const r = await rankingsService.deGrupo(miId, grupoId);
-      setRanking({ activo: r.activo, unido: r.unido });
+      setRanking(await rankingsService.deGrupo(miId, grupoId));
     } catch (e) {
-      setRanking({ activo: false, unido: false });
+      setRanking(SIN_RANKING);
     }
   }, [miId, grupoId]);
 
@@ -157,20 +165,31 @@ export function GrupoChatScreen({ route, navigation }) {
     }
   };
 
+  const recargarTrasUnirse = async () => {
+    const { detalle, lista, hayMas } = await cargarTodo();
+    setGrupo(detalle);
+    setHayMasAnteriores(hayMas);
+    setMensajes(recordarUltimo(lista));
+    cargarRanking();
+  };
+
   const unirse = async () => {
     setUniendo(true);
     setError(null);
     try {
       await gruposService.unirse(miId, grupoId);
-      const { detalle, lista, hayMas } = await cargarTodo();
-      setGrupo(detalle);
-      setHayMasAnteriores(hayMas);
-      setMensajes(recordarUltimo(lista));
+      await recargarTrasUnirse();
     } catch (e) {
       setError(e.message);
     } finally {
       setUniendo(false);
     }
+  };
+
+  // Grupo privado: si el código está mal, el error lo muestra la caja del código
+  const unirseConCodigo = async (codigo) => {
+    await gruposService.unirse(miId, grupoId, codigo);
+    await recargarTrasUnirse();
   };
 
   // Crea el ranking y manda la invitación al grupo; quien invita queda adentro
@@ -267,8 +286,17 @@ export function GrupoChatScreen({ route, navigation }) {
           {!!grupo && !grupo.unido && (
             <View style={styles.sinUnir}>
               {!!grupo.descripcion && <Text style={styles.descripcion}>{grupo.descripcion}</Text>}
-              <Text style={styles.descripcion}>Unite al grupo para leer y mandar mensajes.</Text>
-              <Button title="Unirme" onPress={unirse} loading={uniendo} style={styles.botonUnirme} />
+              {grupo.esPrivado ? (
+                <>
+                  <Text style={styles.descripcion}>🔒 Este grupo es privado. Pedile el código a alguien del grupo.</Text>
+                  <EntradaCodigo onEntrar={unirseConCodigo} textoBoton="Unirme" style={styles.codigoSinUnir} />
+                </>
+              ) : (
+                <>
+                  <Text style={styles.descripcion}>Unite al grupo para leer y mandar mensajes.</Text>
+                  <Button title="Unirme" onPress={unirse} loading={uniendo} style={styles.botonUnirme} />
+                </>
+              )}
             </View>
           )}
 
@@ -312,27 +340,81 @@ export function GrupoChatScreen({ route, navigation }) {
               </View>
 
               <View style={styles.columnaMiembros}>
-                <Text style={styles.miembrosTitulo}>Miembros ({grupo.totalMiembros ?? 0})</Text>
-                <FlatList
-                  style={styles.flex}
-                  data={grupo.miembros || []}
-                  keyExtractor={(m) => String(m.id)}
-                  renderItem={({ item }) => (
+                <View style={styles.pestanas}>
+                  {PESTANAS.map(({ id, titulo }) => (
                     <TouchableOpacity
-                      style={styles.miembro}
-                      onPress={() => navigation.navigate('PerfilPublico', { perfilId: item.id })}
-                      activeOpacity={0.7}
+                      key={id}
+                      style={[styles.pestana, pestana === id && styles.pestanaActiva]}
+                      onPress={() => setPestana(id)}
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected: pestana === id }}
+                      activeOpacity={0.8}
                     >
-                      <Text style={styles.miembroNombre} numberOfLines={1}>{item.nombre}{item.id === miId ? ' (vos)' : ''}</Text>
-                      <Text style={styles.miembroUsuario} numberOfLines={1}>@{item.username}</Text>
+                      <Text style={styles.pestanaTexto}>{titulo}</Text>
                     </TouchableOpacity>
-                  )}
-                />
-                {ranking.unido ? (
-                  <Button title="Ver ranking" variant="secondary" onPress={verRanking} style={styles.botonSalir} />
-                ) : !ranking.activo ? (
-                  <Button title="Invitar a ranking" onPress={invitarARanking} loading={accionRanking} style={styles.botonSalir} />
-                ) : null}
+                  ))}
+                </View>
+
+                {pestana === 'miembros' && (
+                  <>
+                    {grupo.esPrivado && !!grupo.codigo && (
+                      <View style={styles.codigoCaja}>
+                        <Text style={styles.codigoEtiqueta}>🔒 Código para invitar</Text>
+                        <Text style={styles.codigo} selectable>{grupo.codigo}</Text>
+                      </View>
+                    )}
+                    <Text style={styles.miembrosTitulo}>Miembros ({grupo.totalMiembros ?? 0})</Text>
+                    <FlatList
+                      style={styles.flex}
+                      data={grupo.miembros || []}
+                      keyExtractor={(m) => String(m.id)}
+                      renderItem={({ item }) => (
+                        <TouchableOpacity
+                          style={styles.miembro}
+                          onPress={() => navigation.navigate('PerfilPublico', { perfilId: item.id })}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.miembroNombre} numberOfLines={1}>{item.nombre}{item.id === miId ? ' (vos)' : ''}</Text>
+                          <Text style={styles.miembroUsuario} numberOfLines={1}>@{item.username}</Text>
+                        </TouchableOpacity>
+                      )}
+                    />
+                  </>
+                )}
+
+                {pestana === 'ranking' && (
+                  <>
+                    {!ranking.activo && (
+                      <Text style={styles.rankingAyuda}>Todavía no hay ranking. Invitá al grupo: cada uno entra al aceptar.</Text>
+                    )}
+                    {ranking.activo && !ranking.unido && (
+                      <Text style={styles.rankingAyuda}>El grupo tiene un ranking. Aceptá para competir por XP.</Text>
+                    )}
+                    {ranking.activo && (
+                      <FlatList
+                        style={styles.flex}
+                        data={ranking.participantes}
+                        keyExtractor={(p) => String(p.id)}
+                        ListEmptyComponent={<Text style={styles.rankingAyuda}>Nadie aceptó todavía.</Text>}
+                        renderItem={({ item }) => (
+                          <View style={[styles.puesto, item.id === miId && styles.puestoMio]}>
+                            <Text style={styles.puestoNumero}>#{item.posicion}</Text>
+                            <Text style={styles.puestoNombre} numberOfLines={1}>@{item.username}{item.id === miId ? ' (vos)' : ''}</Text>
+                            <Text style={styles.puestoXp}>{item.xp ?? 0} XP</Text>
+                          </View>
+                        )}
+                      />
+                    )}
+                    {ranking.unido ? (
+                      <Button title="Ver ranking completo" variant="secondary" onPress={verRanking} style={styles.botonSalir} />
+                    ) : ranking.activo ? (
+                      <Button title="Aceptar y entrar" onPress={aceptarRanking} loading={accionRanking} style={styles.botonSalir} />
+                    ) : (
+                      <Button title="Invitar a ranking" onPress={invitarARanking} loading={accionRanking} style={styles.botonSalir} />
+                    )}
+                  </>
+                )}
+
                 {confirmandoSalida ? (
                   <Button title="Confirmar salida" variant="danger" onPress={salir} loading={saliendo} style={styles.botonSalir} />
                 ) : (
@@ -353,7 +435,21 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
   fila: { flex: 1, flexDirection: 'row', gap: 14 },
   columnaChat: { flex: 1 },
-  columnaMiembros: { width: '26%', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 14, padding: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
+  pestanas: { flexDirection: 'row', gap: 6, marginBottom: 8 },
+  pestana: { flex: 1, alignItems: 'center', paddingVertical: 6, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  pestanaActiva: { backgroundColor: 'rgba(178,140,255,0.3)', borderColor: '#b28cff' },
+  pestanaTexto: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
+  codigoCaja: { alignItems: 'center', padding: 8, marginBottom: 8, borderRadius: 10, backgroundColor: 'rgba(163,251,163,0.1)', borderWidth: 1, borderColor: 'rgba(163,251,163,0.5)' },
+  codigoEtiqueta: { color: 'rgba(255,255,255,0.8)', fontSize: 11 },
+  codigo: { color: '#a3fba3', fontSize: 18, fontWeight: 'bold', letterSpacing: 2, marginTop: 2 },
+  codigoSinUnir: { width: '60%' },
+  rankingAyuda: { color: 'rgba(255,255,255,0.75)', fontSize: 12, textAlign: 'center', marginVertical: 6 },
+  puesto: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
+  puestoMio: { backgroundColor: 'rgba(178,140,255,0.15)', borderRadius: 6 },
+  puestoNumero: { color: '#fff', fontSize: 12, fontWeight: 'bold', width: 26 },
+  puestoNombre: { color: '#fff', fontSize: 12, flex: 1 },
+  puestoXp: { color: '#a3fba3', fontSize: 12, fontWeight: 'bold' },
+  columnaMiembros: { width: '30%', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 14, padding: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
   miembrosTitulo: { color: '#fff', fontSize: 14, fontWeight: 'bold', marginBottom: 8 },
   miembro: { paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
   miembroNombre: { color: '#fff', fontSize: 13, fontWeight: '600' },

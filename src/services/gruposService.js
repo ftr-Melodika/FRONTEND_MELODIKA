@@ -20,15 +20,21 @@ export const gruposService = {
   buscar: async (miPerfilId, texto) =>
     (await pedir(() => axiosClient.get(`${ENDPOINTS.grupos(miPerfilId)}/buscar`, { params: { q: texto } }))) || [],
 
-  // datos: { nombre, descripcion, miembroIds? } (miembroIds: ids de amigos aceptados)
+  // datos: { nombre, descripcion, miembroIds?, esPrivado? } (miembroIds: ids de amigos aceptados)
+  // Un grupo privado vuelve con su código (8 letras o números) en `codigo`
   crear: (miPerfilId, datos) =>
     pedir(() => axiosClient.post(ENDPOINTS.grupos(miPerfilId), datos)),
 
   obtener: (miPerfilId, grupoId) =>
     pedir(() => axiosClient.get(ENDPOINTS.grupo(miPerfilId, grupoId))),
 
-  unirse: (miPerfilId, grupoId) =>
-    pedir(() => axiosClient.post(`${ENDPOINTS.grupo(miPerfilId, grupoId)}/unirse`)),
+  // codigo: solo para grupos privados. Devuelve { grupoId, unido, grupo }
+  unirse: (miPerfilId, grupoId, codigo) =>
+    pedir(() => axiosClient.post(`${ENDPOINTS.grupo(miPerfilId, grupoId)}/unirse`, codigo ? { codigo } : undefined)),
+
+  // Entrar a un grupo privado sabiendo solo su código. Devuelve { grupoId, unido, grupo }
+  unirseConCodigo: (miPerfilId, codigo) =>
+    pedir(() => axiosClient.post(`${ENDPOINTS.grupos(miPerfilId)}/unirse-con-codigo`, { codigo })),
 
   salir: (miPerfilId, grupoId) =>
     pedir(() => axiosClient.delete(`${ENDPOINTS.grupo(miPerfilId, grupoId)}/salir`)),

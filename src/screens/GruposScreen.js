@@ -1,5 +1,6 @@
 // Archivo: src/screens/GruposScreen.js
 // Tres apartados: los grupos en los que estás, buscar grupos y crear uno nuevo.
+// En la búsqueda se ven todos los grupos; a los privados (🔒) se entra con su código.
 import { useCallback, useContext, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -9,8 +10,11 @@ import { Button } from '../components/Button';
 import { InputField } from '../components/InputField';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { CrearGrupo } from '../components/grupos/CrearGrupo';
+import { EntradaCodigo } from '../components/grupos/EntradaCodigo';
 import { AuthContext } from '../context/AuthContext';
 import { gruposService } from '../services/gruposService';
+
+const nombreConCandado = (grupo) => `${grupo.esPrivado ? '🔒 ' : ''}${grupo.nombre}`;
 
 const APARTADOS = [
   { id: 'mios', titulo: 'Mis grupos' },
@@ -61,7 +65,7 @@ function MisGrupos({ miId, onAbrir, onBuscar }) {
       renderItem={({ item }) => (
         <TouchableOpacity style={styles.fila} onPress={() => onAbrir(item)} activeOpacity={0.7}>
           <View style={styles.textos}>
-            <Text style={styles.nombre} numberOfLines={1}>{item.nombre}</Text>
+            <Text style={styles.nombre} numberOfLines={1}>{nombreConCandado(item)}</Text>
             <Text style={styles.detalle} numberOfLines={1}>
               {item.ultimoMensaje
                 ? `${item.ultimoMensaje.remitenteNombre || 'Usuario'}: ${item.ultimoMensaje.contenido}`
@@ -81,6 +85,9 @@ function BuscarGrupos({ miId, onAbrir }) {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const [uniendoId, setUniendoId] = useState(null);
+  // Grupo privado al que se le está escribiendo el código (se abre la caja debajo de su fila)
+  const [codigoParaId, setCodigoParaId] = useState(null);
+  const [conCodigo, setConCodigo] = useState(false);
 
   const buscar = useCallback(async (consulta) => {
     setCargando(true);
@@ -98,6 +105,10 @@ function BuscarGrupos({ miId, onAbrir }) {
   useFocusEffect(useCallback(() => { buscar(''); }, [buscar]));
 
   const unirse = async (grupo) => {
+    if (grupo.esPrivado) {
+      setCodigoParaId((actual) => (actual === grupo.id ? null : grupo.id));
+      return;
+    }
     setUniendoId(grupo.id);
     setError(null);
     try {
@@ -110,8 +121,26 @@ function BuscarGrupos({ miId, onAbrir }) {
     }
   };
 
+  // Los errores (código incorrecto) los muestra la caja del código
+  const unirseConCodigoDe = (grupo) => async (codigo) => {
+    await gruposService.unirse(miId, grupo.id, codigo);
+    onAbrir(grupo);
+  };
+
+  const unirseSoloConCodigo = async (codigo) => {
+    const { grupo } = await gruposService.unirseConCodigo(miId, codigo);
+    onAbrir(grupo);
+  };
+
   return (
     <View style={styles.flex}>
+      {conCodigo && (
+        <View style={styles.cajaCodigo}>
+          <Text style={styles.cajaCodigoTitulo}>Escribí el código del grupo privado (distingue mayúsculas)</Text>
+          <EntradaCodigo onEntrar={unirseSoloConCodigo} autoFocus />
+        </View>
+      )}
+
       <View style={styles.buscador}>
         <View style={styles.flex}>
           <InputField
@@ -123,6 +152,12 @@ function BuscarGrupos({ miId, onAbrir }) {
           />
         </View>
         <Button title="Buscar" onPress={() => buscar(texto)} style={styles.botonBuscar} />
+        <Button
+          title={conCodigo ? 'Cerrar' : 'Tengo un código'}
+          variant="secondary"
+          onPress={() => setConCodigo((v) => !v)}
+          style={styles.botonCodigo}
+        />
       </View>
 
       {!!error && <Text style={styles.error}>{error}</Text>}
@@ -136,16 +171,30 @@ function BuscarGrupos({ miId, onAbrir }) {
         contentContainerStyle={styles.lista}
         keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => (
-          <View style={styles.fila}>
-            <View style={styles.textos}>
-              <Text style={styles.nombre} numberOfLines={1}>{item.nombre}</Text>
-              {!!item.descripcion && <Text style={styles.detalle} numberOfLines={2}>{item.descripcion}</Text>}
-              <Text style={styles.miembrosTexto}>{textoMiembros(item.totalMiembros)}</Text>
+          <View style={styles.tarjeta}>
+            <View style={styles.filaInterna}>
+              <View style={styles.textos}>
+                <Text style={styles.nombre} numberOfLines={1}>{nombreConCandado(item)}</Text>
+                {!!item.descripcion && <Text style={styles.detalle} numberOfLines={2}>{item.descripcion}</Text>}
+                <Text style={styles.miembrosTexto}>
+                  {textoMiembros(item.totalMiembros)}{item.esPrivado ? '  ·  Privado: se entra con código' : ''}
+                </Text>
+              </View>
+              {item.unido ? (
+                <Button title="Abrir" variant="secondary" onPress={() => onAbrir(item)} style={styles.botonFila} />
+              ) : (
+                <Button
+                  title={item.esPrivado ? (codigoParaId === item.id ? 'Cancelar' : 'Con código') : 'Unirme'}
+                  variant={item.esPrivado && codigoParaId === item.id ? 'secondary' : 'primary'}
+                  onPress={() => unirse(item)}
+                  loading={uniendoId === item.id}
+                  disabled={!!uniendoId}
+                  style={styles.botonFila}
+                />
+              )}
             </View>
-            {item.unido ? (
-              <Button title="Abrir" variant="secondary" onPress={() => onAbrir(item)} style={styles.botonFila} />
-            ) : (
-              <Button title="Unirme" onPress={() => unirse(item)} loading={uniendoId === item.id} disabled={!!uniendoId} style={styles.botonFila} />
+            {codigoParaId === item.id && !item.unido && (
+              <EntradaCodigo onEntrar={unirseConCodigoDe(item)} textoBoton="Unirme" autoFocus style={styles.codigoEnFila} />
             )}
           </View>
         )}
@@ -197,6 +246,11 @@ const styles = StyleSheet.create({
   pestanaTexto: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
   lista: { paddingBottom: 20 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 14, paddingVertical: 10, paddingHorizontal: 14, marginBottom: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  tarjeta: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 14, paddingVertical: 10, paddingHorizontal: 14, marginBottom: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  filaInterna: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  codigoEnFila: { marginTop: 10 },
+  cajaCodigo: { marginBottom: 12, padding: 12, borderRadius: 14, backgroundColor: 'rgba(178,140,255,0.12)', borderWidth: 1, borderColor: 'rgba(178,140,255,0.5)' },
+  cajaCodigoTitulo: { color: '#fff', fontSize: 14, fontWeight: 'bold', marginBottom: 8 },
   textos: { flex: 1, minWidth: 0 },
   nombre: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   detalle: { color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 2 },
@@ -204,6 +258,7 @@ const styles = StyleSheet.create({
   miembrosTexto: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 2 },
   buscador: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   botonBuscar: { width: 110, minHeight: 44, paddingVertical: 8, marginVertical: 0 },
+  botonCodigo: { width: 160, minHeight: 44, paddingVertical: 8, marginVertical: 0 },
   botonFila: { width: 110, minHeight: 42, paddingVertical: 8, marginVertical: 0 },
   error: { color: '#ffb3bd', fontSize: 14, textAlign: 'center', marginVertical: 8 },
   vacioCaja: { alignItems: 'center' },
