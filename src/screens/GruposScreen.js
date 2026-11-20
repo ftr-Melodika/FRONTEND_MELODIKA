@@ -1,13 +1,14 @@
 // Archivo: src/screens/GruposScreen.js
 // Tres apartados: los grupos en los que estás, buscar grupos y crear uno nuevo.
 import { useCallback, useContext, useState } from 'react';
-import { View, Text, FlatList, ScrollView, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Background } from '../components/Background';
 import { Button } from '../components/Button';
 import { InputField } from '../components/InputField';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { CrearGrupo } from '../components/grupos/CrearGrupo';
 import { AuthContext } from '../context/AuthContext';
 import { gruposService } from '../services/gruposService';
 
@@ -153,52 +154,6 @@ function BuscarGrupos({ miId, onAbrir }) {
   );
 }
 
-function CrearGrupo({ miId, onCreado }) {
-  const [nombre, setNombre] = useState('');
-  const [descripcion, setDescripcion] = useState('');
-  const [enviando, setEnviando] = useState(false);
-  const [error, setError] = useState(null);
-
-  const crear = async () => {
-    const nombreLimpio = nombre.trim();
-    if (nombreLimpio.length < 3) {
-      setError('El nombre debe tener al menos 3 caracteres.');
-      return;
-    }
-    setEnviando(true);
-    setError(null);
-    try {
-      const grupo = await gruposService.crear(miId, { nombre: nombreLimpio, descripcion: descripcion.trim() });
-      setNombre('');
-      setDescripcion('');
-      onCreado(grupo);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setEnviando(false);
-    }
-  };
-
-  return (
-    <ScrollView contentContainerStyle={styles.lista} keyboardShouldPersistTaps="handled">
-      <InputField placeholder="Nombre del grupo" value={nombre} onChangeText={setNombre} maxLength={50} autoCapitalize="sentences" />
-      <TextInput
-        style={styles.descripcion}
-        placeholder="¿De qué se trata? (opcional)"
-        placeholderTextColor="rgba(255, 255, 255, 0.7)"
-        value={descripcion}
-        onChangeText={setDescripcion}
-        maxLength={200}
-        multiline
-        textAlignVertical="top"
-      />
-      <Text style={styles.contador}>{descripcion.length} / 200</Text>
-      {!!error && <Text style={styles.error}>{error}</Text>}
-      <Button title="Crear grupo" onPress={crear} loading={enviando} />
-    </ScrollView>
-  );
-}
-
 export function GruposScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { perfil } = useContext(AuthContext);
@@ -250,8 +205,6 @@ const styles = StyleSheet.create({
   buscador: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   botonBuscar: { width: 110, minHeight: 44, paddingVertical: 8, marginVertical: 0 },
   botonFila: { width: 110, minHeight: 42, paddingVertical: 8, marginVertical: 0 },
-  descripcion: { minHeight: 90, backgroundColor: 'rgba(255, 255, 255, 0.15)', borderColor: 'rgba(255, 255, 255, 0.3)', borderWidth: 1, borderRadius: 10, padding: 12, color: '#fff', fontSize: 15 },
-  contador: { color: 'rgba(255,255,255,0.6)', fontSize: 11, textAlign: 'right', marginTop: 4 },
   error: { color: '#ffb3bd', fontSize: 14, textAlign: 'center', marginVertical: 8 },
   vacioCaja: { alignItems: 'center' },
   vacio: { color: 'rgba(255,255,255,0.8)', fontSize: 15, textAlign: 'center', marginTop: 20 },

@@ -26,6 +26,9 @@ export const ENDPOINTS = {
   solicitud: (id, amistadId) => `${BASE_URL}/perfiles/${id}/solicitudes/${amistadId}`,
   amistad: (id, amistadId) => `${BASE_URL}/perfiles/${id}/amistades/${amistadId}`,
   amigos: (id) => `${BASE_URL}/perfiles/${id}/amigos`,
+  invitacion: (id) => `${BASE_URL}/perfiles/${id}/invitacion`,
+  invitacionRegenerar: (id) => `${BASE_URL}/perfiles/${id}/invitacion/regenerar`,
+  invitacionPorToken: (id, token) => `${BASE_URL}/perfiles/${id}/invitacion/${encodeURIComponent(token)}`,
   grupos: (id) => `${BASE_URL}/perfiles/${id}/grupos`,
   grupo: (id, grupoId) => `${BASE_URL}/perfiles/${id}/grupos/${grupoId}`,
 
