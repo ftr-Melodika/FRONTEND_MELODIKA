@@ -1,6 +1,6 @@
 // Reemplazar por la URL del backend de cada uno (SIEMPRE terminando en /api)
-const SERVER_URL = 'http://192.168.0.232:3000/api'; // IP gasti
-//const SERVER_URL = 'https://corroding-confused-polka.ngrok-free.dev/api'; // ngrok gasti
+//const SERVER_URL = 'http://192.168.0.232:3000/api'; // IP gasti
+const SERVER_URL = 'https://corroding-confused-polka.ngrok-free.dev/api'; // ngrok gasti
 //const SERVER_URL = 'https://compile-upturned-greedily.ngrok-free.dev/api'; // Ngrok Juanma
 //const SERVER_URL = 'https://national-retake-exquisite.ngrok-free.dev/api'; // IP IVO
 
@@ -26,6 +26,9 @@ export const ENDPOINTS = {
   solicitud: (id, amistadId) => `${BASE_URL}/perfiles/${id}/solicitudes/${amistadId}`,
   amistad: (id, amistadId) => `${BASE_URL}/perfiles/${id}/amistades/${amistadId}`,
   amigos: (id) => `${BASE_URL}/perfiles/${id}/amigos`,
+  invitacion: (id) => `${BASE_URL}/perfiles/${id}/invitacion`,
+  invitacionRegenerar: (id) => `${BASE_URL}/perfiles/${id}/invitacion/regenerar`,
+  invitacionPorToken: (id, token) => `${BASE_URL}/perfiles/${id}/invitacion/${encodeURIComponent(token)}`,
   grupos: (id) => `${BASE_URL}/perfiles/${id}/grupos`,
   grupo: (id, grupoId) => `${BASE_URL}/perfiles/${id}/grupos/${grupoId}`,
 

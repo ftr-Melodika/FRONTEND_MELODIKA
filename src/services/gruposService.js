@@ -20,6 +20,7 @@ export const gruposService = {
   buscar: async (miPerfilId, texto) =>
     (await pedir(() => axiosClient.get(`${ENDPOINTS.grupos(miPerfilId)}/buscar`, { params: { q: texto } }))) || [],
 
+  // datos: { nombre, descripcion, miembroIds? } (miembroIds: ids de amigos aceptados)
   crear: (miPerfilId, datos) =>
     pedir(() => axiosClient.post(ENDPOINTS.grupos(miPerfilId), datos)),
 

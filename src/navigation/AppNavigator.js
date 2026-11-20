@@ -1,5 +1,5 @@
-import React, { useContext } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useContext, useState } from 'react';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthContext } from '../context/AuthContext';
 import { LoadingModal } from '../components/LoadingModal'; // 👈 El nuevo modal
@@ -15,6 +15,9 @@ import { GruposScreen } from '../screens/GruposScreen';
 import { GrupoChatScreen } from '../screens/GrupoChatScreen';
 import { ReportarErrorScreen } from '../screens/ReportarErrorScreen';
 import { ContactoScreen } from '../screens/ContactoScreen';
+import { AgregarAmigoScreen } from '../screens/AgregarAmigoScreen';
+import { InvitacionAmigoScreen } from '../screens/InvitacionAmigoScreen';
+import { useInvitacionLink } from '../hooks/useInvitacionLink';
 
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
@@ -29,12 +32,21 @@ import { CancionScreen } from '../screens/CancionScreen';
 import { Background } from '../components/Background';
 
 const Stack = createNativeStackNavigator();
+const navigationRef = createNavigationContainerRef();
 
 // Antes cada cambio de pantalla mostraba la pantalla de carga 0,8 s a propósito: en un celular
 // lento se sumaba al tiempo real de montar la pantalla. Ahora la carga se muestra solo cuando hay
 // algo que esperar (cada pantalla usa LoadingModal mientras busca sus datos).
 export function AppNavigator() {
-  const { isLoading, userToken } = useContext(AuthContext);
+  const { isLoading, userToken, perfil } = useContext(AuthContext);
+  const [navegacionLista, setNavegacionLista] = useState(false);
+
+  // Links melodika://invitar/<token>: abre la invitación cuando hay sesión y perfil activo
+  useInvitacionLink({
+    navigationRef,
+    navegacionLista,
+    hayPerfil: userToken !== null && !!perfil?.id,
+  });
 
   if (isLoading) {
     return (
@@ -46,7 +58,7 @@ export function AppNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef} onReady={() => setNavegacionLista(true)}>
       <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
         {userToken === null ? (
           <>
@@ -67,6 +79,8 @@ export function AppNavigator() {
             <Stack.Screen name="Practica" component={PracticaScreen} />
             <Stack.Screen name="PerfilPublico" component={PerfilPublicoScreen} />
             <Stack.Screen name="Solicitudes" component={SolicitudesScreen} />
+            <Stack.Screen name="AgregarAmigo" component={AgregarAmigoScreen} />
+            <Stack.Screen name="InvitacionAmigo" component={InvitacionAmigoScreen} />
             <Stack.Screen name="Feedback" component={FeedbackScreen} />
             <Stack.Screen name="Grupos" component={GruposScreen} />
             <Stack.Screen name="GrupoChat" component={GrupoChatScreen} />
