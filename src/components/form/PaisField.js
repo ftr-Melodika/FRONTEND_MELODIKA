@@ -3,7 +3,8 @@
 // que se escribe. Se abre en una ventana encima del formulario: con el teclado abierto (y la app en
 // horizontal) una lista desplegada dentro del formulario quedaría tapada.
 import { useMemo, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useAlturaTeclado } from '../../hooks/useAlturaTeclado';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icono } from '../icono/Icono';
 import { SelectField } from '../SelectField';
@@ -14,6 +15,7 @@ const ALTO_OPCION = 44;
 // value: el nombre del país ('' si no eligió). Un país viejo escrito a mano se muestra igual.
 export function PaisField({ value, onSelect, label = 'País (opcional)' }) {
   const insets = useSafeAreaInsets();
+  const alturaTeclado = useAlturaTeclado();
   const [abierto, setAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const resultados = useMemo(() => filtrarPaises(busqueda), [busqueda]);
@@ -39,9 +41,8 @@ export function PaisField({ value, onSelect, label = 'País (opcional)' }) {
         onRequestClose={cerrar}
         supportedOrientations={['landscape', 'landscape-left', 'landscape-right', 'portrait']}
       >
-        <KeyboardAvoidingView
-          style={[styles.fondo, { paddingTop: Math.max(insets.top, 12), paddingBottom: Math.max(insets.bottom, 12) }]}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        <View
+          style={[styles.fondo, { paddingTop: Math.max(insets.top, 12), paddingBottom: Math.max(insets.bottom, 12) + alturaTeclado }]}
         >
           <Pressable style={StyleSheet.absoluteFill} onPress={cerrar} accessibilityLabel="Cerrar" />
           <View style={styles.tarjeta}>
@@ -84,7 +85,7 @@ export function PaisField({ value, onSelect, label = 'País (opcional)' }) {
               )}
             />
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
     </View>
   );

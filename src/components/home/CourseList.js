@@ -1,5 +1,6 @@
 // Archivo: src/components/home/CourseList.js
 // Primera vista del Home: todos los cursos como tarjetas. Al tocar uno se ven sus ejercicios.
+import { useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { Icono, COLORES_ICONO } from '../icono/Icono';
@@ -32,7 +33,7 @@ function Anillo({ tam, fraccion, children }) {
   );
 }
 
-function TarjetaCurso({ curso, numero, onPress, actual }) {
+function TarjetaCurso({ curso, numero, onPress, actual, onLayout }) {
   const bloqueado = !curso.desbloqueado;
   const avance = avanceDe(curso);
   const estado = curso.completado ? 'Completado' : bloqueado ? 'Bloqueado' : avance?.hechas ? 'En curso' : 'Disponible';
@@ -41,6 +42,7 @@ function TarjetaCurso({ curso, numero, onPress, actual }) {
     <TouchableOpacity
       style={[styles.tarjeta, actual && styles.tarjetaActual, curso.completado && styles.tarjetaCompletada, bloqueado && styles.tarjetaBloqueada]}
       onPress={() => onPress(curso)}
+      onLayout={onLayout}
       activeOpacity={0.8}
       accessibilityRole="button"
       accessibilityLabel={`${curso.nombre}, ${estado}`}
@@ -80,12 +82,39 @@ function TarjetaCurso({ curso, numero, onPress, actual }) {
 export function CourseList({ cursos, onSelect }) {
   // El curso "actual": el primero desbloqueado que todavía no terminaste
   const actual = cursos.find((c) => c.desbloqueado && !c.completado) || cursos.find((c) => c.desbloqueado);
+  const scrollRef = useRef(null);
+  const medidas = useRef({ ancho: 0, x: null, tam: 0 });
+
+  // Cuando ya sabemos el ancho de la lista y dónde está la tarjeta actual, la centramos
+  const centrarActual = () => {
+    const { ancho, x, tam } = medidas.current;
+    if (!ancho || x === null || !scrollRef.current) return;
+    scrollRef.current.scrollTo({ x: Math.max(0, x + tam / 2 - ancho / 2), animated: false });
+  };
+
   return (
     <View style={styles.seccion}>
       <Text style={styles.titulo}>Elegí un curso para ver sus ejercicios</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.lista}>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.lista}
+        onLayout={(e) => { medidas.current.ancho = e.nativeEvent.layout.width; centrarActual(); }}
+      >
         {cursos.map((curso, i) => (
-          <TarjetaCurso key={curso.id} curso={curso} numero={i + 1} onPress={onSelect} actual={curso === actual} />
+          <TarjetaCurso
+            key={curso.id}
+            curso={curso}
+            numero={i + 1}
+            onPress={onSelect}
+            actual={curso === actual}
+            onLayout={curso === actual ? (e) => {
+              medidas.current.x = e.nativeEvent.layout.x;
+              medidas.current.tam = e.nativeEvent.layout.width;
+              centrarActual();
+            } : undefined}
+          />
         ))}
       </ScrollView>
     </View>

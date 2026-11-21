@@ -1,7 +1,7 @@
 // Archivo: src/screens/AjustesCuentaScreen.js
 // Ajustes de la cuenta (no del perfil): el correo con el que se entró y la zona para eliminarla.
 import { useState, useContext } from 'react';
-import { View, Text, StyleSheet, Alert, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Alert, Dimensions, TouchableOpacity } from 'react-native';
 import { Icono } from '../components/icono/Icono';
 import { Background } from '../components/Background';
 import { ScreenHeader } from '../components/ScreenHeader';
@@ -9,13 +9,12 @@ import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
 import { AuthContext } from '../context/AuthContext';
 import { authService } from '../services/authService';
-import { useAlturaTeclado } from '../hooks/useAlturaTeclado';
+import { FormScroll } from '../components/FormScroll';
 import { REQUISITOS_PASSWORD, passwordValida } from '../utils/password';
 import { FUENTE_TITULO } from '../theme/fuentes';
 
 export function AjustesCuentaScreen() {
   const { userData: cuenta, logout } = useContext(AuthContext);
-  const alturaTeclado = useAlturaTeclado();
   const cardWidth = Math.round(Dimensions.get('window').width * 0.94);
 
   const [confirmando, setConfirmando] = useState(false);
@@ -76,11 +75,10 @@ export function AjustesCuentaScreen() {
 
   return (
     <Background>
-      <ScrollView
+      <FormScroll
         style={{ flex: 1 }}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 + alturaTeclado }]}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
       >
         <View style={[styles.glassCard, { width: cardWidth }]}>
           <ScreenHeader title="Ajustes de cuenta" />
@@ -132,7 +130,7 @@ export function AjustesCuentaScreen() {
             <Button title="Eliminar cuenta" variant="danger" onPress={() => setConfirmando(true)} />
           )}
         </View>
-      </ScrollView>
+      </FormScroll>
     </Background>
   );
 }

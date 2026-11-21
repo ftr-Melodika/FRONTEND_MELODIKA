@@ -1,5 +1,5 @@
 import { useState, useContext } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, Alert } from 'react-native';
 import { Background } from '../components/Background';
 import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
@@ -7,7 +7,7 @@ import { Checkbox } from '../components/form/Checkbox'; // 👈 Checkbox importa
 import { authService } from '../services/authService';
 import { AuthContext } from '../context/AuthContext';
 import { REQUISITOS_PASSWORD, passwordValida } from '../utils/password';
-import { useAlturaTeclado } from '../hooks/useAlturaTeclado';
+import { FormScroll } from '../components/FormScroll';
 import { FUENTE_TITULO } from '../theme/fuentes';
 
 export function RegisterScreen({ navigation }) {
@@ -20,7 +20,6 @@ export function RegisterScreen({ navigation }) {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login } = useContext(AuthContext);
-  const alturaTeclado = useAlturaTeclado();
 
   const handleRegister = async () => {
     if (!nombre || !apellido || !telefono || !email || !password || !confirmPassword) return Alert.alert('Error', 'Faltan campos.');
@@ -52,7 +51,7 @@ export function RegisterScreen({ navigation }) {
   return (
     <Background>
       <View style={styles.glassCard}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { paddingBottom: 16 + alturaTeclado }]} keyboardShouldPersistTaps="handled">
+        <FormScroll showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           <Button 
             title="Volver" icono="volver" 
             variant="back" 
@@ -79,7 +78,7 @@ export function RegisterScreen({ navigation }) {
             <Text style={{color: 'rgba(255,255,255,0.7)'}}>¿Ya tenés una cuenta?</Text>
             <Button title="Inicia sesión" variant="link" onPress={() => navigation.navigate('Login')} />
           </View>
-        </ScrollView>
+        </FormScroll>
       </View>
     </Background>
   );

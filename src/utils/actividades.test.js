@@ -1,7 +1,18 @@
 // Ejecutar con: npm test
 import test from 'node:test';
 import assert from 'node:assert';
-import { compararAfinacion, obtenerAfinacion, obtenerQuiz, siguienteCuerda } from './actividades.js';
+import { compararAfinacion, obtenerAfinacion, obtenerCancion, obtenerQuiz, siguienteCuerda } from './actividades.js';
+
+test('obtenerCancion lee la canción y la fase, y rechaza lo inválido', () => {
+  assert.deepStrictEqual(obtenerCancion({ practica: { tipo: 'cancion', cancionId: 'horse-with-no-name', fase: 'tocar' } }), { cancionId: 'horse-with-no-name', fase: 'tocar' });
+  assert.deepStrictEqual(obtenerCancion({ practica: { tipo: 'cancion', cancionId: 'flaca', fase: 'aprender' } }), { cancionId: 'flaca', fase: 'aprender' });
+  assert.strictEqual(obtenerCancion({ practica: { tipo: 'cancion', cancionId: 3, fase: 'tocar' } }), null);
+  assert.strictEqual(obtenerCancion({ practica: { tipo: 'cancion', cancionId: ' ', fase: 'tocar' } }), null);
+  assert.strictEqual(obtenerCancion({ practica: { tipo: 'cancion', cancionId: 'flaca', fase: 'otra' } }), null);
+  assert.strictEqual(obtenerCancion({ practica: { tipo: 'cancion', fase: 'tocar' } }), null);
+  assert.strictEqual(obtenerCancion({ practica: { tipo: 'quiz', cancionId: 3, fase: 'tocar' } }), null);
+  assert.strictEqual(obtenerCancion({}), null);
+});
 
 const preguntaValida = {
   pregunta: '¿Cómo se llama la parte marcada?',

@@ -1,6 +1,6 @@
 import { TextoConIcono } from '../components/icono/Icono';
 import { useState, useContext, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Alert, ScrollView, Dimensions, Switch } from 'react-native';
+import { View, Text, StyleSheet, Alert, Dimensions, Switch } from 'react-native';
 import { Background } from '../components/Background';
 import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
@@ -9,7 +9,7 @@ import { DropdownField } from '../components/form/DropdownField';
 import { PaisField } from '../components/form/PaisField';
 import { ModoZurdoField } from '../components/form/ModoZurdoField';
 import { OPCIONES_GENERO } from '../data/generos';
-import { useAlturaTeclado } from '../hooks/useAlturaTeclado';
+import { FormScroll } from '../components/FormScroll';
 import { AvatarPicker } from '../components/form/AvatarPicker';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { perfilesService } from '../services/perfilesService';
@@ -22,7 +22,6 @@ export function EditUserScreen({ route, navigation }) {
   const { perfilAEditar } = route.params;
   const { perfil: perfilActivo, actualizarPerfil, quitarPerfil } = useContext(AuthContext);
   // Lo que ocupa el teclado se suma al final del formulario, para poder bajar hasta el último campo
-  const alturaTeclado = useAlturaTeclado();
   const esPerfilActivo = perfilActivo?.id === perfilAEditar?.id;
   // Si venimos desde el menú (Configuración) volvemos al Home; si no, a la selección de perfiles
   const vieneDeSelectUser = navigation.getState()?.routes?.some((r) => r.name === 'SelectUser');
@@ -165,11 +164,10 @@ export function EditUserScreen({ route, navigation }) {
 
   return (
     <Background>
-      <ScrollView
+      <FormScroll
         style={{ flex: 1 }}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 + alturaTeclado }]}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
       >
         <View style={[styles.glassCard, { width: cardWidth }]}>
           {vieneDeSelectUser ? (
@@ -232,7 +230,7 @@ export function EditUserScreen({ route, navigation }) {
             style={styles.deleteButton}
           />
         </View>
-      </ScrollView>
+      </FormScroll>
     </Background>
   );
 }

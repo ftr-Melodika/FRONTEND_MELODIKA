@@ -7,7 +7,7 @@ import { GuitarNeck, dedoSugerido } from './GuitarNeck';
 import { EstadoDeteccion } from './EstadoDeteccion';
 import { useDeteccionPractica } from '../../hooks/useDeteccionPractica';
 import { cejillasDeSecuencia } from '../../utils/cejilla';
-import { acordesDeContexto } from '../../utils/acordes';
+import { acordesDeContexto, agruparConsignas } from '../../utils/acordes';
 
 const SEGUNDOS_PARA_SALTEAR = 20;
 const MS_AUTO_TERMINAR = 1200;
@@ -48,11 +48,17 @@ export function PracticaConDeteccion({
   // Al tocar un acorde cuerda por cuerda, cada nota muestra el acorde entero (remarcando su cuerda)
   const contextos = useMemo(() => acordesDeContexto(secuencia), [secuencia]);
   const acordeDeLaNota = contextos[Math.min(indice, secuencia.length - 1)];
+  // Un acorde cuerda por cuerda cuenta como una sola consigna: sus cuerdas son pasos de adentro
+  const consignas = useMemo(() => agruparConsignas(secuencia), [secuencia]);
+  const posicion = Math.min(indice, secuencia.length - 1);
+  const numeroConsigna = Math.max(0, consignas.findIndex((g) => posicion >= g.desde && posicion <= g.hasta));
+  const grupo = consignas[numeroConsigna];
+  const pasosDelGrupo = grupo.hasta - grupo.desde + 1;
   const { estado, lectura, aprobado } = useDeteccionPractica(objetivo, !completo, { seguirAlAprobar: true });
 
   // Sin micrófono no hay forma de aprobar: el alumno no puede quedar trabado en la lección
   const sinMicrofono = estado === 'sin-permiso' || estado === 'no-disponible' || estado === 'error';
-  const varias = secuencia.length > 1;
+  const varias = consignas.length > 1;
 
   useEffect(() => {
     const espera = setTimeout(() => setPuedeSaltear(true), SEGUNDOS_PARA_SALTEAR * 1000);
@@ -82,14 +88,19 @@ export function PracticaConDeteccion({
     return () => clearTimeout(espera);
   }, [autoTerminar, completo]);
 
+  // En un acorde cuerda por cuerda, el título es el acorde y el paso se aclara aparte
+  const nombreDelGrupo = secuencia[grupo.hasta].nombre;
+  const enAcordePorCuerdas = pasosDelGrupo > 1;
   const titulo = completo
-    ? (varias ? `¡Hiciste las ${secuencia.length} consignas!` : `¡Sonó ${objetivo.nombre}!`)
-    : `${varias ? `Consigna ${indice + 1} de ${secuencia.length}:  ` : ''}${describir(objetivo)}`;
+    ? (varias ? `¡Hiciste las ${consignas.length} consignas!` : `¡Sonó ${secuencia[secuencia.length - 1].nombre}!`)
+    : enAcordePorCuerdas
+      ? `${varias ? `Consigna ${numeroConsigna + 1} de ${consignas.length}:  ` : ''}Acorde: ${nombreDelGrupo}  •  ${posicion === grupo.hasta ? 'ahora el acorde completo' : `cuerda ${posicion - grupo.desde + 1} de ${pasosDelGrupo - 1}`}`
+      : `${varias ? `Consigna ${numeroConsigna + 1} de ${consignas.length}:  ` : ''}${describir(objetivo)}`;
 
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        {varias && <Progreso total={secuencia.length} actual={indice} completo={completo} />}
+        {varias && <Progreso total={consignas.length} actual={numeroConsigna} completo={completo} />}
         <Text style={styles.consigna} numberOfLines={1}>{titulo}</Text>
         {objetivo.tipo === 'acorde' ? (
           <GuitarNeck posiciones={objetivo.posiciones} correcto={festejo || completo} />

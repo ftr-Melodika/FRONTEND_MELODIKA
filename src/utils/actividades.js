@@ -25,6 +25,19 @@ function validarRecorte(recorte) {
   return valido?.ancho > 0 && valido?.alto > 0 ? valido : null;
 }
 
+// practica.tipo = 'cancion'. Es la clase de canción de un curso: { cancionId, fase } o null.
+// fase 'aprender' (anteúltima clase): los acordes y los cambios. fase 'tocar' (última): la canción a tempo.
+export const FASES_CANCION = ['aprender', 'tocar'];
+export function obtenerCancion(leccion) {
+  const practica = leccion?.practica;
+  if (practica?.tipo !== 'cancion') return null;
+  // Los ids de las canciones son texto ("horse-with-no-name"), igual que en la sección Canciones
+  const cancionId = typeof practica.cancionId === 'string' ? practica.cancionId.trim() : '';
+  if (!cancionId) return null;
+  if (!FASES_CANCION.includes(practica.fase)) return null;
+  return { cancionId, fase: practica.fase };
+}
+
 // practica.tipo = 'quiz'. Devuelve { nombre, imagen, preguntas } o null.
 // Cada pregunta puede traer su propia imagen y un recorte (un acercamiento a una parte del dibujo).
 // Una pregunta inválida (sin texto, con menos de 2 opciones o sin respuesta correcta) se descarta.

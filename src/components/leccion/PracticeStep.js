@@ -5,7 +5,8 @@ import { Button } from '../Button';
 import { GuitarNeck } from './GuitarNeck';
 import { PracticaConDeteccion } from './PracticaConDeteccion';
 import { obtenerSecuencia } from '../../utils/deteccionSonido';
-import { obtenerAfinacion, obtenerQuiz } from '../../utils/actividades';
+import { obtenerAfinacion, obtenerCancion, obtenerQuiz } from '../../utils/actividades';
+import { CancionStep } from './CancionStep';
 import { QuizStep } from './QuizStep';
 import { AfinacionStep } from './AfinacionStep';
 import { RitmoStep } from './RitmoStep';
@@ -38,6 +39,9 @@ export function PracticeStep({ onBack, onFinish, finishing, leccion }) {
   const riff = useMemo(() => obtenerRiff(leccion), [leccion]);
   const [aTempo, setATempo] = useState(false);
 
+  const cancion = useMemo(() => obtenerCancion(leccion), [leccion]);
+
+  if (cancion) return <CancionStep cancionId={cancion.cancionId} fase={cancion.fase} onBack={onBack} onFinish={onFinish} finishing={finishing} />;
   if (ritmo) return <RitmoStep ritmo={ritmo} onBack={onBack} onFinish={onFinish} finishing={finishing} autoTerminar />;
   if (quiz) return <QuizStep quiz={quiz} onBack={onBack} onFinish={onFinish} finishing={finishing} autoTerminar />;
   if (afinacion) return <AfinacionStep afinacion={afinacion} onBack={onBack} onFinish={onFinish} finishing={finishing} autoTerminar />;

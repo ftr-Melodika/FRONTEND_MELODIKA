@@ -1,6 +1,6 @@
 // Archivo: src/screens/CreateUserScreen.js
 import { useState, useContext } from 'react';
-import { View, Text, StyleSheet, Alert, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Alert, Dimensions } from 'react-native';
 import { Background } from '../components/Background';
 import { InputField } from '../components/InputField';
 import { Button } from '../components/Button';
@@ -10,7 +10,7 @@ import { DropdownField } from '../components/form/DropdownField';
 import { PaisField } from '../components/form/PaisField';
 import { ModoZurdoField } from '../components/form/ModoZurdoField';
 import { OPCIONES_GENERO } from '../data/generos';
-import { useAlturaTeclado } from '../hooks/useAlturaTeclado';
+import { FormScroll } from '../components/FormScroll';
 import { AvatarPicker } from '../components/form/AvatarPicker';
 
 // 👇 Importamos nuestro servicio especialista
@@ -21,7 +21,6 @@ import { FUENTE_TITULO } from '../theme/fuentes';
 export function CreateUserScreen({ navigation }) {
   const { actualizarPerfil } = useContext(AuthContext);
   // Lo que ocupa el teclado se suma al final del formulario, para poder bajar hasta el último campo
-  const alturaTeclado = useAlturaTeclado();
 
   const [nombre, setNombre] = useState('');
   const [username, setUsername] = useState('');
@@ -67,11 +66,10 @@ export function CreateUserScreen({ navigation }) {
 
   return (
     <Background>
-      <ScrollView
+      <FormScroll
         style={{ flex: 1 }}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 + alturaTeclado }]}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
       >
 
         <View style={[styles.glassCard, { width: cardWidth }]}>
@@ -92,7 +90,7 @@ export function CreateUserScreen({ navigation }) {
           <ModoZurdoField value={esZurdo} onChange={setEsZurdo} />
           <Button title="Crear perfil" onPress={handleCreateUser} loading={loading} />
         </View>
-      </ScrollView>
+      </FormScroll>
     </Background>
   );
 }

@@ -2,10 +2,12 @@
 // Pantalla de formulario compartida por Dar feedback, Reportar errores y Contacto.
 // El resultado se muestra en la propia pantalla para que se vea igual en celular y en web.
 import { useContext, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Background } from './Background';
 import { Button } from './Button';
+import { InputField } from './InputField';
+import { FormScroll, avisarFoco } from './FormScroll';
 import { ScreenHeader } from './ScreenHeader';
 import { AuthContext } from '../context/AuthContext';
 import { mensajesService } from '../services/mensajesService';
@@ -13,10 +15,15 @@ import { mensajesService } from '../services/mensajesService';
 const MINIMO_CARACTERES = 10;
 const MAXIMO_CARACTERES = 2000;
 
-export function MensajeForm({ titulo, tipo, intro, etiquetaCategoria, categorias, placeholder, textoExito }) {
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// pedirContacto: agrega los campos Nombre y Email antes de la consulta
+export function MensajeForm({ titulo, tipo, intro, etiquetaCategoria, categorias, placeholder, textoExito, pedirContacto = false }) {
   const insets = useSafeAreaInsets();
   const { perfil } = useContext(AuthContext);
   const [categoria, setCategoria] = useState(categorias[0]);
+  const [nombre, setNombre] = useState('');
+  const [email, setEmail] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState(null);
@@ -24,6 +31,16 @@ export function MensajeForm({ titulo, tipo, intro, etiquetaCategoria, categorias
   const largo = mensaje.trim().length;
 
   const handleEnviar = async () => {
+    if (pedirContacto) {
+      if (!nombre.trim()) {
+        setResultado({ ok: false, texto: 'Ingresá tu nombre.' });
+        return;
+      }
+      if (!EMAIL_REGEX.test(email.trim())) {
+        setResultado({ ok: false, texto: 'Ingresá un email válido.' });
+        return;
+      }
+    }
     if (largo < MINIMO_CARACTERES) {
       setResultado({ ok: false, texto: `Contanos un poco más (mínimo ${MINIMO_CARACTERES} caracteres).` });
       return;
@@ -31,7 +48,12 @@ export function MensajeForm({ titulo, tipo, intro, etiquetaCategoria, categorias
     setEnviando(true);
     setResultado(null);
     try {
-      await mensajesService.enviar(perfil.id, { tipo, categoria, mensaje: mensaje.trim() });
+      const datos = { tipo, categoria, mensaje: mensaje.trim() };
+      if (pedirContacto) {
+        datos.nombre = nombre.trim();
+        datos.email = email.trim();
+      }
+      await mensajesService.enviar(perfil.id, datos);
       setMensaje('');
       setResultado({ ok: true, texto: textoExito });
     } catch (error) {
@@ -45,7 +67,7 @@ export function MensajeForm({ titulo, tipo, intro, etiquetaCategoria, categorias
     <Background>
       <View style={[styles.container, { paddingLeft: Math.max(insets.left, 20), paddingRight: Math.max(insets.right, 20) }]}>
         <ScreenHeader title={titulo} />
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <FormScroll contentContainerStyle={styles.scroll}>
           <Text style={styles.intro}>{intro}</Text>
 
           <Text style={styles.etiqueta}>{etiquetaCategoria}</Text>
@@ -62,7 +84,27 @@ export function MensajeForm({ titulo, tipo, intro, etiquetaCategoria, categorias
             ))}
           </View>
 
+          {pedirContacto && (
+            <>
+              <InputField
+                placeholder="Nombre"
+                value={nombre}
+                onChangeText={(t) => { setNombre(t); setResultado(null); }}
+                autoCapitalize="words"
+                autoComplete="name"
+              />
+              <InputField
+                placeholder="Email"
+                value={email}
+                onChangeText={(t) => { setEmail(t); setResultado(null); }}
+                keyboardType="email-address"
+                autoComplete="email"
+              />
+            </>
+          )}
+
           <TextInput
+            onFocus={avisarFoco}
             style={styles.textarea}
             placeholder={placeholder}
             placeholderTextColor="rgba(255, 255, 255, 0.7)"
@@ -79,7 +121,7 @@ export function MensajeForm({ titulo, tipo, intro, etiquetaCategoria, categorias
           )}
 
           <Button title="Enviar" onPress={handleEnviar} loading={enviando} />
-        </ScrollView>
+        </FormScroll>
       </View>
     </Background>
   );

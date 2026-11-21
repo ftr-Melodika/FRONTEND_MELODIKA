@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Background } from '../components/Background';
 import { Button } from '../components/Button';
 import { InputField } from '../components/InputField';
+import { FormScroll } from '../components/FormScroll';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { AuthContext } from '../context/AuthContext';
 import { amistadesService } from '../services/amistadesService';
@@ -89,7 +90,7 @@ export function AgregarAmigoScreen({ navigation }) {
         />
 
         <View style={styles.fila}>
-          <ScrollView style={styles.columna} contentContainerStyle={styles.contenido} keyboardShouldPersistTaps="handled">
+          <FormScroll style={styles.columna} contentContainerStyle={styles.contenido}>
             <Text style={styles.titulo}>Por nombre de usuario</Text>
             <Text style={styles.ayuda}>Escribilo exacto, sin el @.</Text>
             <InputField
@@ -101,7 +102,7 @@ export function AgregarAmigoScreen({ navigation }) {
             />
             {!!resultado && <Text style={resultado.ok ? styles.ok : styles.error}>{resultado.texto}</Text>}
             <Button title="Enviar solicitud" onPress={enviar} loading={enviando} />
-          </ScrollView>
+          </FormScroll>
 
           <ScrollView style={styles.columna} contentContainerStyle={styles.contenido}>
             <Text style={styles.titulo}>Mi link de invitación</Text>

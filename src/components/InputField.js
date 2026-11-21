@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { Icono } from './icono/Icono';
+import { avisarFoco } from './FormScroll';
 
 // Si es de contraseña (secureTextEntry) trae el ojito para verla u ocultarla
 export function InputField({ placeholder, secureTextEntry, value, onChangeText, ...rest }) {
@@ -16,6 +17,7 @@ export function InputField({ placeholder, secureTextEntry, value, onChangeText, 
       autoCapitalize="none"
       autoCorrect={false}
       {...rest}
+      onFocus={(e) => { avisarFoco(); rest.onFocus?.(e); }}
     />
   );
   if (!secureTextEntry) return input;

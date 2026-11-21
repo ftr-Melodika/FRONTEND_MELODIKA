@@ -3,7 +3,8 @@
 // A la derecha, dos pestañas: los miembros (y el código, si el grupo es privado) y el ranking del grupo.
 // A un grupo privado se entra con su código.
 import { useCallback, useContext, useRef, useState } from 'react';
-import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
+import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { useAlturaTeclado } from '../hooks/useAlturaTeclado';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Background } from '../components/Background';
@@ -37,6 +38,7 @@ function horaDe(fecha) {
 
 export function GrupoChatScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
+  const alturaTeclado = useAlturaTeclado();
   const { perfil } = useContext(AuthContext);
   const miId = perfil?.id;
   const { grupoId, nombre: nombreInicial } = route.params;
@@ -277,7 +279,8 @@ export function GrupoChatScreen({ route, navigation }) {
 
   return (
     <Background>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* Con la app de borde a borde el teclado no achica la pantalla: se deja ese espacio abajo */}
+      <View style={[styles.flex, { paddingBottom: alturaTeclado }]}>
         <View style={[styles.container, { paddingLeft: Math.max(insets.left, 20), paddingRight: Math.max(insets.right, 20) }]}>
           <ScreenHeader title={grupo?.nombre || nombreInicial || 'Grupo'} right={volver} />
 
@@ -424,7 +427,7 @@ export function GrupoChatScreen({ route, navigation }) {
             </View>
           )}
         </View>
-      </KeyboardAvoidingView>
+      </View>
       <LoadingModal visible={loading} text="Abriendo el grupo..." />
     </Background>
   );

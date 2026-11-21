@@ -1,7 +1,7 @@
 // Ejecutar con: npm test
 import test from 'node:test';
 import assert from 'node:assert';
-import { ACORDES_RESPALDO, acordeAlAzar, acordesDeContexto, acordesDeRespaldo, extraerAcordes, preguntaDeAcorde, tituloDeAcorde } from './acordes.js';
+import { ACORDES_RESPALDO, acordeAlAzar, acordesDeContexto, agruparConsignas, acordesDeRespaldo, extraerAcordes, preguntaDeAcorde, tituloDeAcorde } from './acordes.js';
 import { nombreDeMidi } from './deteccionSonido.js';
 
 // Como llega del backend (GET /api/cursos/perfil/:perfilId/curso/:cursoId), ya pasado por mapearLeccion
@@ -115,6 +115,20 @@ test('acordesDeContexto: cada nota del acorde perfecto muestra la forma entera d
   const lam = { tipo: 'acorde', nombre: 'Lam', posiciones: [{ cuerda: 5, traste: 0 }, { cuerda: 4, traste: 2, dedo: 2 }, { cuerda: 3, traste: 2, dedo: 3 }, { cuerda: 2, traste: 1, dedo: 1 }, { cuerda: 1, traste: 0 }] };
   const contexto = acordesDeContexto([nota(5, 0), nota(4, 2), nota(2, 1), lam]);
   assert.deepStrictEqual(contexto, [lam.posiciones, lam.posiciones, lam.posiciones, null]);
+});
+
+test('agruparConsignas: un acorde cuerda por cuerda es una sola consigna', () => {
+  const nota = (cuerda, traste) => ({ tipo: 'nota', posiciones: [{ cuerda, traste }] });
+  const lam = { tipo: 'acorde', nombre: 'Lam', posiciones: [{ cuerda: 5, traste: 0 }, { cuerda: 4, traste: 2 }, { cuerda: 1, traste: 0 }] };
+  const re = { tipo: 'acorde', nombre: 'Re', posiciones: [{ cuerda: 4, traste: 0 }, { cuerda: 3, traste: 2 }] };
+  // Dos acordes con sus cuerdas: dos consignas
+  assert.deepStrictEqual(
+    agruparConsignas([nota(5, 0), nota(4, 2), nota(1, 0), lam, nota(4, 0), nota(3, 2), re]),
+    [{ desde: 0, hasta: 3 }, { desde: 4, hasta: 6 }],
+  );
+  // Acordes sin cuerdas (los cambios) y notas sueltas: una consigna cada uno
+  assert.deepStrictEqual(agruparConsignas([lam, re, lam]), [{ desde: 0, hasta: 0 }, { desde: 1, hasta: 1 }, { desde: 2, hasta: 2 }]);
+  assert.deepStrictEqual(agruparConsignas([nota(6, 3), nota(1, 0)]), [{ desde: 0, hasta: 0 }, { desde: 1, hasta: 1 }]);
 });
 
 test('acordesDeContexto: una nota que no es del acorde siguiente (un riff) se muestra sola', () => {

@@ -3,7 +3,7 @@
 // entre tus amigos. A un grupo privado se entra solo con su código, que se ve dentro del grupo.
 // En horizontal (la app es landscape) el formulario va a la izquierda y los amigos a la derecha.
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 
 const PRIVACIDAD = [
   { id: false, titulo: 'Público', ayuda: 'Cualquiera lo encuentra y entra.' },
@@ -11,6 +11,7 @@ const PRIVACIDAD = [
 ];
 import { Button } from '../Button';
 import { InputField } from '../InputField';
+import { FormScroll, avisarFoco } from '../FormScroll';
 import { SelectorAmigos } from './SelectorAmigos';
 import { amistadesService } from '../../services/amistadesService';
 import { gruposService } from '../../services/gruposService';
@@ -70,9 +71,10 @@ export function CrearGrupo({ miId, onCreado }) {
 
   return (
     <View style={styles.fila}>
-      <ScrollView style={styles.columnaForm} contentContainerStyle={styles.formContenido} keyboardShouldPersistTaps="handled">
+      <FormScroll style={styles.columnaForm} contentContainerStyle={styles.formContenido}>
         <InputField placeholder="Nombre del grupo" value={nombre} onChangeText={setNombre} maxLength={50} autoCapitalize="sentences" />
         <TextInput
+          onFocus={avisarFoco}
           style={styles.descripcion}
           placeholder="¿De qué se trata? (opcional)"
           placeholderTextColor="rgba(255, 255, 255, 0.7)"
@@ -106,7 +108,7 @@ export function CrearGrupo({ miId, onCreado }) {
           onPress={crear}
           loading={enviando}
         />
-      </ScrollView>
+      </FormScroll>
 
       <View style={styles.columnaAmigos}>
         <Text style={styles.titulo}>Elegí integrantes</Text>

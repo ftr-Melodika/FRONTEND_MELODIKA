@@ -137,3 +137,21 @@ export function acordesDeContexto(secuencia) {
     return pertenece ? acorde.posiciones : null;
   });
 }
+
+// Las consignas que ve el alumno. Un acorde tocado cuerda por cuerda es UNA sola consigna (sus
+// cuerdas son pasos adentro de ella); cada nota suelta o acorde solo es una consigna.
+// Devuelve [{ desde, hasta }] con los índices de `secuencia` (hasta incluido), en orden.
+export function agruparConsignas(secuencia) {
+  const contextos = acordesDeContexto(secuencia);
+  const grupos = [];
+  let desde = 0;
+  secuencia.forEach((paso, i) => {
+    const sigueElAcorde = contextos[i] !== null;
+    if (sigueElAcorde) return; // Una cuerda del acorde: el grupo se cierra en el acorde
+    grupos.push({ desde, hasta: i });
+    desde = i + 1;
+  });
+  // Notas sueltas pendientes al final (no deberían quedar: un acorde siempre las cierra)
+  if (desde < secuencia.length) grupos.push({ desde, hasta: secuencia.length - 1 });
+  return grupos;
+}

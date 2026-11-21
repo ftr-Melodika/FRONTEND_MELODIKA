@@ -48,4 +48,8 @@ export const ENDPOINTS = {
   completarLeccion: (perfilId, cursoId, leccionId) =>
     `${BASE_URL}/cursos/perfil/${perfilId}/curso/${cursoId}/lecciones/${leccionId}/completar`,
   completarCurso: (perfilId, cursoId) => `${BASE_URL}/cursos/perfil/${perfilId}/curso/${cursoId}/completar`,
+
+  // Canciones de la sección Canciones (y de las clases finales de los cursos)
+  canciones: `${BASE_URL}/canciones`,
+  cancion: (id) => `${BASE_URL}/canciones/${encodeURIComponent(id)}`,
 };

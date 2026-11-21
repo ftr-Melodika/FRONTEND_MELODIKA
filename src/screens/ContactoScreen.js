@@ -6,6 +6,7 @@ export function ContactoScreen() {
     <MensajeForm
       titulo="Contacto"
       tipo="contacto"
+      pedirContacto
       intro="¿Tenés una consulta sobre tu cuenta o sobre Melodika? Escribinos desde acá."
       etiquetaCategoria="Motivo de la consulta"
       categorias={['Mi cuenta', 'Cursos', 'Otra consulta']}

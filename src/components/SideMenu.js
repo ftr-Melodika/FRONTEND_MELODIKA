@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useContext } from 'react';
-import { View, StyleSheet, Animated, Pressable, ScrollView, Modal } from 'react-native';
+import { View, StyleSheet, Animated, Pressable, ScrollView, Modal, Linking } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -11,6 +11,7 @@ import { AccordotionItem } from './menu/AccordotionItem';
 import { SubMenuItem } from './menu/SubMenuItem';
 
 const DRAWER_WIDTH = 300;
+const URL_SITIO_WEB = 'https://melodika.netlify.app';
 
 // El menú se dibuja dentro de un Modal: así queda por encima de cualquier pantalla
 // y tocar en cualquier lugar fuera del panel lo cierra.
@@ -27,6 +28,7 @@ export function SideMenu({ visible, onClose }) {
 
   useEffect(() => {
     if (visible) {
+      setSeccionAbierta(seccionDe(pantallaActual)); // al abrir, el menú se reinicia
       setIsRendering(true);
       Animated.parallel([
         Animated.timing(slideAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
@@ -43,10 +45,29 @@ export function SideMenu({ visible, onClose }) {
 
   const pantallaActual = route?.name;
 
+  // Solo un acordeón abierto a la vez
+  const seccionDe = (pantalla) => {
+    if (['EditUser', 'AjustesCuenta', 'Logros', 'Progreso', 'Ranking'].includes(pantalla)) return 'Perfil';
+    if (['Practica', 'Canciones', 'Cancion'].includes(pantalla)) return 'Práctica';
+    if (['Solicitudes', 'Feedback', 'Grupos', 'GrupoChat'].includes(pantalla)) return 'Comunidad';
+    if (['PreguntasFrecuentes', 'ReportarError', 'Contacto'].includes(pantalla)) return 'Soporte';
+    return null;
+  };
+  const [seccionAbierta, setSeccionAbierta] = useState(() => seccionDe(pantallaActual));
+  const acordeon = (nombre) => ({
+    open: seccionAbierta === nombre,
+    onToggle: (abrir) => setSeccionAbierta(abrir ? nombre : null),
+  });
+
   // Navega y cierra el menú. Si ya estamos en esa pantalla, solo cierra.
   const irA = (pantalla, params) => {
     onClose();
     if (pantalla !== pantallaActual) navigation.navigate(pantalla, params);
+  };
+
+  const abrirSitioWeb = () => {
+    onClose();
+    Linking.openURL(URL_SITIO_WEB).catch(() => {});
   };
 
   const handleLogout = async () => {
@@ -95,7 +116,7 @@ export function SideMenu({ visible, onClose }) {
             <AccordotionItem
               title="Perfil"
               icon="usuario"
-              defaultOpen={['EditUser', 'AjustesCuenta', 'Logros', 'Progreso', 'Ranking'].includes(pantallaActual)}
+              {...acordeon('Perfil')}
             >
               <SubMenuItem
                 title="Configuración"
@@ -109,7 +130,7 @@ export function SideMenu({ visible, onClose }) {
               <SubMenuItem title="Ranking" icon="medalla1" isActive={pantallaActual === 'Ranking'} onPress={() => irA('Ranking')} />
             </AccordotionItem>
 
-            <AccordotionItem title="Práctica" icon="pua" defaultOpen={['Practica', 'Canciones', 'Cancion'].includes(pantallaActual)}>
+            <AccordotionItem title="Práctica" icon="pua" {...acordeon('Práctica')}>
               <SubMenuItem title="Práctica" icon="rayo" isActive={pantallaActual === 'Practica'} onPress={() => irA('Practica')} />
               <SubMenuItem
                 title="Canciones"
@@ -121,13 +142,13 @@ export function SideMenu({ visible, onClose }) {
 
             <MenuItem title="Afinador" icon="notas" isActive={pantallaActual === 'Afinador'} onPress={() => irA('Afinador')} />
 
-            <AccordotionItem title="Comunidad" icon="amigos" defaultOpen={['Solicitudes', 'Feedback', 'Grupos', 'GrupoChat'].includes(pantallaActual)}>
+            <AccordotionItem title="Comunidad" icon="amigos" {...acordeon('Comunidad')}>
               <SubMenuItem title="Solicitudes y amigos" icon="saludo" isActive={pantallaActual === 'Solicitudes'} onPress={() => irA('Solicitudes')} />
               <SubMenuItem title="Dar feedback" icon="chat" isActive={pantallaActual === 'Feedback'} onPress={() => irA('Feedback')} />
               <SubMenuItem title="Grupos" icon="union" isActive={pantallaActual === 'Grupos' || pantallaActual === 'GrupoChat'} onPress={() => irA('Grupos')} />
             </AccordotionItem>
 
-            <AccordotionItem title="Soporte" icon="soporte" defaultOpen={['PreguntasFrecuentes', 'ReportarError', 'Contacto'].includes(pantallaActual)}>
+            <AccordotionItem title="Soporte" icon="soporte" {...acordeon('Soporte')}>
               <SubMenuItem
                 title="Preguntas frecuentes"
                 icon="pregunta"
@@ -136,6 +157,7 @@ export function SideMenu({ visible, onClose }) {
               />
               <SubMenuItem title="Reportar errores" icon="insecto" isActive={pantallaActual === 'ReportarError'} onPress={() => irA('ReportarError')} />
               <SubMenuItem title="Contacto" icon="sobre" isActive={pantallaActual === 'Contacto'} onPress={() => irA('Contacto')} />
+              <SubMenuItem title="Sitio web" icon="globo" onPress={abrirSitioWeb} />
             </AccordotionItem>
 
             <View style={{ height: 10 }} />
