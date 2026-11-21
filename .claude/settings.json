@@ -1,5 +1,9 @@
 {
   "enabledPlugins": {
     "expo@claude-plugins-official": true
+  },
+  "crossSessionInbound": "accept",
+  "permissions": {
+    "allow": ["SendMessage", "ListAgents"]
   }
 }
