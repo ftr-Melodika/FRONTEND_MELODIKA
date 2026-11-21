@@ -85,8 +85,6 @@ export async function borrarSesion() {
   await Promise.all([AsyncStorage.removeItem(CLAVE_TOKEN), AsyncStorage.removeItem(CLAVE_VENCE), guardarSeguro(CLAVE_REFRESH, null)]);
 }
 
-export const hayRefreshToken = () => !!refreshToken;
-
 // Pide un token nuevo con el refresh token. Supabase rota el refresh token: el viejo deja de servir,
 // así que dos renovaciones a la vez harían fallar a la segunda. Por eso hay una sola en curso y
 // todos los que la necesitan esperan la misma.

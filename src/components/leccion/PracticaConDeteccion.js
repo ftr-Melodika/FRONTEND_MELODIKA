@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Button } from '../Button';
 import { GuitarNeck, dedoSugerido } from './GuitarNeck';
-import { EstadoDeteccion } from './EstadoDeteccion';
+import { EstadoDeteccion, microfonoCaido } from './EstadoDeteccion';
 import { useDeteccionPractica } from '../../hooks/useDeteccionPractica';
 import { cejillasDeSecuencia } from '../../utils/cejilla';
 import { acordesDeContexto, agruparConsignas } from '../../utils/acordes';
@@ -42,22 +42,22 @@ export function PracticaConDeteccion({
   const [completo, setCompleto] = useState(false);
   const [puedeSaltear, setPuedeSaltear] = useState(false);
 
-  const objetivo = secuencia[Math.min(indice, secuencia.length - 1)];
+  const posicion = Math.min(indice, secuencia.length - 1);
+  const objetivo = secuencia[posicion];
   // En una lección de cejilla, las notas sueltas que aprieta la cejilla también la muestran
   const cejillas = useMemo(() => cejillasDeSecuencia(secuencia), [secuencia]);
   // Al tocar un acorde cuerda por cuerda, cada nota muestra el acorde entero (remarcando su cuerda)
   const contextos = useMemo(() => acordesDeContexto(secuencia), [secuencia]);
-  const acordeDeLaNota = contextos[Math.min(indice, secuencia.length - 1)];
+  const acordeDeLaNota = contextos[posicion];
   // Un acorde cuerda por cuerda cuenta como una sola consigna: sus cuerdas son pasos de adentro
-  const consignas = useMemo(() => agruparConsignas(secuencia), [secuencia]);
-  const posicion = Math.min(indice, secuencia.length - 1);
+  const consignas = useMemo(() => agruparConsignas(secuencia, contextos), [secuencia, contextos]);
   const numeroConsigna = Math.max(0, consignas.findIndex((g) => posicion >= g.desde && posicion <= g.hasta));
   const grupo = consignas[numeroConsigna];
   const pasosDelGrupo = grupo.hasta - grupo.desde + 1;
   const { estado, lectura, aprobado } = useDeteccionPractica(objetivo, !completo, { seguirAlAprobar: true });
 
   // Sin micrófono no hay forma de aprobar: el alumno no puede quedar trabado en la lección
-  const sinMicrofono = estado === 'sin-permiso' || estado === 'no-disponible' || estado === 'error';
+  const sinMicrofono = microfonoCaido(estado);
   const varias = consignas.length > 1;
 
   useEffect(() => {
@@ -83,7 +83,7 @@ export function PracticaConDeteccion({
 
   // En una lección, al lograrlo se termina sola (un instante después, para que se vea el acierto)
   useEffect(() => {
-    if (!autoTerminar || !(completo)) return undefined;
+    if (!autoTerminar || !completo) return undefined;
     const espera = setTimeout(() => onFinish(), MS_AUTO_TERMINAR);
     return () => clearTimeout(espera);
   }, [autoTerminar, completo]);

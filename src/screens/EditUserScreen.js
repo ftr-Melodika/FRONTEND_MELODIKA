@@ -21,7 +21,6 @@ export function EditUserScreen({ route, navigation }) {
   // Recibimos el perfil desde la navegación
   const { perfilAEditar } = route.params;
   const { perfil: perfilActivo, actualizarPerfil, quitarPerfil } = useContext(AuthContext);
-  // Lo que ocupa el teclado se suma al final del formulario, para poder bajar hasta el último campo
   const esPerfilActivo = perfilActivo?.id === perfilAEditar?.id;
   // Si venimos desde el menú (Configuración) volvemos al Home; si no, a la selección de perfiles
   const vieneDeSelectUser = navigation.getState()?.routes?.some((r) => r.name === 'SelectUser');

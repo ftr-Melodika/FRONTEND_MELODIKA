@@ -1,14 +1,9 @@
 import { Icono } from '../icono/Icono';
-import { useState } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 
 
-// Si se pasan `open` y `onToggle`, el padre controla qué acordeón está abierto.
-export function AccordotionItem({ title, icon, children, defaultOpen = false, open, onToggle }) {
-  const [openInterno, setOpenInterno] = useState(defaultOpen);
-  const controlado = open !== undefined;
-  const isOpen = controlado ? open : openInterno;
-  const setIsOpen = controlado ? onToggle : setOpenInterno;
+// El padre controla qué acordeón está abierto (`open` y `onToggle`).
+export function AccordotionItem({ title, icon, children, open: isOpen, onToggle: setIsOpen }) {
 
   return (
     <View>

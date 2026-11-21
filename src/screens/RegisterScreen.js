@@ -56,7 +56,7 @@ export function RegisterScreen({ navigation }) {
             title="Volver" icono="volver" 
             variant="back" 
             onPress={() => navigation.goBack()} 
-            style={[styles.backButtonInside]}
+            style={styles.backButtonInside}
             textStyle={{ fontSize: 16 }}
           />
           <Text style={styles.title}>Crear cuenta</Text>

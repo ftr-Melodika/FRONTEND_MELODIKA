@@ -20,7 +20,6 @@ import { FUENTE_TITULO } from '../theme/fuentes';
 
 export function CreateUserScreen({ navigation }) {
   const { actualizarPerfil } = useContext(AuthContext);
-  // Lo que ocupa el teclado se suma al final del formulario, para poder bajar hasta el último campo
 
   const [nombre, setNombre] = useState('');
   const [username, setUsername] = useState('');

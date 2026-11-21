@@ -1,5 +1,4 @@
 import { Icono } from './icono/Icono';
-import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
 
 // Variantes: primary (violeta lleno), secondary (borde blanco), danger (borde rojo), link, back

@@ -40,7 +40,7 @@ export function EntradaCodigo({ onEntrar, textoBoton = 'Entrar', autoFocus = fal
             maxLength={LARGO_CODIGO_GRUPO}
             autoFocus={autoFocus}
             returnKeyType="go"
-            style={[styles.entrada]}
+            style={styles.entrada}
           />
         </View>
         <Button title={textoBoton} onPress={entrar} loading={enviando} disabled={codigo.length === 0} style={styles.boton} />

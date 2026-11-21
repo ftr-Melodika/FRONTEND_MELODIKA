@@ -70,7 +70,7 @@ function parsearPractica(valor) {
 }
 
 // "video" -> "Video" (la BD guarda tipos y niveles en minúscula)
-export function capitalizar(texto) {
+function capitalizar(texto) {
   if (!texto) return texto;
   return String(texto).charAt(0).toUpperCase() + String(texto).slice(1);
 }

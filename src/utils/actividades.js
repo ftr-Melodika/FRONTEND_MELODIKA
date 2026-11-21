@@ -3,9 +3,10 @@
 // Vienen en el campo `practica` de la lección. Los valida un CHECK de la BD, pero puede cambiar:
 // un dato inválido se trata como si no existiera.
 // Es lógica pura: se prueba en actividades.test.js.
+import { CENTS_AFINADA } from './afinador.js';
 import { midiAFrecuencia, midiDePosicion, nombreDeMidi } from './deteccionSonido.js';
 
-export const CENTS_AFINADA_POR_DEFECTO = 5;
+export const CENTS_AFINADA_POR_DEFECTO = CENTS_AFINADA;
 export const MS_ESTABLE_POR_DEFECTO = 1000;
 
 const esNumeroEntre = (v, min, max) => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;

@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Button } from '../Button';
-import { AvisoMicrofono } from './EstadoDeteccion';
+import { AvisoMicrofono, microfonoCaido } from './EstadoDeteccion';
 import { LecturaAfinador, COLOR_AFINADA } from '../afinador/LecturaAfinador';
 import { useAfinacionGuiada } from '../../hooks/useAfinacionGuiada';
 
@@ -16,7 +16,7 @@ export function AfinacionStep({ afinacion, onBack, onFinish, finishing, autoTerm
   const { cuerdas, toleranciaCents, msEstable } = afinacion;
   const { estado, frecuencia, resultado, cuerdaElegida, afinadas, terminado } = useAfinacionGuiada({ cuerdas, toleranciaCents, msEstable });
   const [puedeSaltear, setPuedeSaltear] = useState(false);
-  const sinMicrofono = estado === 'sin-permiso' || estado === 'no-disponible' || estado === 'error';
+  const sinMicrofono = microfonoCaido(estado);
   const actual = cuerdas.find((c) => c.cuerda === cuerdaElegida);
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export function AfinacionStep({ afinacion, onBack, onFinish, finishing, autoTerm
 
   // En una lección, al lograrlo se termina sola (un instante después, para que se vea el acierto)
   useEffect(() => {
-    if (!autoTerminar || !(terminado)) return undefined;
+    if (!autoTerminar || !terminado) return undefined;
     const espera = setTimeout(() => onFinish(), MS_AUTO_TERMINAR);
     return () => clearTimeout(espera);
   }, [autoTerminar, terminado]);

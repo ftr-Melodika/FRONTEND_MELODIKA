@@ -2,6 +2,7 @@
 // Los países para elegir en el perfil, en español, y el buscador. Es lógica pura: se prueba en paises.test.js.
 // El backend valida el país con /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]{2,50}$/ (sin guiones, apóstrofes ni puntos):
 // por eso "Guinea Bisáu" y "Timor Oriental" van escritos así.
+import { normalizarTexto as normalizar } from './texto.js';
 
 export const PAISES = [
   'Afganistán', 'Albania', 'Alemania', 'Andorra', 'Angola', 'Antigua y Barbuda', 'Arabia Saudita', 'Argelia',
@@ -29,8 +30,7 @@ export const PAISES = [
   'Vietnam', 'Yemen', 'Yibuti', 'Zambia', 'Zimbabue',
 ];
 
-// Sin tildes ni mayúsculas: "peru" encuentra "Perú"
-const normalizar = (texto) => texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+// La búsqueda ignora tildes y mayúsculas: "peru" encuentra "Perú"
 
 // Los países que contienen el texto buscado: primero los que empiezan con él ("ar" -> Argentina antes que Qatar)
 export function filtrarPaises(texto, paises = PAISES) {

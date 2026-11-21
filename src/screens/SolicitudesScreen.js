@@ -18,6 +18,12 @@ const VACIO = {
   amigos: 'Todavía no tenés amigos. Usá "Agregar amigo" o buscá músicos en tus grupos.',
 };
 
+const PESTANAS = [
+  { id: 'recibidas', titulo: 'Recibidas' },
+  { id: 'enviadas', titulo: 'Enviadas' },
+  { id: 'amigos', titulo: 'Amigos' },
+];
+
 export function SolicitudesScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { perfil } = useContext(AuthContext);
@@ -87,12 +93,6 @@ export function SolicitudesScreen({ navigation }) {
     );
   };
 
-  const pestanas = [
-    { id: 'recibidas', titulo: 'Recibidas' },
-    { id: 'enviadas', titulo: 'Enviadas' },
-    { id: 'amigos', titulo: 'Amigos' },
-  ];
-
   return (
     <Background>
       <View style={[styles.container, { paddingLeft: Math.max(insets.left, 20), paddingRight: Math.max(insets.right, 20) }]}>
@@ -102,7 +102,7 @@ export function SolicitudesScreen({ navigation }) {
         />
 
         <View style={styles.pestanas}>
-          {pestanas.map(({ id, titulo }) => (
+          {PESTANAS.map(({ id, titulo }) => (
             <TouchableOpacity
               key={id}
               style={[styles.pestana, pestana === id && styles.pestanaActiva]}

@@ -20,7 +20,16 @@ export function DatePickerField({ onDateChange, initialValue }) {
       ? `${String(fechaInicial.getDate()).padStart(2, '0')}/${String(fechaInicial.getMonth() + 1).padStart(2, '0')}/${fechaInicial.getFullYear()}`
       : 'Seleccionar fecha de nacimiento'
   );
-  
+
+  // Muestra la fecha elegida (DD/MM/AAAA) y se la avisa al formulario (AAAA-MM-DD)
+  const confirmarFecha = (fecha) => {
+    const dia = String(fecha.getDate()).padStart(2, '0');
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    const anio = fecha.getFullYear();
+    setBirthdayLabel(`${dia}/${mes}/${anio}`);
+    onDateChange(`${anio}-${mes}-${dia}`);
+  };
+
   const onChangeDate = (event, selectedDate) => {
     // Android: el diálogo cierra automáticamente, manejamos setShowDatePicker aquí
     if (Platform.OS === 'android') {
@@ -31,11 +40,7 @@ export function DatePickerField({ onDateChange, initialValue }) {
       }
       if (selectedDate) {
         setDate(selectedDate);
-        const dia = String(selectedDate.getDate()).padStart(2, '0');
-        const mes = String(selectedDate.getMonth() + 1).padStart(2, '0');
-        const anio = selectedDate.getFullYear();
-        setBirthdayLabel(`${dia}/${mes}/${anio}`);
-        onDateChange(`${anio}-${mes}-${dia}`);
+        confirmarFecha(selectedDate);
       }
       setShowDatePicker(false);
       return;
@@ -89,14 +94,9 @@ export function DatePickerField({ onDateChange, initialValue }) {
                 <TouchableOpacity onPress={() => { setShowDatePicker(false); }} style={styles.iosButton}>
                   <Text style={styles.iosButtonText}>Cancelar</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => { 
+                <TouchableOpacity onPress={() => {
                   // Confirmar selección iOS
-                  const selectedDate = date || new Date();
-                  const dia = String(selectedDate.getDate()).padStart(2, '0');
-                  const mes = String(selectedDate.getMonth() + 1).padStart(2, '0');
-                  const anio = selectedDate.getFullYear();
-                  setBirthdayLabel(`${dia}/${mes}/${anio}`);
-                  onDateChange(`${anio}-${mes}-${dia}`);
+                  confirmarFecha(date || new Date());
                   setShowDatePicker(false);
                  }} style={[styles.iosButton, styles.iosConfirm]}>
                   <Text style={[styles.iosButtonText, styles.iosConfirmText]}>Aceptar</Text>

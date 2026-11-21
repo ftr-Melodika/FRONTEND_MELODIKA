@@ -77,11 +77,13 @@ export const useRankingGrupo = (perfilId, grupoId) =>
     enabled: !!perfilId && !!grupoId,
   });
 
+const STALE_CATALOGO_MS = 5 * 60 * 1000; // El catálogo de canciones casi no cambia
+
 export const useCanciones = () =>
   useQuery({
     queryKey: ['canciones'],
     queryFn: cancionesService.listar,
-    staleTime: 5 * 60 * 1000, // El catálogo casi no cambia
+    staleTime: STALE_CATALOGO_MS,
   });
 
 export const useCancion = (id) =>
@@ -89,7 +91,7 @@ export const useCancion = (id) =>
     queryKey: ['cancion', id],
     queryFn: () => cancionesService.obtener(id),
     enabled: !!id,
-    staleTime: 5 * 60 * 1000,
+    staleTime: STALE_CATALOGO_MS,
   });
 
 // El mensaje de error de una consulta, solo si no hay nada para mostrar (con datos viejos no se molesta)

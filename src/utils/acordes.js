@@ -2,6 +2,7 @@
 // Acordes para la pantalla de Práctica. Vienen del backend, en el campo `practica` de las lecciones
 // de acordes (curso "Tus Primeros Acordes"). Es lógica pura: se prueba en acordes.test.js.
 import { obtenerObjetivo } from './deteccionSonido.js';
+import { azarPorDefecto, mezclar } from './azar.js';
 
 // Respaldo por si el backend no responde: los mismos 6 acordes del curso, con sus dedos.
 // Cuerda 1 = Mi agudo; las cuerdas que no se tocan no aparecen.
@@ -100,21 +101,10 @@ export function extraerAcordes(lecciones) {
 export const acordesDeRespaldo = () =>
   extraerAcordes(ACORDES_RESPALDO.map((a, orden) => ({ orden, titulo: a.titulo, practica: { tipo: 'acorde', ...a } })));
 
-const azarPorDefecto = (maximo) => Math.floor(Math.random() * maximo);
-
 // Un acorde al azar distinto del anterior: el que todavía suena no debe aprobar el siguiente
 export function acordeAlAzar(acordes, anterior, azar = azarPorDefecto) {
   const candidatos = acordes.length > 1 ? acordes.filter((a) => a.nombre !== anterior?.nombre) : acordes;
   return candidatos[azar(candidatos.length)];
-}
-
-function mezclar(lista, azar) {
-  const copia = [...lista];
-  for (let i = copia.length - 1; i > 0; i--) {
-    const j = azar(i + 1);
-    [copia[i], copia[j]] = [copia[j], copia[i]];
-  }
-  return copia;
 }
 
 // Pregunta del modo "Adivinar" con acordes: el mástil muestra la forma y hay que elegir el nombre
@@ -141,11 +131,11 @@ export function acordesDeContexto(secuencia) {
 // Las consignas que ve el alumno. Un acorde tocado cuerda por cuerda es UNA sola consigna (sus
 // cuerdas son pasos adentro de ella); cada nota suelta o acorde solo es una consigna.
 // Devuelve [{ desde, hasta }] con los índices de `secuencia` (hasta incluido), en orden.
-export function agruparConsignas(secuencia) {
-  const contextos = acordesDeContexto(secuencia);
+// `contextos` (opcional) es el resultado de acordesDeContexto(secuencia), si ya se calculó.
+export function agruparConsignas(secuencia, contextos = acordesDeContexto(secuencia)) {
   const grupos = [];
   let desde = 0;
-  secuencia.forEach((paso, i) => {
+  secuencia.forEach((_, i) => {
     const sigueElAcorde = contextos[i] !== null;
     if (sigueElAcorde) return; // Una cuerda del acorde: el grupo se cierra en el acorde
     grupos.push({ desde, hasta: i });

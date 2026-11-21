@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TextoConIcono, COLORES_ICONO } from '../icono/Icono';
 import { Button } from '../Button';
 import { GuitarNeck } from '../leccion/GuitarNeck';
-import { AvisoMicrofono } from '../leccion/EstadoDeteccion';
+import { AvisoMicrofono, microfonoCaido, pistaDeAcorde } from '../leccion/EstadoDeteccion';
 import { useDeteccionPractica } from '../../hooks/useDeteccionPractica';
 import { obtenerObjetivo } from '../../utils/deteccionSonido';
 import { posicionAlAzar } from '../../utils/practica';
@@ -20,15 +20,6 @@ const MS_FESTEJO = 450; // Lo que se ve el punto dorado antes de pasar a la sigu
 const CLAVE_RECORD = { notas: 'practicaRecordContrarreloj', acordes: 'practicaRecordContrarrelojAcordes' };
 
 const formatearTiempo = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-
-// Lo que dice el detector de un acorde que todavía no suena bien
-function pistaDeAcorde(lectura) {
-  const partes = [];
-  if (lectura.faltantes?.length) partes.push(`Falta ${lectura.faltantes.join(', ')}`);
-  if (lectura.desafinadas?.length) partes.push(`Desafinada: ${lectura.desafinadas.join(', ')}`);
-  if (lectura.sobrantes?.length) partes.push(`Sobra ${lectura.sobrantes.join(', ')}`);
-  return partes.join('  •  ');
-}
 
 export function ModoContrarreloj({ material, acordes }) {
   const conAcordes = material === 'acordes';
@@ -57,7 +48,7 @@ export function ModoContrarreloj({ material, acordes }) {
   const enCurso = fase === 'preparando' || fase === 'jugando';
   // El micrófono sigue abierto entre una y otra: si se cerrara, tardaría en volver
   const { estado, lectura, aprobado } = useDeteccionPractica(objetivo, enCurso, { seguirAlAprobar: true });
-  const sinMicrofono = estado === 'sin-permiso' || estado === 'no-disponible' || estado === 'error';
+  const sinMicrofono = microfonoCaido(estado);
   const claveRecord = CLAVE_RECORD[material];
 
   const siguiente = () => {

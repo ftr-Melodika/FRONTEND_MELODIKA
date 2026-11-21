@@ -248,11 +248,12 @@ export function calcularPotencias(muestras) {
 function crearPerfilRuido() {
   let perfil = null;
   let lecturas = 0;
+  let suavizado = null; // Se reusa: lo lee encontrarFundamentales enseguida y no lo guarda
   return {
     listo: () => lecturas >= LECTURAS_CALIBRACION,
     // Promedio con las frecuencias vecinas, sin bajar de lo medido: un tono constante sigue tapado
     potencias() {
-      const suavizado = new Float64Array(perfil.length);
+      if (!suavizado || suavizado.length !== perfil.length) suavizado = new Float64Array(perfil.length);
       let suma = 0;
       for (let i = 0; i < perfil.length; i++) {
         suma += perfil[i];

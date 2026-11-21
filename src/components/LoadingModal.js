@@ -1,7 +1,7 @@
 // Archivo: src/components/LoadingModal.js
 // Pantalla de carga a pantalla completa: tapa todo el contenido (que se dibuja recién cuando termina)
 // y muestra un "ecualizador" animado en el centro. Al terminar se desvanece suavemente.
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, Animated, Easing, StyleSheet } from 'react-native';
 import { Background } from './Background';
 import { FUENTE_TITULO } from '../theme/fuentes';

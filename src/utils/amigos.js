@@ -1,9 +1,7 @@
 // Archivo: src/utils/amigos.js
 // Orden y filtro de la lista de amigos (selector de integrantes al crear un grupo).
 
-// Minúsculas y sin tildes: "Ángel" coincide con "angel"
-const normalizar = (texto) =>
-  String(texto ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+import { normalizarTexto as normalizar } from './texto.js';
 
 const nombreDe = (amigo) => amigo?.perfil?.nombre ?? '';
 const usernameDe = (amigo) => amigo?.perfil?.username ?? '';

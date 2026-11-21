@@ -2,24 +2,7 @@
 // Grupos y sus mensajes. miPerfilId es siempre el perfil activo.
 import axiosClient from '../api/axiosClient';
 import { ENDPOINTS } from '../config/api';
-import { getErrorMessage } from '../utils/errorUtils';
-import { invalidar } from '../api/queryClient';
-
-// Para lo que cambia datos: después de que sale bien, lo que está en caché con esos nombres vence
-async function modificar(llamada, ...claves) {
-  const datos = await pedir(llamada);
-  invalidar(...claves);
-  return datos;
-}
-
-async function pedir(llamada) {
-  try {
-    const response = await llamada();
-    return response.data?.data;
-  } catch (error) {
-    throw new Error(getErrorMessage(error));
-  }
-}
+import { pedir, modificar } from '../api/pedir';
 
 export const gruposService = {
   misGrupos: async (miPerfilId) =>

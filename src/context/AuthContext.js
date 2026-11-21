@@ -20,8 +20,10 @@ export const AuthProvider = ({ children }) => {
     const checkLogin = async () => {
       try {
         const { token, refreshToken } = await cargarSesion();
-        const cuenta = await AsyncStorage.getItem('userCuenta');
-        const perfilGuardado = await AsyncStorage.getItem('userPerfil'); // Buscamos el perfil
+        const [cuenta, perfilGuardado] = await Promise.all([
+          AsyncStorage.getItem('userCuenta'),
+          AsyncStorage.getItem('userPerfil'), // Buscamos el perfil
+        ]);
 
         if ((token || refreshToken) && cuenta) {
           // Se entra directo con lo guardado, aunque el token haya vencido: se renueva al primer

@@ -67,7 +67,7 @@ export function QuizStep({ quiz, onBack, onFinish, finishing, autoTerminar = fal
 
   // En una lección, al lograrlo se termina sola (un instante después, para que se vea el acierto)
   useEffect(() => {
-    if (!autoTerminar || !(quizPerfecto)) return undefined;
+    if (!autoTerminar || !quizPerfecto) return undefined;
     const espera = setTimeout(() => onFinish(), MS_AUTO_TERMINAR);
     return () => clearTimeout(espera);
   }, [autoTerminar, quizPerfecto]);

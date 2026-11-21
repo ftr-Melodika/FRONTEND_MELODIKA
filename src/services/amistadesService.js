@@ -3,24 +3,10 @@
 // miPerfilId es siempre el perfil activo: el backend valida que sea de la cuenta logueada.
 import axiosClient from '../api/axiosClient';
 import { ENDPOINTS } from '../config/api';
-import { getErrorMessage } from '../utils/errorUtils';
-import { invalidar } from '../api/queryClient';
+import { pedir, modificar as modificarYInvalidar } from '../api/pedir';
 
 // Para lo que cambia datos: después de que sale bien, las solicitudes y los amigos en caché vencen
-async function modificar(llamada) {
-  const datos = await pedir(llamada);
-  invalidar('solicitudes', 'amigos');
-  return datos;
-}
-
-async function pedir(llamada) {
-  try {
-    const response = await llamada();
-    return response.data?.data;
-  } catch (error) {
-    throw new Error(getErrorMessage(error));
-  }
-}
+const modificar = (llamada) => modificarYInvalidar(llamada, 'solicitudes', 'amigos');
 
 export const amistadesService = {
   obtenerPerfil: (miPerfilId, otroId) =>

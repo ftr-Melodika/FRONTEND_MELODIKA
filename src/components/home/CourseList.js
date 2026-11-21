@@ -38,6 +38,14 @@ function TarjetaCurso({ curso, numero, onPress, actual, onLayout }) {
   const avance = avanceDe(curso);
   const estado = curso.completado ? 'Completado' : bloqueado ? 'Bloqueado' : avance?.hechas ? 'En curso' : 'Disponible';
 
+  const icono = (
+    <Icono
+      nombre={curso.completado ? 'completado' : bloqueado ? 'candado' : 'guitarra'}
+      tamano={actual ? 44 : 34}
+      acento={curso.completado ? COLORES_ICONO.verde : undefined}
+    />
+  );
+
   return (
     <TouchableOpacity
       style={[styles.tarjeta, actual && styles.tarjetaActual, curso.completado && styles.tarjetaCompletada, bloqueado && styles.tarjetaBloqueada]}
@@ -47,20 +55,11 @@ function TarjetaCurso({ curso, numero, onPress, actual, onLayout }) {
       accessibilityRole="button"
       accessibilityLabel={`${curso.nombre}, ${estado}`}
     >
-      {(() => {
-        const icono = (
-          <Icono
-            nombre={curso.completado ? 'completado' : bloqueado ? 'candado' : 'guitarra'}
-            tamano={actual ? 44 : 34}
-            acento={curso.completado ? COLORES_ICONO.verde : undefined}
-          />
-        );
-        return actual ? (
-          <Anillo tam={84} fraccion={curso.completado ? 1 : avance?.hechas ? avance.hechas / avance.total : 0}>{icono}</Anillo>
-        ) : (
-          <View style={styles.icono}>{icono}</View>
-        );
-      })()}
+      {actual ? (
+        <Anillo tam={84} fraccion={curso.completado ? 1 : avance?.hechas ? avance.hechas / avance.total : 0}>{icono}</Anillo>
+      ) : (
+        <View style={styles.icono}>{icono}</View>
+      )}
       <Text style={styles.numero}>CURSO {numero}</Text>
       <View style={[styles.cajaNombre, actual && styles.cajaNombreActual]}>
         <Text style={[styles.nombre, actual && styles.nombreActual]} numberOfLines={2}>{curso.nombre}</Text>
@@ -139,5 +138,4 @@ const styles = StyleSheet.create({
   barra: { width: '100%', height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.2)', marginTop: 10, overflow: 'hidden' },
   barraLlena: { height: '100%', backgroundColor: '#a3fba3' },
   estado: { color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '600', marginTop: 8 },
-  estadoCompletado: { color: '#a3fba3' },
 });

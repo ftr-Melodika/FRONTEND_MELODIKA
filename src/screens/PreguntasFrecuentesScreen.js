@@ -33,7 +33,7 @@ const PREGUNTAS = [
   },
 ];
 
-export function PreguntasFrecuentesScreen({ navigation }) {
+export function PreguntasFrecuentesScreen() {
   const insets = useSafeAreaInsets();
   const [abierta, setAbierta] = useState(null);
 

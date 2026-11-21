@@ -195,16 +195,11 @@ export function GrupoChatScreen({ route, navigation }) {
   };
 
   // Crea el ranking y manda la invitación al grupo; quien invita queda adentro
-  const invitarARanking = async () => {
+  const accionDeRanking = async (accion) => {
     setAccionRanking(true);
     setErrorEnvio(null);
     try {
-      await rankingsService.invitar(miId, grupoId);
-      await cargarRanking();
-      // La invitación llega como mensaje del chat: la pedimos ya, sin esperar los 5 segundos
-      const params = ultimoIdRef.current ? { despues: ultimoIdRef.current } : undefined;
-      const { mensajes: nuevos } = await gruposService.mensajes(miId, grupoId, params);
-      if (nuevos.length > 0) setMensajes((actuales) => recordarUltimo(combinar(actuales, nuevos)));
+      await accion();
     } catch (e) {
       setErrorEnvio(e.message);
     } finally {
@@ -212,18 +207,19 @@ export function GrupoChatScreen({ route, navigation }) {
     }
   };
 
-  const aceptarRanking = async () => {
-    setAccionRanking(true);
-    setErrorEnvio(null);
-    try {
-      await rankingsService.aceptar(miId, grupoId);
-      await cargarRanking();
-    } catch (e) {
-      setErrorEnvio(e.message);
-    } finally {
-      setAccionRanking(false);
-    }
-  };
+  const invitarARanking = () => accionDeRanking(async () => {
+    await rankingsService.invitar(miId, grupoId);
+    await cargarRanking();
+    // La invitación llega como mensaje del chat: la pedimos ya, sin esperar los 5 segundos
+    const params = ultimoIdRef.current ? { despues: ultimoIdRef.current } : undefined;
+    const { mensajes: nuevos } = await gruposService.mensajes(miId, grupoId, params);
+    if (nuevos.length > 0) setMensajes((actuales) => recordarUltimo(combinar(actuales, nuevos)));
+  });
+
+  const aceptarRanking = () => accionDeRanking(async () => {
+    await rankingsService.aceptar(miId, grupoId);
+    await cargarRanking();
+  });
 
   const verRanking = () => navigation.navigate('RankingGrupo', { grupoId, nombre: grupo?.nombre || nombreInicial });
 

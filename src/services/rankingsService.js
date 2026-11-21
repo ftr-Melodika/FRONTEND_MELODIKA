@@ -2,24 +2,10 @@
 // Rankings de grupo: alguien invita al grupo y cada miembro entra al aceptar. miPerfilId es el perfil activo.
 import axiosClient from '../api/axiosClient';
 import { ENDPOINTS } from '../config/api';
-import { getErrorMessage } from '../utils/errorUtils';
-import { invalidar } from '../api/queryClient';
+import { pedir, modificar as modificarYInvalidar } from '../api/pedir';
 
 // Para lo que cambia datos: después de que sale bien, los rankings en caché vencen
-async function modificar(llamada) {
-  const datos = await pedir(llamada);
-  invalidar('rankings', 'rankingGrupo');
-  return datos;
-}
-
-async function pedir(llamada) {
-  try {
-    const response = await llamada();
-    return response.data?.data;
-  } catch (error) {
-    throw new Error(getErrorMessage(error));
-  }
-}
+const modificar = (llamada) => modificarYInvalidar(llamada, 'rankings', 'rankingGrupo');
 
 export const rankingsService = {
   // Rankings en los que participo: [{ grupoId, grupoNombre, totalParticipantes, miPosicion }]

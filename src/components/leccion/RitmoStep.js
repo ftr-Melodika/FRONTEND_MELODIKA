@@ -176,7 +176,7 @@ export function RitmoStep({ ritmo, onBack, onFinish, finishing, autoTerminar = f
 
   // En una lección, al lograrlo se termina sola (un instante después, para que se vea el acierto)
   useEffect(() => {
-    if (!autoTerminar || !(aprobado)) return undefined;
+    if (!autoTerminar || !aprobado) return undefined;
     const espera = setTimeout(() => onFinish(), MS_AUTO_TERMINAR);
     return () => clearTimeout(espera);
   }, [autoTerminar, aprobado]);

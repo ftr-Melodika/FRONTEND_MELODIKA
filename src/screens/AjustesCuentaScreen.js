@@ -103,11 +103,11 @@ export function AjustesCuentaScreen() {
               </TouchableOpacity>
               {abiertoPassword && (
                 <View style={styles.desplegableContenido}>
-              <InputField placeholder="Contraseña actual" secureTextEntry value={passActual} onChangeText={setPassActual} />
-              <InputField placeholder="Contraseña nueva" secureTextEntry value={passNueva} onChangeText={setPassNueva} />
-              <InputField placeholder="Repetir contraseña nueva" secureTextEntry value={passRepetida} onChangeText={setPassRepetida} />
-              <Text style={styles.ayuda}>{REQUISITOS_PASSWORD}</Text>
-              <Button title="Guardar contraseña" onPress={cambiarPassword} loading={cambiando} />
+                  <InputField placeholder="Contraseña actual" secureTextEntry value={passActual} onChangeText={setPassActual} />
+                  <InputField placeholder="Contraseña nueva" secureTextEntry value={passNueva} onChangeText={setPassNueva} />
+                  <InputField placeholder="Repetir contraseña nueva" secureTextEntry value={passRepetida} onChangeText={setPassRepetida} />
+                  <Text style={styles.ayuda}>{REQUISITOS_PASSWORD}</Text>
+                  <Button title="Guardar contraseña" onPress={cambiarPassword} loading={cambiando} />
                 </View>
               )}
             </>

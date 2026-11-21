@@ -1,5 +1,4 @@
 import { Icono } from '../icono/Icono';
-import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 
 export function Checkbox({ label, checked, onChange, style }) {

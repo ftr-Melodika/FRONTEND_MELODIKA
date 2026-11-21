@@ -34,25 +34,26 @@ export const FormScroll = ({ contentContainerStyle, children, ...rest }) => {
     });
   }, []);
 
-  // Teclado recién abierto, o campo nuevo con el teclado ya abierto
-  useEffect(() => {
-    if (alturaTeclado === 0) return undefined;
-    const espera = setTimeout(asegurarVisible, ESPERA_MS);
-    return () => clearTimeout(espera);
-  }, [alturaTeclado, asegurarVisible]);
-
-  useEffect(() => {
-    let espera;
-    const oyente = () => {
-      clearTimeout(espera);
-      espera = setTimeout(asegurarVisible, ESPERA_MS);
-    };
-    oyentes.add(oyente);
-    return () => {
-      oyentes.delete(oyente);
-      clearTimeout(espera);
-    };
+  // Un solo temporizador: teclado recién abierto y campo nuevo suelen llegar juntos
+  const espera = useRef(null);
+  const programar = useCallback(() => {
+    clearTimeout(espera.current);
+    espera.current = setTimeout(asegurarVisible, ESPERA_MS);
   }, [asegurarVisible]);
+
+  // Teclado recién abierto
+  useEffect(() => {
+    if (alturaTeclado > 0) programar();
+  }, [alturaTeclado, programar]);
+
+  // Campo nuevo con el teclado ya abierto
+  useEffect(() => {
+    oyentes.add(programar);
+    return () => {
+      oyentes.delete(programar);
+      clearTimeout(espera.current);
+    };
+  }, [programar]);
 
   return (
     <ScrollView

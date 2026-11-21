@@ -8,8 +8,10 @@
 // D = abajo, U = arriba, X = apagado y - = sin tocar. Con 16 letras son semicorcheas (1 e y a 2 e y a…).
 // Con dos acordes, la primera mitad es del primero y la segunda del segundo, salvo que un "|"
 // marque dónde cambia: 'DD|UUDDDU' es 2 corcheas de Em y 6 de C.
-import { midiDePosicion, nombreDeMidi } from './deteccionSonido.js';
+import { midiDePosicion } from './deteccionSonido.js';
 import { cuentaDelCompas } from './ritmo.js';
+import { normalizarTexto as normalizar } from './texto.js';
+import { secuenciaDePractica } from './riff.js';
 import { FORMAS } from '../data/canciones.js';
 
 // Los 8 acordes del curso "Acordes": una canción solo con estos es fácil
@@ -102,19 +104,13 @@ export function objetivoDeAcorde(cancion, nombre) {
   return { tipo: 'acorde', nombre, posiciones, midis: posiciones.map((pos) => midiConCapo(pos, cancion.capo || 0)) };
 }
 
-const objetivoDeNota = (cancion, pos) => {
-  const midi = midiConCapo(pos, cancion.capo || 0);
-  return { tipo: 'nota', nombre: nombreDeMidi(midi), posiciones: [pos], midis: [midi] };
-};
-
 // Aprender la canción, en dos partes que usan la práctica de siempre (consignas una por una):
 // - acordes: cada acorde cuerda por cuerda (de la más grave a la más aguda) y después rasgueado.
 // - cambios: cada cambio de la canción, ida y vuelta dos veces (A B A B A).
 export function aprendizajeDeCancion(cancion) {
   const acordes = acordesDeCancion(cancion).flatMap((nombre) => {
     const objetivo = objetivoDeAcorde(cancion, nombre);
-    const cuerdaPorCuerda = [...objetivo.posiciones].sort((a, b) => b.cuerda - a.cuerda).map((pos) => objetivoDeNota(cancion, pos));
-    return [...cuerdaPorCuerda, objetivo];
+    return secuenciaDePractica(objetivo); // Cada cuerda, de la más grave a la más aguda, y el acorde entero
   });
 
   // Los cambios en el orden de la canción (contando la vuelta al principio), sin repetir
@@ -191,11 +187,9 @@ export function riffDeCancion(cancion, velocidad = VELOCIDADES.original) {
   };
 }
 
-const normalizar = (texto) => texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-
 // Busca por título o artista, sin importar tildes ni mayúsculas. `nivel` = 'Fácil' | 'Intermedia' | null.
 export function filtrarCanciones(canciones, texto = '', nivel = null) {
-  const buscado = normalizar(texto.trim());
+  const buscado = normalizar(texto);
   return canciones.filter((c) =>
     (!nivel || nivelDeCancion(c) === nivel) &&
     (!buscado || normalizar(`${c.titulo} ${c.artista}`).includes(buscado)));

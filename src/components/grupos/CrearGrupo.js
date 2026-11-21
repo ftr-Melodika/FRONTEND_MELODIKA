@@ -4,11 +4,6 @@
 // En horizontal (la app es landscape) el formulario va a la izquierda y los amigos a la derecha.
 import { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-
-const PRIVACIDAD = [
-  { id: false, titulo: 'Público', ayuda: 'Cualquiera lo encuentra y entra.' },
-  { id: true, titulo: 'Privado', ayuda: 'Se ve en la búsqueda, pero se entra solo con el código.' },
-];
 import { Button } from '../Button';
 import { InputField } from '../InputField';
 import { FormScroll, avisarFoco } from '../FormScroll';
@@ -16,6 +11,11 @@ import { SelectorAmigos } from './SelectorAmigos';
 import { amistadesService } from '../../services/amistadesService';
 import { gruposService } from '../../services/gruposService';
 import { alternarSeleccion } from '../../utils/amigos';
+
+const PRIVACIDAD = [
+  { id: false, titulo: 'Público', ayuda: 'Cualquiera lo encuentra y entra.' },
+  { id: true, titulo: 'Privado', ayuda: 'Se ve en la búsqueda, pero se entra solo con el código.' },
+];
 
 export function CrearGrupo({ miId, onCreado }) {
   const [nombre, setNombre] = useState('');

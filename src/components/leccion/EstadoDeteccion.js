@@ -14,6 +14,18 @@ const AVISOS = {
   error: 'No se pudo usar el micrófono. Puede estar ocupado por otra app.',
 };
 
+// El micrófono no se puede usar (sin permiso, sin soporte o con falla): sin él no hay forma de aprobar
+export const microfonoCaido = (estado) => estado === 'sin-permiso' || estado === 'no-disponible' || estado === 'error';
+
+// Lo que dice el detector de un acorde que todavía no suena bien
+export function pistaDeAcorde(lectura) {
+  const partes = [];
+  if (lectura.faltantes?.length) partes.push(`Falta ${lectura.faltantes.join(', ')}`);
+  if (lectura.desafinadas?.length) partes.push(`Desafinada: ${lectura.desafinadas.join(', ')}`);
+  if (lectura.sobrantes?.length) partes.push(`Sobra ${lectura.sobrantes.join(', ')}`);
+  return partes.join('  •  ');
+}
+
 function dondeTocar({ cuerda, traste }) {
   return traste === 0 ? `la cuerda ${cuerda} al aire` : `la cuerda ${cuerda} en el traste ${traste}`;
 }
@@ -35,11 +47,7 @@ function textoDeLectura(objetivo, lectura) {
     return `Suena ${lectura.notaDetectada}, buscá ${objetivo.nombre}`;
   }
 
-  const partes = [];
-  if (lectura.faltantes.length) partes.push(`Falta ${lectura.faltantes.join(', ')}`);
-  if (lectura.desafinadas?.length) partes.push(`Desafinada: ${lectura.desafinadas.join(', ')}`);
-  if (lectura.sobrantes.length) partes.push(`Sobra ${lectura.sobrantes.join(', ')}`);
-  return partes.join('  •  ');
+  return pistaDeAcorde(lectura);
 }
 
 // Muestra el último mensaje recibido, pero sin cambiar antes de que pase el tiempo mínimo.
