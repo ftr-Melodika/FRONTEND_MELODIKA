@@ -1,6 +1,6 @@
 // Archivo: src/components/leccion/RiffStep.js
 // El riff en movimiento: las notas avanzan de derecha a izquierda sobre las cuerdas, en cuadrados
-// con el número de traste, y hay que tocar cada una cuando pasa por la línea amarilla.
+// con el número de traste, y hay que tocar cada una cuando pasa por la línea amarilla (ver RiffMastil).
 // Si se erra mucho, el mástil se frena y vuelve a donde se empezó a errar. Si se traba siempre en el
 // mismo acorde (o nota), se abre la práctica de ese acorde y, al hacerla bien, sigue desde ahí.
 // En modo zurdo (ver useZurdo) el mástil se ve espejado: la línea queda a la derecha y las notas
@@ -8,116 +8,38 @@
 // En las canciones avanzan acordes: un rectángulo con el nombre (cifrado americano) que cubre las
 // cuerdas que se tocan. Detrás vienen los golpes del rasgueo, más transparentes y con su flecha,
 // en el tiempo en que se tocan: son una guía, lo que se evalúa es el acorde.
+//
+// Dos vistas (ver VistaLeccionContext):
+// - normal (la sección Canciones): título, botones Empezar / Parar y textos de estado.
+// - inmersiva (las clases): sin botones. El riff arranca solo, el mástil ocupa casi toda la pantalla,
+//   el resultado sale en un cartel sobre el mástil y el menú de pausa lo abre LeccionScreen.
+//   Al pausar el riff se frena; al reanudar vuelve a empezar desde el principio.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { Button } from '../Button';
+import { Icono } from '../icono/Icono';
 import { PracticaConDeteccion } from './PracticaConDeteccion';
+import { RiffMastil } from './RiffMastil';
+import { AvisoRiff, CartelRiff } from './CartelRiff';
 import { useRiff } from '../../hooks/useRiff';
 import { estilosZurdo, useZurdo } from '../../hooks/useZurdo';
+import { VISTA_NORMAL, VistaLeccionContext, useVistaLeccion } from '../../context/VistaLeccionContext';
 import { nombreDeMidi } from '../../utils/deteccionSonido';
 import { APROBAR, secuenciaDePractica } from '../../utils/riff';
+import { ALTO_MASTIL_BASE, medidasDelMastil } from '../../utils/medidasRiff';
 
-const CUERDAS = [6, 5, 4, 3, 2, 1]; // De arriba hacia abajo, como el mástil del resto de la app
-const GROSOR = { 1: 1.5, 2: 1.8, 3: 2.2, 4: 2.6, 5: 3.1, 6: 3.6 };
-const ALTO = 186;
-const ANCHO_ETIQUETA = 22;
-const X_LINEA = 56; // Dónde está la línea para tocar, desde el borde izquierdo del mástil
-const TAMANO_NOTA = 26;
-const ANCHO_ACORDE = 48;
-const ANCHO_GOLPE = 34; // Entra entre corchea y corchea (55 px) con aire; en semicorcheas se achica
-const PX_POR_PULSO = 110;
+const PROPORCION_ALTO_INMERSIVO = 0.58; // Del alto de la pantalla
+const ALTO_INMERSIVO_MAXIMO = 320;
 const SEGUNDOS_PARA_SALTEAR = 20;
 const MS_FESTEJO_PRACTICA = 1200; // Lo que se ve el "¡Bien!" de la práctica antes de volver a tocar
+// En una lección, al lograrlo se termina sola (un instante después, para que se vea el acierto)
+const MS_AUTO_TERMINAR = 1200;
 
 const MENSAJE_MICROFONO = {
   'sin-permiso': 'Necesitamos el micrófono para escuchar tus notas. Activalo en los ajustes del celular.',
   'no-disponible': 'En este dispositivo no podemos usar el micrófono.',
   error: 'No pudimos abrir el micrófono. Probá salir y volver a entrar.',
 };
-
-const altoCuerda = ALTO / CUERDAS.length;
-const centroCuerda = (cuerda) => altoCuerda * (CUERDAS.indexOf(cuerda) + 0.5);
-
-function Nota({ nota, resultado, pxPorMs, espejo }) {
-  if (nota.tipo === 'acorde') {
-    const arriba = centroCuerda(nota.cuerdaGrave) - TAMANO_NOTA / 2;
-    const abajo = centroCuerda(nota.cuerdaAguda) + TAMANO_NOTA / 2;
-    const estado = [resultado === true && styles.notaBien, resultado === false && styles.notaMal];
-    const anchoGolpe = Math.min(ANCHO_GOLPE, (nota.msParte ?? Infinity) * pxPorMs - 4);
-    const angosto = anchoGolpe < ANCHO_GOLPE;
-    return (
-      <>
-        {nota.golpes?.map((g, i) => (
-          <View
-            key={i}
-            style={[
-              styles.nota,
-              styles.golpe,
-              ...estado,
-              { width: anchoGolpe, left: X_LINEA + (nota.t + g.t) * pxPorMs - anchoGolpe / 2, top: arriba, height: abajo - arriba },
-            ]}
-          >
-            <Text style={[styles.golpeTexto, angosto && styles.golpeTextoAngosto, espejo]}>{g.golpe}</Text>
-          </View>
-        ))}
-        {/* El acorde va al final para quedar encima si un golpe lo toca */}
-        <View
-          style={[
-            styles.nota,
-            styles.acorde,
-            ...estado,
-            { left: X_LINEA + nota.t * pxPorMs - ANCHO_ACORDE / 2, top: arriba, height: abajo - arriba },
-          ]}
-        >
-          <Text style={[styles.acordeTexto, espejo]} numberOfLines={1} adjustsFontSizeToFit>{nota.nombre}</Text>
-        </View>
-      </>
-    );
-  }
-  return (
-    <View
-      style={[
-        styles.nota,
-        resultado === true && styles.notaBien,
-        resultado === false && styles.notaMal,
-        { left: X_LINEA + nota.t * pxPorMs - TAMANO_NOTA / 2, top: centroCuerda(nota.cuerda) - TAMANO_NOTA / 2 },
-      ]}
-    >
-      <Text style={[styles.notaTexto, espejo]}>{nota.traste}</Text>
-    </View>
-  );
-}
-
-// Las notas, en una tira que se desplaza con una animación nativa (no depende del reloj de JavaScript)
-function Tira({ recorrido, resultados, tramo, pxPorMs, espejo }) {
-  const desplazamiento = useRef(new Animated.Value(0)).current;
-  const fin = recorrido.duracion + 1500;
-
-  useEffect(() => {
-    if (!tramo) {
-      desplazamiento.setValue(0);
-      return undefined;
-    }
-    const desde = tramo.inicio === null ? tramo.desde : tramo.desde + (Date.now() - tramo.inicio);
-    desplazamiento.setValue(-desde * pxPorMs);
-    if (tramo.inicio === null) return undefined; // Quieta (volviendo atrás)
-    const animacion = Animated.timing(desplazamiento, {
-      toValue: -fin * pxPorMs,
-      duration: Math.max(0, fin - desde),
-      easing: Easing.linear,
-      useNativeDriver: true,
-      isInteraction: false,
-    });
-    animacion.start();
-    return () => animacion.stop();
-  }, [tramo, pxPorMs, fin]);
-
-  return (
-    <Animated.View style={[styles.tira, { transform: [{ translateX: desplazamiento }] }]} pointerEvents="none">
-      {recorrido.notas.map((nota, i) => <Nota key={i} nota={nota} resultado={resultados[i]} pxPorMs={pxPorMs} espejo={espejo} />)}
-    </Animated.View>
-  );
-}
 
 // La práctica de un acorde (o nota) donde se trabó: cuerda por cuerda y después entero.
 // Al hacerla bien vuelve sola a la canción; también se puede volver sin terminarla.
@@ -134,25 +56,28 @@ function ModalPractica({ nota, onVolver }) {
   const esAcorde = nota.tipo === 'acorde';
   const nombre = esAcorde ? nota.nombre : secuencia[0].nombre;
   return (
-    <View style={styles.tarjetaPractica}>
-      <Text style={styles.tituloPractica}>Practiquemos {esAcorde ? `el acorde ${nombre}` : `la nota ${nombre}`}</Text>
-      <Text style={styles.ayudaPractica}>
-        {listo
-          ? '¡Bien! Volvemos a la canción…'
-          : esAcorde
-            ? 'Te trabaste acá. Tocá cada cuerda por separado y después el acorde completo.'
-            : 'Te trabaste acá. Tocá esta nota y seguimos.'}
-      </Text>
-      <PracticaConDeteccion
-        secuencia={secuencia}
-        permitirSaltear={false}
-        textoAtras="Volver a la canción"
-        onBack={onVolver}
-        textoFinal="Seguir tocando"
-        onFinish={onVolver}
-        onCompletar={() => setListo(true)}
-      />
-    </View>
+    // La práctica aparte tiene sus propios botones, aunque la clase sea inmersiva
+    <VistaLeccionContext.Provider value={VISTA_NORMAL}>
+      <View style={styles.tarjetaPractica}>
+        <Text style={styles.tituloPractica}>Practiquemos {esAcorde ? `el acorde ${nombre}` : `la nota ${nombre}`}</Text>
+        <Text style={styles.ayudaPractica}>
+          {listo
+            ? '¡Bien! Volvemos a la canción…'
+            : esAcorde
+              ? 'Te trabaste acá. Tocá cada cuerda por separado y después el acorde completo.'
+              : 'Te trabaste acá. Tocá esta nota y seguimos.'}
+        </Text>
+        <PracticaConDeteccion
+          secuencia={secuencia}
+          permitirSaltear={false}
+          textoAtras="Volver a la canción"
+          onBack={onVolver}
+          textoFinal="Seguir tocando"
+          onFinish={onVolver}
+          onCompletar={() => setListo(true)}
+        />
+      </View>
+    </VistaLeccionContext.Provider>
   );
 }
 
@@ -181,19 +106,34 @@ function SelectorVelocidad({ opciones, valor, onCambiar, deshabilitado }) {
   );
 }
 
+// Arriba del mástil en la vista inmersiva: el tempo, la velocidad y cuánto se lleva acertado
+function BarraDeAciertos({ aciertos, total }) {
+  const avance = total > 0 ? Math.min(1, aciertos / total) : 0;
+  return (
+    <View style={styles.aciertos} accessibilityLabel={`${aciertos} de ${total} acertados`}>
+      <View style={styles.aciertosBarra}>
+        <View style={[styles.aciertosRelleno, { width: `${Math.round(avance * 100)}%` }]} />
+      </View>
+      <Text style={styles.aciertosTexto}>{aciertos}/{total}</Text>
+    </View>
+  );
+}
+
 // Fuera de una lección (en Canciones) no hay XP: se cambia el texto final y no se ofrece saltear.
 // Con `velocidades` (y `velocidad` + `onCambiarVelocidad`) se puede elegir la velocidad antes de tocar.
-const MS_AUTO_TERMINAR = 1200;
-
 export function RiffStep({
   riff, onBack, onFinish, finishing, textoFinal = 'Terminar Lección', permitirSaltear = true, autoTerminar = false,
   velocidad, velocidades, onCambiarVelocidad,
   // Si se indica, solo cuenta como aprobado a esa velocidad: en otras es práctica y se ofrece pasar a esa
   velocidadParaAprobar,
 }) {
+  const { inmersivo, pausado } = useVistaLeccion();
+  const { height } = useWindowDimensions();
+  const alto = inmersivo ? Math.min(ALTO_INMERSIVO_MAXIMO, Math.max(ALTO_MASTIL_BASE, Math.round(height * PROPORCION_ALTO_INMERSIVO))) : ALTO_MASTIL_BASE;
+  const medidas = useMemo(() => medidasDelMastil(alto), [alto]);
   const [puedeSaltear, setPuedeSaltear] = useState(false);
   const { fase, estado, empezar, detener, recorrido, tramo, resultados, resumen, retrocesos, practica, volverDePracticar } = useRiff(riff);
-  const pxPorMs = PX_POR_PULSO / riff.msPulso;
+  const pxPorMs = medidas.pxPorPulso / riff.msPulso;
   const espejo = useZurdo() ? estilosZurdo.espejo : null;
 
   useEffect(() => {
@@ -208,18 +148,128 @@ export function RiffStep({
   const soloPractica = superado && velocidadParaAprobar !== undefined && velocidad !== velocidadParaAprobar;
   const aprobado = superado && !soloPractica;
 
-  // En una lección, al lograrlo se termina sola (un instante después, para que se vea el acierto)
+  // Vista inmersiva: arranca sola al entrar, se frena al pausar y vuelve a empezar al reanudar
+  const yaArranco = useRef(false);
+  const frenadoPorPausa = useRef(false);
+  useEffect(() => {
+    if (!inmersivo) return;
+    if (pausado) {
+      if (enMarcha && fase !== 'practicando') {
+        frenadoPorPausa.current = true;
+        detener();
+      }
+      return;
+    }
+    if (fase === 'listo' && (!yaArranco.current || frenadoPorPausa.current)) {
+      yaArranco.current = true;
+      frenadoPorPausa.current = false;
+      empezar();
+    }
+  }, [inmersivo, pausado, fase]);
+
   useEffect(() => {
     if (!autoTerminar || !aprobado) return undefined;
     const espera = setTimeout(() => onFinish(), MS_AUTO_TERMINAR);
     return () => clearTimeout(espera);
   }, [autoTerminar, aprobado]);
-  const proxima = useMemo(() => recorrido.notas[resultados.findIndex((r) => r === null)] ?? null, [recorrido, resultados]);
+
+  const indiceProxima = resultados.findIndex((r) => r === null);
+  const proxima = recorrido.notas[indiceProxima] ?? null;
   const esCancion = riff.notas[0]?.tipo === 'acorde';
   // Cuerdas que se resaltan a la izquierda: las de la próxima nota o acorde
-  const cuerdasProximas = proxima ? (proxima.tipo === 'acorde' ? proxima.posiciones.map((pos) => pos.cuerda) : [proxima.cuerda]) : [];
+  const cuerdasProximas = fase === 'tocando' && proxima
+    ? (proxima.tipo === 'acorde' ? proxima.posiciones.map((pos) => pos.cuerda) : [proxima.cuerda])
+    : [];
   const vueltas = recorrido.notas.length / riff.notas.length;
   const elementos = esCancion ? 'acordes' : 'notas';
+  const necesarios = Math.ceil(resumen.total * APROBAR);
+
+  const mastil = (
+    <RiffMastil
+      medidas={medidas}
+      recorrido={recorrido}
+      resultados={resultados}
+      indiceProxima={fase === 'tocando' ? indiceProxima : -1}
+      tramo={tramo}
+      pxPorMs={pxPorMs}
+      espejo={espejo}
+      cuerdasResaltadas={cuerdasProximas}
+    />
+  );
+  const guia = riff.capo || riff.rasgueo ? (
+    <Text style={styles.guia} numberOfLines={2}>
+      {[riff.capo ? `Capo en el traste ${riff.capo}` : null, riff.rasgueo ? `Rasgueo: ${riff.rasgueo}` : null].filter(Boolean).join('   •   ')}
+    </Text>
+  ) : null;
+  const modalPractica = (
+    <Modal
+      visible={!!practica}
+      transparent
+      animationType="fade"
+      onRequestClose={volverDePracticar}
+      supportedOrientations={['landscape', 'landscape-left', 'landscape-right', 'portrait']}
+    >
+      <View style={styles.fondoPractica}>
+        {practica ? <ModalPractica nota={practica.nota} onVolver={volverDePracticar} /> : null}
+      </View>
+    </Modal>
+  );
+
+  if (inmersivo) {
+    const velocidadActual = velocidades?.find((o) => o.valor === velocidad)?.titulo;
+    let superposicion = null;
+    if (sinMicrofono) {
+      superposicion = (
+        <CartelRiff texto={MENSAJE_MICROFONO[estado]} tono="error">
+          {permitirSaltear ? <Button title="Saltear (sin XP)" variant="secondary" onPress={() => onFinish({ omitida: true })} loading={finishing} /> : null}
+        </CartelRiff>
+      );
+    } else if (fase === 'retrocediendo') {
+      superposicion = <AvisoRiff texto="↩ Volvamos a donde empezaste a errar" tono="aviso" />;
+    } else if (fase === 'preparando') {
+      superposicion = <AvisoRiff texto="Abriendo el micrófono…" />;
+    } else if (fase === 'terminado' && soloPractica) {
+      superposicion = (
+        <CartelRiff titulo="¡Muy bien!" texto={`Acertaste ${resumen.aciertos} de ${resumen.total}. Para aprobar la clase tocalo a velocidad normal.`} tono="bien">
+          <Button title="Ahora a velocidad normal →" onPress={() => onCambiarVelocidad(velocidadParaAprobar)} style={styles.btnCartel} />
+        </CartelRiff>
+      );
+    } else if (fase === 'terminado' && aprobado) {
+      superposicion = (
+        <CartelRiff titulo="¡Muy bien!" texto={`Acertaste ${resumen.aciertos} de ${resumen.total}`} tono="bien">
+          {autoTerminar ? null : <Button title={textoFinal} onPress={() => onFinish()} loading={finishing} style={styles.btnCartel} />}
+        </CartelRiff>
+      );
+    } else if (fase === 'terminado') {
+      superposicion = (
+        <CartelRiff titulo="¡Casi!" texto={`Acertaste ${resumen.aciertos} de ${resumen.total}. Necesitás ${necesarios} para superarlo.`}>
+          <Button title="Reintentar" onPress={empezar} style={styles.btnCartel} />
+          {velocidades && onCambiarVelocidad ? <SelectorVelocidad opciones={velocidades} valor={velocidad} onCambiar={onCambiarVelocidad} deshabilitado={false} /> : null}
+        </CartelRiff>
+      );
+    }
+
+    return (
+      <View style={styles.container}>
+        <View style={styles.content}>
+          <View style={styles.hud}>
+            <View style={styles.chip}>
+              <Icono nombre="notas" tamano={16} />
+              <Text style={styles.chipTexto}>{riff.bpm} BPM</Text>
+            </View>
+            {velocidadActual ? <View style={styles.chip}><Text style={styles.chipTexto}>{velocidadActual}</Text></View> : null}
+            {fase === 'tocando' || fase === 'retrocediendo' || fase === 'terminado' ? <BarraDeAciertos aciertos={resumen.aciertos} total={resumen.total} /> : null}
+          </View>
+          <View style={styles.zonaMastil}>
+            {mastil}
+            <View style={styles.superposicion} pointerEvents="box-none">{superposicion}</View>
+          </View>
+          {guia}
+        </View>
+        {modalPractica}
+      </View>
+    );
+  }
 
   let estadoTexto;
   if (sinMicrofono) estadoTexto = MENSAJE_MICROFONO[estado];
@@ -239,7 +289,7 @@ export function RiffStep({
       ? `¡Muy bien! Acertaste ${resumen.aciertos} de ${resumen.total} ${elementos}. Para aprobar la clase tocalo a velocidad normal.`
       : resumen.aprobado
       ? `¡Muy bien! Acertaste ${resumen.aciertos} de ${resumen.total} ${elementos}.`
-      : `Acertaste ${resumen.aciertos} de ${resumen.total} ${elementos}. Para superarlo necesitás ${Math.ceil(resumen.total * APROBAR)}: ¡probá de nuevo!`;
+      : `Acertaste ${resumen.aciertos} de ${resumen.total} ${elementos}. Para superarlo necesitás ${necesarios}: ¡probá de nuevo!`;
     if (retrocesos > 0) estadoTexto += `  (Volviste atrás ${retrocesos} ${retrocesos === 1 ? 'vez' : 'veces'}.)`;
   }
 
@@ -263,29 +313,10 @@ export function RiffStep({
           ) : null}
         </View>
 
-        <View style={[styles.fila, espejo]}>
-          <View style={styles.etiquetas}>
-            {CUERDAS.map((c) => (
-              <View key={c} style={[styles.etiquetaFila, { height: altoCuerda }]}>
-                <Text style={[styles.etiqueta, cuerdasProximas.includes(c) && fase === 'tocando' && styles.etiquetaActiva, espejo]}>{c}</Text>
-              </View>
-            ))}
-          </View>
-          <View style={styles.mastil}>
-            {CUERDAS.map((c) => (
-              <View key={c} style={[styles.cuerda, { top: centroCuerda(c) - GROSOR[c] / 2, height: GROSOR[c] }, c > 3 && styles.cuerdaEntorchada]} />
-            ))}
-            <View style={styles.linea} />
-            <Tira recorrido={recorrido} resultados={resultados} tramo={tramo} pxPorMs={pxPorMs} espejo={espejo} />
-          </View>
-        </View>
+        {mastil}
 
         <Text style={[styles.estado, sinMicrofono && styles.estadoError, fase === 'retrocediendo' && styles.estadoRetroceso]}>{estadoTexto}</Text>
-        {riff.capo || riff.rasgueo ? (
-          <Text style={styles.guia} numberOfLines={2}>
-            {[riff.capo ? `Capo en el traste ${riff.capo}` : null, riff.rasgueo ? `Rasgueo: ${riff.rasgueo}` : null].filter(Boolean).join('   •   ')}
-          </Text>
-        ) : null}
+        {guia}
       </View>
 
       <View style={styles.btnRow}>
@@ -293,17 +324,7 @@ export function RiffStep({
         {principal}
       </View>
 
-      <Modal
-        visible={!!practica}
-        transparent
-        animationType="fade"
-        onRequestClose={volverDePracticar}
-        supportedOrientations={['landscape', 'landscape-left', 'landscape-right', 'portrait']}
-      >
-        <View style={styles.fondoPractica}>
-          {practica ? <ModalPractica nota={practica.nota} onVolver={volverDePracticar} /> : null}
-        </View>
-      </Modal>
+      {modalPractica}
     </View>
   );
 }
@@ -318,28 +339,16 @@ const styles = StyleSheet.create({
   velocidadActiva: { backgroundColor: '#4c52d9' },
   velocidadDeshabilitada: { opacity: 0.45 },
   velocidadTexto: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-  fila: { flexDirection: 'row', width: '100%', height: ALTO },
-  etiquetas: { width: ANCHO_ETIQUETA },
-  etiquetaFila: { justifyContent: 'center', alignItems: 'center' },
-  etiqueta: { color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: 'bold', width: 20, height: 20, lineHeight: 20, textAlign: 'center', borderRadius: 10, overflow: 'hidden' },
-  etiquetaActiva: { color: '#fff', backgroundColor: '#2fbf5b' },
-  mastil: { flex: 1, overflow: 'hidden', borderRadius: 6, backgroundColor: '#3a2416', borderTopWidth: 1, borderBottomWidth: 1, borderColor: 'rgba(240,226,196,0.55)' },
-  cuerda: { position: 'absolute', left: 0, right: 0, backgroundColor: '#d9dce0' },
-  cuerdaEntorchada: { backgroundColor: '#c99b55' },
-  linea: { position: 'absolute', top: 0, bottom: 0, left: X_LINEA - 2, width: 4, backgroundColor: '#ffd35c', opacity: 0.9 },
-  tira: { position: 'absolute', top: 0, bottom: 0, left: 0, width: 1 },
-  nota: {
-    position: 'absolute', width: TAMANO_NOTA, height: TAMANO_NOTA, borderRadius: 6, backgroundColor: '#4c52d9',
-    borderWidth: 2, borderColor: '#e6e8ff', justifyContent: 'center', alignItems: 'center',
-  },
-  notaBien: { backgroundColor: '#2fbf5b', borderColor: '#eafff0' },
-  notaMal: { backgroundColor: 'rgba(220,70,90,0.55)', borderColor: 'rgba(255,255,255,0.4)' },
-  notaTexto: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-  acorde: { width: ANCHO_ACORDE, borderRadius: 10, paddingHorizontal: 2 },
-  acordeTexto: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
-  golpe: { width: ANCHO_GOLPE, borderRadius: 8, opacity: 0.4 },
-  golpeTexto: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
-  golpeTextoAngosto: { fontSize: 14 },
+  hud: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 10, minHeight: 28 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.35)' },
+  chipTexto: { color: '#fff', fontSize: 13, fontWeight: 'bold' },
+  aciertos: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  aciertosBarra: { width: 150, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.2)', overflow: 'hidden' },
+  aciertosRelleno: { height: '100%', borderRadius: 4, backgroundColor: '#2fbf5b' },
+  aciertosTexto: { color: '#fff', fontSize: 13, fontWeight: 'bold' },
+  zonaMastil: { width: '100%', justifyContent: 'center' },
+  superposicion: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, justifyContent: 'center', alignItems: 'center' },
+  btnCartel: { backgroundColor: '#4c52d9', minWidth: 220 },
   guia: { color: 'rgba(255,255,255,0.85)', fontSize: 13, textAlign: 'center', paddingHorizontal: 12 },
   estado: { color: 'rgba(255,255,255,0.9)', fontSize: 14, textAlign: 'center', paddingHorizontal: 12 },
   estadoError: { color: '#ff9aa5' },

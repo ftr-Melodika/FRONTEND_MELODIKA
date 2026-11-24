@@ -74,13 +74,14 @@ function useMensajeLegible(texto, inmediato) {
   return mostrado;
 }
 
-export function EstadoDeteccion({ objetivo, estado, lectura, aprobado }) {
+// `compacto` (vista inmersiva): una cápsula centrada y más chica, para no tapar el mástil
+export function EstadoDeteccion({ objetivo, estado, lectura, aprobado, compacto = false }) {
   const texto = textoDeLectura(objetivo, lectura);
   const mensaje = useMensajeLegible(texto, !lectura || lectura.calibrando || lectura.correcta);
 
   if (aprobado) {
     return (
-      <View style={[styles.caja, styles.cajaBien]} accessibilityLiveRegion="polite">
+      <View style={[styles.caja, styles.cajaBien, compacto && styles.cajaCompacta]} accessibilityLiveRegion="polite">
         <Text style={styles.textoBien}>¡Correcto! Sonó {objetivo.nombre} 🎸</Text>
       </View>
     );
@@ -88,19 +89,19 @@ export function EstadoDeteccion({ objetivo, estado, lectura, aprobado }) {
 
   if (estado === 'escuchando') {
     return (
-      <View style={styles.caja}>
+      <View style={[styles.caja, compacto && styles.cajaCompacta]}>
         <Text style={styles.texto} numberOfLines={2}>🎤 {mensaje}</Text>
       </View>
     );
   }
 
-  return <AvisoMicrofono estado={estado} />;
+  return <AvisoMicrofono estado={estado} compacto={compacto} />;
 }
 
 // Lo que se muestra cuando el micrófono no está escuchando
-export function AvisoMicrofono({ estado }) {
+export function AvisoMicrofono({ estado, compacto = false }) {
   return (
-    <View style={[styles.caja, styles.fila]} accessibilityLiveRegion="polite">
+    <View style={[styles.caja, styles.fila, compacto && styles.cajaCompacta]} accessibilityLiveRegion="polite">
       <Text style={styles.textoSuave} numberOfLines={2}>{AVISOS[estado]}</Text>
       {estado === 'sin-permiso' && (
         <Button title="Abrir ajustes" variant="secondary" onPress={() => Linking.openSettings()} style={styles.boton} />
@@ -112,6 +113,7 @@ export function AvisoMicrofono({ estado }) {
 const styles = StyleSheet.create({
   caja: { width: '100%', minHeight: 36, justifyContent: 'center', paddingHorizontal: 12, paddingVertical: 6, marginBottom: 6, borderRadius: 8, backgroundColor: 'rgba(0,0,0,0.3)' },
   cajaBien: { backgroundColor: '#a3fba3' },
+  cajaCompacta: { width: 'auto', maxWidth: '90%', minHeight: 32, alignSelf: 'center', marginBottom: 0, borderRadius: 18, paddingVertical: 4 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   texto: { color: '#fff', fontSize: 15, fontWeight: 'bold', textAlign: 'center' },
   textoBien: { color: '#10300f', fontSize: 15, fontWeight: 'bold', textAlign: 'center' },

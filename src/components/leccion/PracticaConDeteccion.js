@@ -6,6 +6,7 @@ import { Button } from '../Button';
 import { GuitarNeck, dedoSugerido } from './GuitarNeck';
 import { EstadoDeteccion, microfonoCaido } from './EstadoDeteccion';
 import { useDeteccionPractica } from '../../hooks/useDeteccionPractica';
+import { useVistaLeccion } from '../../context/VistaLeccionContext';
 import { cejillasDeSecuencia } from '../../utils/cejilla';
 import { acordesDeContexto, agruparConsignas } from '../../utils/acordes';
 
@@ -21,9 +22,9 @@ function describir(objetivo) {
   return `Cuerda ${cuerda}  •  ${donde}  •  Nota: ${objetivo.nombre}`;
 }
 
-function Progreso({ total, actual, completo }) {
+function Progreso({ total, actual, completo, etiqueta = 'Consigna' }) {
   return (
-    <View style={styles.progreso} accessibilityLabel={`Consigna ${Math.min(actual + 1, total)} de ${total}`}>
+    <View style={styles.progreso} accessibilityLabel={`${etiqueta} ${Math.min(actual + 1, total)} de ${total}`}>
       {Array.from({ length: total }, (_, i) => (
         <View key={i} style={[styles.punto, (completo || i < actual) && styles.puntoHecho, !completo && i === actual && styles.puntoActual]} />
       ))}
@@ -34,6 +35,8 @@ function Progreso({ total, actual, completo }) {
 // Recorre las consignas una por una. El micrófono queda abierto entre consigna y consigna.
 // Fuera de una lección (en Canciones) no hay XP: se cambia el texto final y no se ofrece saltear.
 // `onCompletar` avisa apenas se hacen todas las consignas (sin esperar el botón final).
+// En la vista inmersiva de una clase (ver VistaLeccionContext) no hay botones: el mástil ocupa casi toda
+// la pantalla, un cartel con el nombre dice qué tocar y, con el menú de pausa abierto, el micrófono descansa.
 export function PracticaConDeteccion({
   onBack, onFinish, finishing, secuencia, textoFinal = 'Terminar Lección', permitirSaltear = true, onCompletar, textoAtras = 'Atrás', autoTerminar = false,
 }) {
@@ -41,6 +44,7 @@ export function PracticaConDeteccion({
   const [festejo, setFestejo] = useState(false);
   const [completo, setCompleto] = useState(false);
   const [puedeSaltear, setPuedeSaltear] = useState(false);
+  const { inmersivo, pausado } = useVistaLeccion();
 
   const posicion = Math.min(indice, secuencia.length - 1);
   const objetivo = secuencia[posicion];
@@ -54,7 +58,7 @@ export function PracticaConDeteccion({
   const numeroConsigna = Math.max(0, consignas.findIndex((g) => posicion >= g.desde && posicion <= g.hasta));
   const grupo = consignas[numeroConsigna];
   const pasosDelGrupo = grupo.hasta - grupo.desde + 1;
-  const { estado, lectura, aprobado } = useDeteccionPractica(objetivo, !completo, { seguirAlAprobar: true });
+  const { estado, lectura, aprobado } = useDeteccionPractica(objetivo, !completo && !pausado, { seguirAlAprobar: true });
 
   // Sin micrófono no hay forma de aprobar: el alumno no puede quedar trabado en la lección
   const sinMicrofono = microfonoCaido(estado);
@@ -97,19 +101,40 @@ export function PracticaConDeteccion({
       ? `${varias ? `Consigna ${numeroConsigna + 1} de ${consignas.length}:  ` : ''}Acorde: ${nombreDelGrupo}  •  ${posicion === grupo.hasta ? 'ahora el acorde completo' : `cuerda ${posicion - grupo.desde + 1} de ${pasosDelGrupo - 1}`}`
       : `${varias ? `Consigna ${numeroConsigna + 1} de ${consignas.length}:  ` : ''}${describir(objetivo)}`;
 
+  const acierto = festejo || completo;
+  const mastil = objetivo.tipo === 'acorde' ? (
+    <GuitarNeck posiciones={objetivo.posiciones} correcto={acierto} grande={inmersivo} />
+  ) : acordeDeLaNota ? (
+    <GuitarNeck posiciones={acordeDeLaNota} resaltar={Number(objetivo.posiciones[0].cuerda)} correcto={acierto} grande={inmersivo} />
+  ) : (
+    <GuitarNeck targetNumber={objetivo.posiciones[0].traste} cuerda={objetivo.posiciones[0].cuerda} cejillas={cejillas} correcto={acierto} grande={inmersivo} />
+  );
+
+  if (inmersivo) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.contenidoInmersivo}>
+          <View style={styles.cabecera}>
+            {varias && <Progreso total={consignas.length} actual={numeroConsigna} completo={completo} />}
+            <View style={[styles.insignia, acierto && styles.insigniaBien]} accessibilityLabel={completo ? 'Listo' : `Tocá ${nombreDelGrupo}`}>
+              <Text style={[styles.insigniaTexto, acierto && styles.insigniaTextoBien]} numberOfLines={1}>{completo ? '¡Listo!' : nombreDelGrupo}</Text>
+            </View>
+            {enAcordePorCuerdas && !completo && <Progreso total={pasosDelGrupo} actual={posicion - grupo.desde} etiqueta="Paso" />}
+          </View>
+          {mastil}
+          <EstadoDeteccion objetivo={objetivo} estado={estado} lectura={lectura} aprobado={acierto} compacto />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.content}>
         {varias && <Progreso total={consignas.length} actual={numeroConsigna} completo={completo} />}
         <Text style={styles.consigna} numberOfLines={1}>{titulo}</Text>
-        {objetivo.tipo === 'acorde' ? (
-          <GuitarNeck posiciones={objetivo.posiciones} correcto={festejo || completo} />
-        ) : acordeDeLaNota ? (
-          <GuitarNeck posiciones={acordeDeLaNota} resaltar={Number(objetivo.posiciones[0].cuerda)} correcto={festejo || completo} />
-        ) : (
-          <GuitarNeck targetNumber={objetivo.posiciones[0].traste} cuerda={objetivo.posiciones[0].cuerda} cejillas={cejillas} correcto={festejo || completo} />
-        )}
-        <EstadoDeteccion objetivo={objetivo} estado={estado} lectura={lectura} aprobado={festejo || completo} />
+        {mastil}
+        <EstadoDeteccion objetivo={objetivo} estado={estado} lectura={lectura} aprobado={acierto} />
       </View>
 
       <View style={styles.btnRow}>
@@ -142,6 +167,12 @@ const styles = StyleSheet.create({
   content: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' },
   consigna: { color: '#fff', fontSize: 15, fontWeight: 'bold', marginBottom: 8 },
   progreso: { flexDirection: 'row', gap: 6, marginBottom: 6 },
+  contenidoInmersivo: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%', gap: 6 },
+  cabecera: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14 },
+  insignia: { minWidth: 96, paddingHorizontal: 22, paddingVertical: 6, borderRadius: 22, alignItems: 'center', backgroundColor: '#4c52d9', borderWidth: 2.5, borderColor: '#d9dcff' },
+  insigniaBien: { backgroundColor: '#a3fba3', borderColor: '#eafff0' },
+  insigniaTexto: { color: '#fff', fontSize: 24, fontWeight: '800' },
+  insigniaTextoBien: { color: '#10300f' },
   punto: { width: 10, height: 10, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.25)' },
   puntoHecho: { backgroundColor: '#2fbf5b' },
   puntoActual: { backgroundColor: '#fff' },

@@ -1,6 +1,6 @@
 // Archivo: src/screens/LeccionScreen.js
-import { useState, useContext, useMemo, useRef } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
+import { useState, useContext, useMemo, useRef, useEffect } from 'react';
+import { View, StyleSheet, Alert, Pressable, Text, BackHandler } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Background } from '../components/Background';
 
@@ -9,8 +9,12 @@ import { VideoStep } from '../components/leccion/VideoStep';
 import { TheoryStep } from '../components/leccion/TheoryStep';
 import { PracticeStep } from '../components/leccion/PracticeStep';
 import { FinLeccion } from '../components/leccion/FinLeccion';
+import { IntroPractica } from '../components/leccion/IntroPractica';
+import { MenuPausa } from '../components/leccion/MenuPausa';
 
 import { AuthContext } from '../context/AuthContext';
+import { VistaLeccionContext } from '../context/VistaLeccionContext';
+import { FUENTE_TITULO } from '../theme/fuentes';
 import { useStreak } from '../hooks/useStreak';
 import { rachaService } from '../services/rachaService';
 import { leccionesService } from '../services/leccionesService';
@@ -18,6 +22,7 @@ import { obtenerSecuencia } from '../utils/deteccionSonido';
 import { obtenerAfinacion, obtenerCancion, obtenerQuiz } from '../utils/actividades';
 import { obtenerRitmo } from '../utils/ritmo';
 import { armarNotasAlAzar, obtenerConsignas } from '../utils/consignas';
+import { usaVistaInmersiva } from '../utils/vistaInmersiva';
 
 // Texto por defecto de la barra lateral según el tipo de paso
 const INSTRUCCION_POR_DEFECTO = {
@@ -54,6 +59,9 @@ export function LeccionScreen({ route, navigation }) {
   // Candado instantáneo: `finishing` (estado) tarda un render en activarse y dos disparos seguidos lo pasan
   const terminandoRef = useRef(false);
   const [instruccionConsigna, setInstruccionConsigna] = useState(null);
+  // Vista inmersiva de la práctica: la intro se ve una vez y el menú de pausa se abre al tocar la pantalla
+  const [introHecha, setIntroHecha] = useState(false);
+  const [pausado, setPausado] = useState(false);
   const [fin, setFin] = useState(null); // { titulo, mensaje, icono, cursoCompletado } al terminar
 
   // La lección siguiente del mismo curso (Home pasa la lista), para seguir sin volver al mapa
@@ -74,6 +82,26 @@ export function LeccionScreen({ route, navigation }) {
   const irAtras = indice > 0 ? () => setIndice(indice - 1) : null;
   const irAdelante = () => setIndice(Math.min(indice + 1, pasos.length - 1));
 
+  // La práctica con mástil ocupa casi toda la pantalla; la intro solo va si es lo primero de la clase
+  const inmersiva = pasoActual === 'practica' && usaVistaInmersiva(leccion);
+  const mostrarIntro = inmersiva && indice === 0 && !introHecha;
+  const jugandoInmersiva = inmersiva && !mostrarIntro && !fin;
+  const salirDeLaClase = () => (irAtras ? irAtras() : navigation.goBack());
+
+  // El botón "atrás" de Android abre la pausa (y la cierra si ya estaba abierta) en vez de salir de golpe
+  useEffect(() => {
+    if (!jugandoInmersiva) {
+      setPausado(false);
+      return undefined;
+    }
+    const suscripcion = BackHandler.addEventListener('hardwareBackPress', () => {
+      setPausado((abierto) => !abierto);
+      return true;
+    });
+    return () => suscripcion.remove();
+  }, [jugandoInmersiva]);
+  const vistaInmersiva = useMemo(() => ({ inmersivo: true, pausado }), [pausado]);
+
   // En una clase con varias consignas, cada una puede traer su propia instrucción
   const instruccion =
     (pasoActual === 'practica' && instruccionConsigna) ||
@@ -87,6 +115,7 @@ export function LeccionScreen({ route, navigation }) {
   const handleTerminar = async ({ omitida = false } = {}) => {
     if (finishing || terminandoRef.current) return;
     terminandoRef.current = true;
+    setPausado(false);
     setFinishing(true);
 
     let xpGanada = 0;
@@ -169,6 +198,65 @@ export function LeccionScreen({ route, navigation }) {
     );
   }
 
+  if (mostrarIntro) {
+    return (
+      <Background>
+        <View style={[styles.horizontalContainer, { paddingLeft: Math.max(insets.left, 15), paddingRight: Math.max(insets.right, 15) }]}>
+          <IntroPractica
+            titulo={leccion.titulo}
+            xp={leccion.xp}
+            instruccion={instruccion}
+            onEmpezar={() => setIntroHecha(true)}
+            onVolver={salirDeLaClase}
+          />
+        </View>
+      </Background>
+    );
+  }
+
+  if (jugandoInmersiva) {
+    const instruccionCorta = instruccionConsigna || leccion.instrucciones?.[indice] || null;
+    return (
+      <Background>
+        <VistaLeccionContext.Provider value={vistaInmersiva}>
+          {/* Tocar cualquier parte abre la pausa; los botones de adentro (carteles) siguen andando */}
+          <Pressable
+            style={[styles.inmersivo, { paddingLeft: Math.max(insets.left, 15), paddingRight: Math.max(insets.right, 15) }]}
+            onPress={() => { if (!finishing) setPausado(true); }}
+            accessible={false}
+          >
+            <View style={styles.cabeceraInmersiva} pointerEvents="none">
+              <Text style={styles.tituloInmersivo} numberOfLines={1}>{leccion.titulo || 'Lección'}</Text>
+              {instruccionCorta ? <Text style={styles.instruccionInmersiva} numberOfLines={2}>{instruccionCorta}</Text> : null}
+            </View>
+            <View style={styles.zonaInmersiva}>
+              <PracticeStep
+                leccion={leccion}
+                onBack={irAtras}
+                onFinish={handleTerminar}
+                finishing={finishing}
+                onInstruccion={setInstruccionConsigna}
+              />
+            </View>
+            {/* Pista de que se puede pausar: no se toca, vale toda la pantalla */}
+            <View style={[styles.pistaPausa, { right: Math.max(insets.right, 15) }]} pointerEvents="none">
+              <View style={styles.barraPausa} />
+              <View style={styles.barraPausa} />
+            </View>
+          </Pressable>
+          {pausado ? (
+            <MenuPausa
+              onReanudar={() => setPausado(false)}
+              onVolver={() => { setPausado(false); salirDeLaClase(); }}
+              onSaltear={() => handleTerminar({ omitida: true })}
+              saltando={finishing}
+            />
+          ) : null}
+        </VistaLeccionContext.Provider>
+      </Background>
+    );
+  }
+
   return (
     <Background>
       <View style={[styles.horizontalContainer, { paddingRight: Math.max(insets.right, 15) }]}>
@@ -219,4 +307,12 @@ const styles = StyleSheet.create({
   horizontalContainer: { flex: 1, flexDirection: 'row', padding: 15, gap: 15 },
   // Eliminamos alignItems: 'center' para evitar que los steps colapsen
   mainContent: { flex: 1, justifyContent: 'center' },
+  // Vista inmersiva: título centrado arriba y la práctica ocupa el resto
+  inmersivo: { flex: 1, paddingVertical: 10 },
+  cabeceraInmersiva: { alignItems: 'center', paddingHorizontal: 40, gap: 2 },
+  tituloInmersivo: { color: '#fff', fontSize: 20, fontFamily: FUENTE_TITULO, fontWeight: 'bold', textAlign: 'center' },
+  instruccionInmersiva: { color: 'rgba(255,255,255,0.8)', fontSize: 13, textAlign: 'center' },
+  zonaInmersiva: { flex: 1, justifyContent: 'center' },
+  pistaPausa: { position: 'absolute', top: 14, flexDirection: 'row', gap: 3, opacity: 0.35 },
+  barraPausa: { width: 4, height: 14, borderRadius: 2, backgroundColor: '#fff' },
 });

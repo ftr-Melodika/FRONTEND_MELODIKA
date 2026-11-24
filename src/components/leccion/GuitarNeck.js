@@ -8,11 +8,15 @@ import { estilosZurdo, useZurdo } from '../../hooks/useZurdo';
 // El alto del mástil se adapta a la pantalla (en un celular horizontal no entran 220px + botones)
 const ALTO_MAXIMO = 220;
 const ALTO_MINIMO = 130;
+// Vista inmersiva (`grande`): el mástil ocupa casi toda la pantalla
+const ALTO_MAXIMO_GRANDE = 340;
+const PROPORCION_ALTO_GRANDE = 0.6;
 const ALTO_PIE = 18; // Fila de abajo, fuera de la madera, con "Aire" y el número de cada traste
 const CANT_TRASTES = 5; // Los acordes abiertos entran; un traste más alto corre la vista
 const TAMANO_PUNTO = 30;
 // El punto es más chico que la separación entre cuerdas, para que se vea sobre una sola
 const PROPORCION_PUNTO = 0.8;
+const PROPORCION_PUNTO_GRANDE = 0.9;
 
 // De izquierda a derecha: número de cuerda, zona de cuerdas al aire, cejuela y los trastes
 const ANCHO_ETIQUETA_CUERDA = 24;
@@ -133,16 +137,19 @@ function Marcador({ traste, primerTraste, separacion, tamano }) {
 // derecha y los trastes hacia la izquierda. Los textos se vuelven a dar vuelta para que se lean.
 // `resaltar` (número de cuerda), junto con `posiciones`: muestra el acorde entero pero remarca solo
 // esa cuerda y atenúa el resto. Es para tocar un acorde cuerda por cuerda.
-export const GuitarNeck = memo(function GuitarNeck({ targetNumber, cuerda, dotLeft, dotBottom, posiciones, onElegir, correcto, cejillas: cejillasLeccion, resaltar }) {
+// `grande` agranda el mástil para la vista inmersiva de las clases (ver VistaLeccionContext).
+export const GuitarNeck = memo(function GuitarNeck({ targetNumber, cuerda, dotLeft, dotBottom, posiciones, onElegir, correcto, cejillas: cejillasLeccion, resaltar, grande = false }) {
   const { height } = useWindowDimensions();
   const zurdo = useZurdo();
   const espejo = zurdo ? estilosZurdo.espejo : null;
-  const altoMastil = Math.round(Math.min(ALTO_MAXIMO, Math.max(ALTO_MINIMO, height * 0.42)));
+  const altoMastil = grande
+    ? Math.round(Math.min(ALTO_MAXIMO_GRANDE, Math.max(ALTO_MINIMO, height * PROPORCION_ALTO_GRANDE)))
+    : Math.round(Math.min(ALTO_MAXIMO, Math.max(ALTO_MINIMO, height * 0.42)));
   const altoMadera = altoMastil - ALTO_PIE;
   const hayObjetivo = targetNumber !== null && targetNumber !== undefined && targetNumber !== '';
 
   const separacion = altoMadera / CUERDAS.length;
-  const tamano = Math.floor(Math.min(TAMANO_PUNTO, separacion * PROPORCION_PUNTO));
+  const tamano = Math.floor(Math.min(TAMANO_PUNTO, separacion * (grande ? PROPORCION_PUNTO_GRANDE : PROPORCION_PUNTO)));
 
   const puntosBase = posiciones
     ? posiciones.map((p) => ({ cuerda: p.cuerda, traste: Number(p.traste), dedo: p.dedo }))
