@@ -109,3 +109,10 @@ test('obtenerQuiz lee la imagen y el recorte de cada pregunta', () => {
   assert.strictEqual(quiz.preguntas[2].imagen, null);
   assert.strictEqual(quiz.preguntas[2].recorte, null);
 });
+
+test('obtenerCancion: bpm y escalón opcionales, solo en la fase tocar', () => {
+  const base = { tipo: 'cancion', cancionId: 'sera', fase: 'tocar' };
+  assert.deepStrictEqual(obtenerCancion({ practica: { ...base, bpm: 96, escalon: 0.75 } }), { cancionId: 'sera', fase: 'tocar', bpm: 96, escalon: 0.75 });
+  assert.deepStrictEqual(obtenerCancion({ practica: { ...base, bpm: 999, escalon: 1 } }), { cancionId: 'sera', fase: 'tocar' });
+  assert.deepStrictEqual(obtenerCancion({ practica: { ...base, fase: 'aprender', bpm: 96 } }), { cancionId: 'sera', fase: 'aprender' });
+});

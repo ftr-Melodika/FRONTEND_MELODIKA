@@ -87,13 +87,19 @@ export function extraerAcordes(lecciones) {
   [...(lecciones || [])]
     .sort((a, b) => (a?.ordenCurso ?? 0) - (b?.ordenCurso ?? 0) || (a?.orden ?? 0) - (b?.orden ?? 0))
     .forEach((leccion) => {
-      const practica = leccion?.practica;
-      if (practica?.tipo === 'acorde') agregar(practica, leccion.titulo);
-      else if (practica?.tipo === 'secuencia' && Array.isArray(practica.pasos)) {
-        practica.pasos
-          .filter((paso) => paso?.tipo === 'acorde' && Array.isArray(paso.posiciones) && paso.posiciones.length >= CUERDAS_MINIMAS_EN_SECUENCIA)
-          .forEach((paso) => agregar(paso, tituloDeAcorde(paso.nombre)));
-      }
+      const practicaLeccion = leccion?.practica;
+      // Una clase con varias consignas guarda cada práctica dentro de `consignas`
+      const practicas = practicaLeccion?.tipo === 'consignas' && Array.isArray(practicaLeccion.consignas)
+        ? practicaLeccion.consignas
+        : [practicaLeccion];
+      practicas.forEach((practica) => {
+        if (practica?.tipo === 'acorde') agregar(practica, leccion.titulo);
+        else if (practica?.tipo === 'secuencia' && Array.isArray(practica.pasos)) {
+          practica.pasos
+            .filter((paso) => paso?.tipo === 'acorde' && Array.isArray(paso.posiciones) && paso.posiciones.length >= CUERDAS_MINIMAS_EN_SECUENCIA)
+            .forEach((paso) => agregar(paso, tituloDeAcorde(paso.nombre)));
+        }
+      });
     });
   return acordes;
 }

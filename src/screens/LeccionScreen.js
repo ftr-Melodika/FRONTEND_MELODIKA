@@ -1,5 +1,5 @@
 // Archivo: src/screens/LeccionScreen.js
-import { useState, useContext, useMemo } from 'react';
+import { useState, useContext, useMemo, useRef } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Background } from '../components/Background';
@@ -17,6 +17,7 @@ import { leccionesService } from '../services/leccionesService';
 import { obtenerSecuencia } from '../utils/deteccionSonido';
 import { obtenerAfinacion, obtenerCancion, obtenerQuiz } from '../utils/actividades';
 import { obtenerRitmo } from '../utils/ritmo';
+import { armarNotasAlAzar, obtenerConsignas } from '../utils/consignas';
 
 // Texto por defecto de la barra lateral según el tipo de paso
 const INSTRUCCION_POR_DEFECTO = {
@@ -35,7 +36,7 @@ function armarPasos(leccion) {
   const pasos = [];
   if (leccion.videoId) pasos.push('video');
   const hayTraste = leccion.trasteObjetivo !== null && leccion.trasteObjetivo !== undefined;
-  const hayPractica = hayTraste || !!obtenerSecuencia(leccion) || !!obtenerQuiz(leccion) || !!obtenerAfinacion(leccion) || !!obtenerRitmo(leccion) || !!obtenerCancion(leccion);
+  const hayPractica = hayTraste || !!obtenerSecuencia(leccion) || !!obtenerQuiz(leccion) || !!obtenerAfinacion(leccion) || !!obtenerRitmo(leccion) || !!obtenerCancion(leccion) || !!obtenerConsignas(leccion) || !!armarNotasAlAzar(leccion.practica);
   // Sin texto de teoría, ese paso solo mostraría un mensaje genérico: si hay práctica, se saltea
   const hayTeoria = !!leccion.textoTeoria || !!leccion.textoDestacado;
   if (hayTeoria || !hayPractica) pasos.push('teoria');
@@ -50,6 +51,9 @@ export function LeccionScreen({ route, navigation }) {
   const pasos = useMemo(() => armarPasos(leccion), [leccion]);
   const [indice, setIndice] = useState(0);
   const [finishing, setFinishing] = useState(false);
+  // Candado instantáneo: `finishing` (estado) tarda un render en activarse y dos disparos seguidos lo pasan
+  const terminandoRef = useRef(false);
+  const [instruccionConsigna, setInstruccionConsigna] = useState(null);
   const [fin, setFin] = useState(null); // { titulo, mensaje, icono, cursoCompletado } al terminar
 
   // La lección siguiente del mismo curso (Home pasa la lista), para seguir sin volver al mapa
@@ -70,7 +74,9 @@ export function LeccionScreen({ route, navigation }) {
   const irAtras = indice > 0 ? () => setIndice(indice - 1) : null;
   const irAdelante = () => setIndice(Math.min(indice + 1, pasos.length - 1));
 
+  // En una clase con varias consignas, cada una puede traer su propia instrucción
   const instruccion =
+    (pasoActual === 'practica' && instruccionConsigna) ||
     leccion.instrucciones?.[indice] ||
     INSTRUCCION_POR_DEFECTO[pasoActual === 'practica' ? tipoPractica : pasoActual];
 
@@ -79,7 +85,8 @@ export function LeccionScreen({ route, navigation }) {
   // El frontend NO decide si la racha sube: solo obedece lo que devuelve el backend.
   // Si el alumno salteó la detección (omitida) no suma XP ni sostiene la racha.
   const handleTerminar = async ({ omitida = false } = {}) => {
-    if (finishing) return;
+    if (finishing || terminandoRef.current) return;
+    terminandoRef.current = true;
     setFinishing(true);
 
     let xpGanada = 0;
@@ -103,6 +110,7 @@ export function LeccionScreen({ route, navigation }) {
         }
       }
     } catch (error) {
+      terminandoRef.current = false;
       setFinishing(false);
       Alert.alert('No se pudo guardar tu progreso', error.message);
       return;
@@ -197,6 +205,7 @@ export function LeccionScreen({ route, navigation }) {
               onBack={irAtras}
               onFinish={handleTerminar}
               finishing={finishing}
+              onInstruccion={setInstruccionConsigna}
             />
           )}
         </View>

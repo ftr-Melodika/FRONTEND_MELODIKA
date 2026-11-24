@@ -12,7 +12,9 @@ import { AfinacionStep } from './AfinacionStep';
 import { RitmoStep } from './RitmoStep';
 import { obtenerRitmo } from '../../utils/ritmo';
 import { RiffStep } from './RiffStep';
-import { obtenerRiff } from '../../utils/riff';
+import { obtenerEscalon, obtenerRiff, opcionesConEscalon } from '../../utils/riff';
+import { obtenerConsignas, resolverNotasAlAzar } from '../../utils/consignas';
+import { ConsignasStep } from './ConsignasStep';
 
 // Práctica de una lección que no permite detección, por no indicar qué tocar
 function PracticaLibre({ onBack, onFinish, finishing, leccion }) {
@@ -29,31 +31,60 @@ function PracticaLibre({ onBack, onFinish, finishing, leccion }) {
   );
 }
 
-// La práctica de una lección puede ser un quiz, afinar la guitarra o tocar una o varias consignas
-export function PracticeStep({ onBack, onFinish, finishing, leccion }) {
+// Una sola práctica: un quiz, afinar la guitarra, un ritmo, una canción o tocar una o varias notas
+function PracticaUnica({ onBack, onFinish, finishing, leccion: leccionOriginal }) {
+  // Las notas al azar se arman una vez, al entrar a la práctica
+  const leccion = useMemo(() => resolverNotasAlAzar(leccionOriginal), [leccionOriginal]);
   const quiz = useMemo(() => obtenerQuiz(leccion), [leccion]);
   const afinacion = useMemo(() => obtenerAfinacion(leccion), [leccion]);
   const secuencia = useMemo(() => obtenerSecuencia(leccion), [leccion]);
   const ritmo = useMemo(() => obtenerRitmo(leccion), [leccion]);
-  // Un riff o melodía con ritmo tiene dos partes: primero las notas una por una, después a tempo
-  const riff = useMemo(() => obtenerRiff(leccion), [leccion]);
-  const [aTempo, setATempo] = useState(false);
+  // Un riff o melodía con ritmo (secuencia con `tempo`) se toca directo a tempo
+  const escalon = obtenerEscalon(leccion.practica?.tempo);
+  // Con escalón se empieza más lento, y solo se aprueba a velocidad original
+  const [velocidad, setVelocidad] = useState(escalon ?? 1);
+  const riff = useMemo(() => obtenerRiff(leccion, velocidad), [leccion, velocidad]);
 
   const cancion = useMemo(() => obtenerCancion(leccion), [leccion]);
 
-  if (cancion) return <CancionStep cancionId={cancion.cancionId} fase={cancion.fase} onBack={onBack} onFinish={onFinish} finishing={finishing} />;
+  if (cancion) return <CancionStep cancionId={cancion.cancionId} fase={cancion.fase} bpm={cancion.bpm} escalon={cancion.escalon} onBack={onBack} onFinish={onFinish} finishing={finishing} />;
   if (ritmo) return <RitmoStep ritmo={ritmo} onBack={onBack} onFinish={onFinish} finishing={finishing} autoTerminar />;
   if (quiz) return <QuizStep quiz={quiz} onBack={onBack} onFinish={onFinish} finishing={finishing} autoTerminar />;
   if (afinacion) return <AfinacionStep afinacion={afinacion} onBack={onBack} onFinish={onFinish} finishing={finishing} autoTerminar />;
   // Se separan porque el hook del micrófono solo debe existir si hay algo que detectar
   if (!secuencia) return <PracticaLibre onBack={onBack} onFinish={onFinish} finishing={finishing} leccion={leccion} />;
-  if (riff && aTempo) return <RiffStep riff={riff} onBack={() => setATempo(false)} onFinish={onFinish} finishing={finishing} autoTerminar />;
+  // La clase a tiempo no repite el aprender: arranca directo con el mástil en movimiento
   if (riff) {
-    // Al completar las notas sigue el riff en movimiento; "Saltear" saltea la lección entera
-    const alTerminarNotas = (opciones) => (opciones?.omitida ? onFinish(opciones) : setATempo(true));
-    return <PracticaConDeteccion onBack={onBack} onFinish={alTerminarNotas} finishing={finishing} secuencia={secuencia} textoFinal="Ahora a tempo →" />;
+    return (
+      <RiffStep
+        key={velocidad}
+        riff={riff}
+        onBack={onBack}
+        onFinish={onFinish}
+        finishing={finishing}
+        autoTerminar
+        {...(escalon ? { velocidad, velocidades: opcionesConEscalon(escalon), onCambiarVelocidad: setVelocidad, velocidadParaAprobar: 1 } : {})}
+      />
+    );
   }
   return <PracticaConDeteccion onBack={onBack} onFinish={onFinish} finishing={finishing} secuencia={secuencia} autoTerminar />;
+}
+
+// La práctica de una lección: una sola, o varias consignas seguidas (practica.tipo = 'consignas').
+// `onInstruccion` avisa el texto de la consigna actual para la barra lateral.
+export function PracticeStep({ onBack, onFinish, finishing, leccion, onInstruccion }) {
+  const consignas = useMemo(() => obtenerConsignas(leccion), [leccion]);
+  if (!consignas) return <PracticaUnica onBack={onBack} onFinish={onFinish} finishing={finishing} leccion={leccion} />;
+  return (
+    <ConsignasStep
+      consignas={consignas}
+      renderPractica={(consigna, props) => <PracticaUnica leccion={consigna} {...props} />}
+      onBack={onBack}
+      onFinish={onFinish}
+      finishing={finishing}
+      onInstruccion={onInstruccion}
+    />
+  );
 }
 
 const styles = StyleSheet.create({

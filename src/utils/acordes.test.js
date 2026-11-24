@@ -137,3 +137,21 @@ test('acordesDeContexto: una nota que no es del acorde siguiente (un riff) se mu
   assert.deepStrictEqual(acordesDeContexto([nota(6, 3), re]), [null, null]);
   assert.deepStrictEqual(acordesDeContexto([nota(1, 0), nota(1, 1), nota(1, 3)]), [null, null, null]);
 });
+
+test('también toma los acordes que vienen dentro de las consignas de una clase', () => {
+  const mim = { tipo: 'acorde', nombre: 'Mim', posiciones: [
+    { cuerda: 6, traste: 0 }, { dedo: 2, cuerda: 5, traste: 2 }, { dedo: 3, cuerda: 4, traste: 2 },
+    { cuerda: 3, traste: 0 }, { cuerda: 2, traste: 0 }, { cuerda: 1, traste: 0 }] };
+  const sol7 = { tipo: 'acorde', nombre: 'Sol7', posiciones: [
+    { cuerda: 6, traste: 3 }, { cuerda: 5, traste: 2 }, { cuerda: 4, traste: 0 },
+    { cuerda: 3, traste: 0 }, { cuerda: 2, traste: 0 }, { cuerda: 1, traste: 1 }] };
+  const lecciones = [
+    { orden: 1, titulo: 'Clase', practica: { tipo: 'consignas', consignas: [
+      { ...mim, instruccion: 'Armá el Mim' },
+      { tipo: 'secuencia', pasos: [sol7, mim], instruccion: 'Ahora los dos' },
+      null,
+    ] } },
+    { orden: 2, titulo: 'Rota', practica: { tipo: 'consignas' } },
+  ];
+  assert.deepStrictEqual(extraerAcordes(lecciones).map((a) => a.nombre), ['Mim', 'Sol7']);
+});

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import {
   obtenerRiff, armarRecorrido, enVentana, dondeRetroceder, resumir, MS_ANTES, MS_DESPUES,
-  claveDeNota, decidirTropiezo, olvidarTropiezo, secuenciaDePractica,
+  claveDeNota, decidirTropiezo, olvidarTropiezo, secuenciaDePractica, obtenerEscalon, opcionesConEscalon,
 } from './riff.js';
 
 const nota = (cuerda, traste, dedo) => ({ tipo: 'nota', nombre: 'x', posiciones: [traste ? { cuerda, traste, dedo } : { cuerda, traste }] });
@@ -120,4 +120,19 @@ test('decidirTropiezo: errar el mismo acorde 3 veces, aunque no sea seguido, pra
 test('claveDeNota: los acordes por nombre, las notas por cuerda y traste', () => {
   assert.strictEqual(claveDeNota(acorde('G')), 'acorde:G');
   assert.strictEqual(claveDeNota({ tipo: 'nota', cuerda: 3, traste: 0 }), 'nota:3-0');
+});
+
+test('obtenerRiff: la velocidad baja el tempo sin cambiar el ritmo', () => {
+  const mitad = obtenerRiff(leccion(TEMPO), 0.5);
+  assert.strictEqual(mitad.bpm, 40);
+  assert.strictEqual(mitad.msPulso, 1500);
+  assert.strictEqual(mitad.duracion, 12000);
+  assert.strictEqual(obtenerRiff(leccion(TEMPO)).bpm, 80);
+});
+
+test('obtenerEscalon: solo acepta un factor entre 0 y 1', () => {
+  assert.strictEqual(obtenerEscalon({ escalon: 0.75 }), 0.75);
+  for (const e of [1, 0, -1, 2, '0.5', null, undefined]) assert.strictEqual(obtenerEscalon({ escalon: e }), null);
+  assert.strictEqual(obtenerEscalon(undefined), null);
+  assert.deepStrictEqual(opcionesConEscalon(0.75), [{ valor: 0.75, titulo: 'x0.75' }, { valor: 1, titulo: 'x1' }]);
 });

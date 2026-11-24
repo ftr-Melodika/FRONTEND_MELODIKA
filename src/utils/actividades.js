@@ -36,7 +36,14 @@ export function obtenerCancion(leccion) {
   const cancionId = typeof practica.cancionId === 'string' ? practica.cancionId.trim() : '';
   if (!cancionId) return null;
   if (!FASES_CANCION.includes(practica.fase)) return null;
-  return { cancionId, fase: practica.fase };
+  const cancion = { cancionId, fase: practica.fase };
+  // Solo en 'tocar': `bpm` pisa el de la canción y `escalon` (0 a 1) ofrece practicar más lento
+  // (esa velocidad no aprueba la clase: solo se aprueba a velocidad original)
+  if (practica.fase === 'tocar') {
+    if (typeof practica.bpm === 'number' && practica.bpm >= 30 && practica.bpm <= 240) cancion.bpm = practica.bpm;
+    if (typeof practica.escalon === 'number' && practica.escalon > 0 && practica.escalon < 1) cancion.escalon = practica.escalon;
+  }
+  return cancion;
 }
 
 // practica.tipo = 'quiz'. Devuelve { nombre, imagen, preguntas } o null.

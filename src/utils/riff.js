@@ -1,7 +1,7 @@
 // Archivo: src/utils/riff.js
 // El riff en movimiento: las notas avanzan por el mástil y hay que tocar cada una cuando pasa por
-// la línea. Es la segunda parte de una lección de riff o melodía: primero se aprenden las notas
-// una por una y después se tocan a tiempo. Es lógica pura: se prueba en riff.test.js.
+// la línea. Una lección "a tiempo" arranca directo con esto, sin repetir el aprender las notas
+// una por una. Es lógica pura: se prueba en riff.test.js.
 //
 // Sale de una práctica de secuencia que además trae el ritmo:
 //   { tipo: 'secuencia', pasos: [nota, nota, …], tempo: { bpm: 80, duraciones: [1.5, 0.5, …] } }
@@ -23,9 +23,10 @@ const ERRORES_SEGUIDOS = 3;
 const ERRORES_EN_TRAMO = 4;
 const TRAMO = 6;
 
+// `velocidad` es un factor del tempo (0.5 = a la mitad). La práctica se valida con el bpm original.
 // Devuelve { nombre, bpm, msPulso, notas, duracion } o null si la práctica no tiene ritmo.
 // Cada nota es { cuerda, traste, dedo, midi, t (ms desde el comienzo), pulsos }.
-export function obtenerRiff(leccion) {
+export function obtenerRiff(leccion, velocidad = 1) {
   const p = leccion?.practica;
   if (p?.tipo !== 'secuencia' || !Array.isArray(p.pasos) || !p.tempo) return null;
   const { bpm, duraciones } = p.tempo;
@@ -33,7 +34,8 @@ export function obtenerRiff(leccion) {
   if (!Array.isArray(duraciones) || duraciones.length !== p.pasos.length) return null;
   if (duraciones.some((d) => typeof d !== 'number' || !(d > 0) || d > 16)) return null;
 
-  const msPulso = 60000 / bpm;
+  const bpmFinal = Math.round(bpm * velocidad);
+  const msPulso = 60000 / bpmFinal;
   let t = 0;
   const notas = [];
   for (let i = 0; i < p.pasos.length; i++) {
@@ -48,8 +50,19 @@ export function obtenerRiff(leccion) {
     notas.push({ tipo: 'nota', cuerda, traste, dedo: pos.dedo ?? null, midi, t, pulsos: duraciones[i] });
     t += duraciones[i] * msPulso;
   }
-  return { nombre: p.nombre || 'Riff', bpm, msPulso, notas, duracion: t };
+  return { nombre: p.nombre || 'Riff', bpm: bpmFinal, msPulso, notas, duracion: t };
 }
+
+// `tempo.escalon` (entre 0 y 1, ej. 0.75) ofrece practicar más lento antes de tocarlo a velocidad
+// original. Devuelve ese factor o null si la práctica no lo trae.
+export function obtenerEscalon(tempo) {
+  return esEscalon(tempo?.escalon) ? tempo.escalon : null;
+}
+
+export const esEscalon = (e) => typeof e === 'number' && e > 0 && e < 1;
+
+// Botones del selector de velocidad cuando hay escalón: el escalón (ej. x0.75) y la original (x1)
+export const opcionesConEscalon = (escalon) => [{ valor: escalon, titulo: `x${escalon}` }, { valor: 1, titulo: 'x1' }];
 
 // Las notas de todas las vueltas seguidas, con su tiempo dentro del recorrido completo.
 // En las canciones, cada "nota" del recorrido puede ser un acorde (ver utils/canciones.js).

@@ -188,6 +188,8 @@ const MS_AUTO_TERMINAR = 1200;
 export function RiffStep({
   riff, onBack, onFinish, finishing, textoFinal = 'Terminar Lección', permitirSaltear = true, autoTerminar = false,
   velocidad, velocidades, onCambiarVelocidad,
+  // Si se indica, solo cuenta como aprobado a esa velocidad: en otras es práctica y se ofrece pasar a esa
+  velocidadParaAprobar,
 }) {
   const [puedeSaltear, setPuedeSaltear] = useState(false);
   const { fase, estado, empezar, detener, recorrido, tramo, resultados, resumen, retrocesos, practica, volverDePracticar } = useRiff(riff);
@@ -201,7 +203,10 @@ export function RiffStep({
 
   const sinMicrofono = !!MENSAJE_MICROFONO[estado];
   const enMarcha = fase === 'preparando' || fase === 'tocando' || fase === 'retrocediendo' || fase === 'practicando';
-  const aprobado = fase === 'terminado' && resumen.aprobado;
+  const superado = fase === 'terminado' && resumen.aprobado;
+  // Practicando más lento no se aprueba la clase: se pasa a la velocidad que sí la aprueba
+  const soloPractica = superado && velocidadParaAprobar !== undefined && velocidad !== velocidadParaAprobar;
+  const aprobado = superado && !soloPractica;
 
   // En una lección, al lograrlo se termina sola (un instante después, para que se vea el acierto)
   useEffect(() => {
@@ -230,7 +235,9 @@ export function RiffStep({
     else if (proxima.tipo === 'acorde') estadoTexto = `Próximo acorde: ${proxima.nombre}  •  ${resumen.aciertos} acertados`;
     else estadoTexto = `Próxima: cuerda ${proxima.cuerda}, ${proxima.traste === 0 ? 'al aire' : `traste ${proxima.traste}`} (${nombreDeMidi(proxima.midi)})  •  ${resumen.aciertos} acertadas`;
   } else if (fase === 'terminado') {
-    estadoTexto = resumen.aprobado
+    estadoTexto = soloPractica
+      ? `¡Muy bien! Acertaste ${resumen.aciertos} de ${resumen.total} ${elementos}. Para aprobar la clase tocalo a velocidad normal.`
+      : resumen.aprobado
       ? `¡Muy bien! Acertaste ${resumen.aciertos} de ${resumen.total} ${elementos}.`
       : `Acertaste ${resumen.aciertos} de ${resumen.total} ${elementos}. Para superarlo necesitás ${Math.ceil(resumen.total * APROBAR)}: ¡probá de nuevo!`;
     if (retrocesos > 0) estadoTexto += `  (Volviste atrás ${retrocesos} ${retrocesos === 1 ? 'vez' : 'veces'}.)`;
@@ -238,6 +245,7 @@ export function RiffStep({
 
   const principal = (() => {
     if (enMarcha) return <Button title="Parar" variant="secondary" onPress={detener} style={styles.btnHalf} />;
+    if (soloPractica) return <Button title="Ahora a velocidad normal →" onPress={() => onCambiarVelocidad(velocidadParaAprobar)} style={[styles.btnHalf, styles.btnTerminar]} />;
     if (aprobado) return <Button title={textoFinal} onPress={() => onFinish()} loading={finishing} style={[styles.btnHalf, styles.btnTerminar]} />;
     return <Button title={fase === 'terminado' ? 'Reintentar' : 'Empezar'} onPress={empezar} style={[styles.btnHalf, styles.btnTerminar]} />;
   })();

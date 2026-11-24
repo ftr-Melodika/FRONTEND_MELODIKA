@@ -9,14 +9,19 @@ import { PracticaConDeteccion } from './PracticaConDeteccion';
 import { RiffStep } from './RiffStep';
 import { useCancion, mensajeError } from '../../hooks/useConsultas';
 import { aprendizajeDeCancion, riffDeCancion } from '../../utils/canciones';
+import { opcionesConEscalon } from '../../utils/riff';
 
-export function CancionStep({ cancionId, fase, onBack, onFinish, finishing }) {
+// `bpm` (opcional) pisa el tempo de la canción. Con `escalon` (0 a 1) se puede practicar más lento,
+// pero la clase solo se aprueba a velocidad original.
+export function CancionStep({ cancionId, fase, bpm, escalon, onBack, onFinish, finishing }) {
   const consulta = useCancion(cancionId);
-  const cancion = consulta.data;
+  const cancionBase = consulta.data;
+  const cancion = useMemo(() => (cancionBase && bpm ? { ...cancionBase, bpm } : cancionBase), [cancionBase, bpm]);
+  const [velocidad, setVelocidad] = useState(escalon ?? 1);
   // 0 = los acordes, 1 = los cambios
   const [paso, setPaso] = useState(0);
   const aprendizaje = useMemo(() => (cancion && fase === 'aprender' ? aprendizajeDeCancion(cancion) : null), [cancion, fase]);
-  const riff = useMemo(() => (cancion && fase === 'tocar' ? riffDeCancion(cancion) : null), [cancion, fase]);
+  const riff = useMemo(() => (cancion && fase === 'tocar' ? riffDeCancion(cancion, velocidad) : null), [cancion, fase, velocidad]);
 
   if (!cancion) {
     return (
@@ -30,7 +35,17 @@ export function CancionStep({ cancionId, fase, onBack, onFinish, finishing }) {
   }
 
   if (fase === 'tocar') {
-    return <RiffStep riff={riff} onBack={onBack} onFinish={onFinish} finishing={finishing} autoTerminar />;
+    return (
+      <RiffStep
+        key={velocidad}
+        riff={riff}
+        onBack={onBack}
+        onFinish={onFinish}
+        finishing={finishing}
+        autoTerminar
+        {...(escalon ? { velocidad, velocidades: opcionesConEscalon(escalon), onCambiarVelocidad: setVelocidad, velocidadParaAprobar: 1 } : {})}
+      />
+    );
   }
 
   // "Saltear" saltea la clase entera, igual que en el resto de las lecciones
