@@ -7,19 +7,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMicrofono } from './useMicrofono';
 import { crearDetector, compararAcorde, compararNota } from '../utils/deteccionSonido';
+import { ruidoMedido } from '../utils/ruidoAmbiente';
 import { armarRecorrido, decidirTropiezo, enVentana, finDeVentana, olvidarTropiezo, resumir, MS_DESPUES } from '../utils/riff';
 
 // Antes de la primera nota: el detector mide el ruido del lugar (~1,5 s) y las notas se acercan
 export const MS_ENTRADA = 2500;
 // Después de volver atrás, cuánto antes de la nota se retoma (para verla venir)
 export const MS_ENTRADA_RETOMAR = 2000;
+// Al reanudar tras una pausa, cuánto antes de donde se pausó se retoma (para ver venir las notas)
+const MS_RETOMAR_PAUSA = 1500;
 const MS_AVISO_RETROCESO = 1300; // Lo que se ve el aviso "volvamos" antes de retomar
 const MS_RELOJ = 30;
 const MS_CAMBIO_MICROFONO = 400; // Al volver de practicar, deja que la práctica suelte el micrófono
 const LECTURAS_RECIENTES = 4; // Un rasgueo hace sonar las cuerdas de a una: se juntan las últimas lecturas
 
 // fase: 'listo' | 'preparando' (abriendo el micrófono) | 'tocando' | 'retrocediendo'
-//   | 'practicando' (frenado: se practica `practica.nota` aparte, con su propio micrófono) | 'terminado'
+//   | 'practicando' (frenado: se practica `practica.nota` aparte, con su propio micrófono)
+//   | 'pausado' (frenado donde estaba, sin micrófono: reanudar() sigue desde ahí) | 'terminado'
 // tramo: { desde (ms del recorrido), inicio (Date.now() en que se pasa por `desde`) } para animar
 // resultados: true / false / null por nota
 export function useRiff(riff) {
@@ -42,6 +46,7 @@ export function useRiff(riff) {
   const practicaActual = useRef(null); // Lo mismo que `practica`, para no depender del render
   const esperaVolver = useRef(null); // El regreso de la práctica, por si se para antes
   const desdePendiente = useRef(null); // Desde dónde arranca cuando el micrófono esté listo
+  const retomarEn = useRef(null); // Desde dónde sigue al reanudar una pausa (ms del recorrido)
   const errores = useRef({}); // Por acorde o nota (ver claveDeNota)
   const retrocesosPorClave = useRef({});
 
@@ -83,7 +88,7 @@ export function useRiff(riff) {
   };
 
   // Mientras se practica aparte, la práctica usa su propio micrófono
-  const estado = useMicrofono(procesarBuffer, fase !== 'listo' && fase !== 'terminado' && fase !== 'practicando');
+  const estado = useMicrofono(procesarBuffer, fase !== 'listo' && fase !== 'terminado' && fase !== 'practicando' && fase !== 'pausado');
 
   const arrancarDesde = (desde) => {
     reloj.current = { desde, inicio: Date.now() };
@@ -96,7 +101,7 @@ export function useRiff(riff) {
   const preparar = (desde) => {
     // El objetivo del detector no importa: se usan las notas oídas (fundamentales) de cada lectura
     const primera = recorrido.notas[0];
-    detector.current = crearDetector({ tipo: 'nota', nombre: '', posiciones: [], midis: [primera.midi ?? primera.midis[0]] });
+    detector.current = crearDetector({ tipo: 'nota', nombre: '', posiciones: [], midis: [primera.midi ?? primera.midis[0]] }, { ruido: ruidoMedido() });
     recientes.current = [];
     muestras.current = 0;
     desfase.current = null;
@@ -127,6 +132,23 @@ export function useRiff(riff) {
     const desde = recorrido.notas[actual.desde].t - MS_ENTRADA;
     setPractica(null);
     esperaVolver.current = setTimeout(() => preparar(desde), MS_CAMBIO_MICROFONO);
+  };
+
+  // Frena donde está, sin perder los aciertos: reanudar() sigue desde ahí. Solo en pleno riff (o abriendo el micrófono)
+  const pausar = () => {
+    if (fase !== 'tocando' && fase !== 'preparando') return;
+    const t = fase === 'tocando' ? posicion() : desdePendiente.current ?? -MS_ENTRADA;
+    retomarEn.current = fase === 'tocando' ? t - MS_RETOMAR_PAUSA : t;
+    enMarcha.current = false;
+    detector.current = null;
+    reloj.current = null;
+    setTramo({ desde: t, inicio: null }); // Quieto donde quedó
+    setFase('pausado');
+  };
+
+  const reanudar = () => {
+    if (fase !== 'pausado') return;
+    preparar(retomarEn.current ?? -MS_ENTRADA);
   };
 
   const detener = () => {
@@ -196,5 +218,5 @@ export function useRiff(riff) {
   }, [fase, recorrido]);
 
   const resumen = useMemo(() => resumir(resultados), [resultados]);
-  return { fase, estado, empezar, detener, recorrido, tramo, resultados, resumen, retrocesos, practica, volverDePracticar };
+  return { fase, estado, empezar, detener, pausar, reanudar, recorrido, tramo, resultados, resumen, retrocesos, practica, volverDePracticar };
 }

@@ -41,8 +41,8 @@ function PracticaUnica({ onBack, onFinish, finishing, leccion: leccionOriginal }
   const ritmo = useMemo(() => obtenerRitmo(leccion), [leccion]);
   // Un riff o melodía con ritmo (secuencia con `tempo`) se toca directo a tempo
   const escalon = obtenerEscalon(leccion.practica?.tempo);
-  // Con escalón se empieza más lento, y solo se aprueba a velocidad original
-  const [velocidad, setVelocidad] = useState(escalon ?? 1);
+  // Siempre se empieza a la velocidad original; con escalón se sugiere la lenta, y solo se aprueba a la original
+  const [velocidad, setVelocidad] = useState(1);
   const riff = useMemo(() => obtenerRiff(leccion, velocidad), [leccion, velocidad]);
 
   const cancion = useMemo(() => obtenerCancion(leccion), [leccion]);

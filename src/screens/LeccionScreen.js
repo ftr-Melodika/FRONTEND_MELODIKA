@@ -11,6 +11,7 @@ import { PracticeStep } from '../components/leccion/PracticeStep';
 import { FinLeccion } from '../components/leccion/FinLeccion';
 import { IntroPractica } from '../components/leccion/IntroPractica';
 import { MenuPausa } from '../components/leccion/MenuPausa';
+import { ModalTerminando } from '../components/leccion/ModalTerminando';
 
 import { AuthContext } from '../context/AuthContext';
 import { VistaLeccionContext } from '../context/VistaLeccionContext';
@@ -23,6 +24,7 @@ import { obtenerAfinacion, obtenerCancion, obtenerQuiz } from '../utils/activida
 import { obtenerRitmo } from '../utils/ritmo';
 import { armarNotasAlAzar, obtenerConsignas } from '../utils/consignas';
 import { usaVistaInmersiva } from '../utils/vistaInmersiva';
+import { useRuidoAmbiente } from '../hooks/useRuidoAmbiente';
 
 // Texto por defecto de la barra lateral según el tipo de paso
 const INSTRUCCION_POR_DEFECTO = {
@@ -62,6 +64,8 @@ export function LeccionScreen({ route, navigation }) {
   // Vista inmersiva de la práctica: la intro se ve una vez y el menú de pausa se abre al tocar la pantalla
   const [introHecha, setIntroHecha] = useState(false);
   const [pausado, setPausado] = useState(false);
+  // Sube cada vez que se reinicia la práctica: como es la `key` de PracticeStep, la práctica empieza de cero
+  const [reinicios, setReinicios] = useState(0);
   const [fin, setFin] = useState(null); // { titulo, mensaje, icono, cursoCompletado } al terminar
 
   // La lección siguiente del mismo curso (Home pasa la lista), para seguir sin volver al mapa
@@ -86,6 +90,8 @@ export function LeccionScreen({ route, navigation }) {
   const inmersiva = pasoActual === 'practica' && usaVistaInmersiva(leccion);
   const mostrarIntro = inmersiva && indice === 0 && !introHecha;
   const jugandoInmersiva = inmersiva && !mostrarIntro && !fin;
+  // El ruido del lugar se mide siempre que el alumno no esté tocando ni mirando un video
+  useRuidoAmbiente(!finishing && (!!fin || pasoActual === 'teoria' || mostrarIntro || (jugandoInmersiva && pausado)));
   const salirDeLaClase = () => (irAtras ? irAtras() : navigation.goBack());
 
   // El botón "atrás" de Android abre la pausa (y la cierra si ya estaba abierta) en vez de salir de golpe
@@ -231,6 +237,7 @@ export function LeccionScreen({ route, navigation }) {
             </View>
             <View style={styles.zonaInmersiva}>
               <PracticeStep
+                key={reinicios}
                 leccion={leccion}
                 onBack={irAtras}
                 onFinish={handleTerminar}
@@ -247,11 +254,13 @@ export function LeccionScreen({ route, navigation }) {
           {pausado ? (
             <MenuPausa
               onReanudar={() => setPausado(false)}
+              onReiniciar={() => { setPausado(false); setReinicios((n) => n + 1); }}
               onVolver={() => { setPausado(false); salirDeLaClase(); }}
               onSaltear={() => handleTerminar({ omitida: true })}
               saltando={finishing}
             />
           ) : null}
+          <ModalTerminando visible={finishing} />
         </VistaLeccionContext.Provider>
       </Background>
     );
@@ -299,6 +308,7 @@ export function LeccionScreen({ route, navigation }) {
         </View>
 
       </View>
+      <ModalTerminando visible={finishing} />
     </Background>
   );
 }

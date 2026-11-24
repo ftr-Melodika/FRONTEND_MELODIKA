@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMicrofono } from './useMicrofono';
 import { crearDetector } from '../utils/deteccionSonido';
+import { ruidoMedido } from '../utils/ruidoAmbiente';
 
 // Lo que la pantalla muestra de una lectura. Si no cambió, no hace falta volver a dibujar:
 // llega una lectura cada 150 ms y redibujar todo (mástil incluido) pesa en un celular lento.
@@ -39,7 +40,8 @@ export function useDeteccionPractica(objetivo, activo = true, { seguirAlAprobar 
   useEffect(() => {
     if (!objetivo) detector.current = null;
     else if (detector.current) detector.current.cambiarObjetivo(objetivo);
-    else detector.current = crearDetector(objetivo);
+    // Con el ruido ya medido (ver useRuidoAmbiente) no hace falta calibrar al empezar
+    else detector.current = crearDetector(objetivo, { ruido: ruidoMedido() });
     setLectura((anterior) => {
       const sigue = anterior?.calibrando ? anterior : null;
       ultimaClave.current = claveVisible(sigue);

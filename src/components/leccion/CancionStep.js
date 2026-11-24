@@ -11,13 +11,13 @@ import { useCancion, mensajeError } from '../../hooks/useConsultas';
 import { aprendizajeDeCancion, riffDeCancion } from '../../utils/canciones';
 import { opcionesConEscalon } from '../../utils/riff';
 
-// `bpm` (opcional) pisa el tempo de la canción. Con `escalon` (0 a 1) se puede practicar más lento,
-// pero la clase solo se aprueba a velocidad original.
+// `bpm` (opcional) pisa el tempo de la canción. Con `escalon` (0 a 1) se puede practicar más lento
+// (siempre se empieza a velocidad original), pero la clase solo se aprueba a velocidad original.
 export function CancionStep({ cancionId, fase, bpm, escalon, onBack, onFinish, finishing }) {
   const consulta = useCancion(cancionId);
   const cancionBase = consulta.data;
   const cancion = useMemo(() => (cancionBase && bpm ? { ...cancionBase, bpm } : cancionBase), [cancionBase, bpm]);
-  const [velocidad, setVelocidad] = useState(escalon ?? 1);
+  const [velocidad, setVelocidad] = useState(1);
   // 0 = los acordes, 1 = los cambios
   const [paso, setPaso] = useState(0);
   const aprendizaje = useMemo(() => (cancion && fase === 'aprender' ? aprendizajeDeCancion(cancion) : null), [cancion, fase]);

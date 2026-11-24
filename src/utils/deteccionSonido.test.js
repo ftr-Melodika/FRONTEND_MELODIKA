@@ -648,3 +648,29 @@ test('después de cambiarObjetivo la nota anterior no aprueba la nueva', () => {
   const lecturas = reproducir(detector, pasaje([midiDePosicion(5, 0)], SR, 2.5, ambiente(SR, SR * 2.5, { semilla: 23 }), 0), SR, 100000);
   assert.ok(!lecturas.at(-1).aprobado);
 });
+
+test('un detector que arranca con un ruido ya medido no vuelve a calibrar', () => {
+  const medidor = crearDetector(nota(5, 0));
+  reproducir(medidor, ambiente(SR, SR * 3), SR);
+  const ruido = medidor.ruido();
+  assert.ok(ruido, 'después de calibrar hay un ruido para compartir');
+
+  const lecturas = reproducir(crearDetector(nota(5, 0), { ruido }), ambiente(SR, SR * 2), SR);
+  assert.ok(lecturas.length > 0);
+  assert.ok(!lecturas.some((l) => l.calibrando), 'volvió a calibrar');
+});
+
+test('mientras calibra todavía no hay ruido para compartir', () => {
+  const detector = crearDetector(nota(5, 0));
+  reproducir(detector, ambiente(SR, SR * 0.5), SR);
+  assert.strictEqual(detector.ruido(), null);
+});
+
+test('un ruido medido con otra frecuencia de muestreo se descarta y se vuelve a calibrar', () => {
+  const medidor = crearDetector(nota(5, 0));
+  reproducir(medidor, ambiente(SR, SR * 3), SR);
+  const otraFrecuencia = 44100;
+  const lecturas = reproducir(crearDetector(nota(5, 0), { ruido: medidor.ruido() }), ambiente(otraFrecuencia, otraFrecuencia * 3), otraFrecuencia);
+  assert.ok(lecturas[0].calibrando);
+  assert.ok(!lecturas.at(-1).calibrando);
+});

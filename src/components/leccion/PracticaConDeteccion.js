@@ -87,10 +87,11 @@ export function PracticaConDeteccion({
 
   // En una lección, al lograrlo se termina sola (un instante después, para que se vea el acierto)
   useEffect(() => {
-    if (!autoTerminar || !completo) return undefined;
+    // En la vista inmersiva no hay botón "Siguiente": al completar siempre sigue solo
+    if (!(autoTerminar || inmersivo) || !completo) return undefined;
     const espera = setTimeout(() => onFinish(), MS_AUTO_TERMINAR);
     return () => clearTimeout(espera);
-  }, [autoTerminar, completo]);
+  }, [autoTerminar, inmersivo, completo]);
 
   // En un acorde cuerda por cuerda, el título es el acorde y el paso se aclara aparte
   const nombreDelGrupo = secuencia[grupo.hasta].nombre;

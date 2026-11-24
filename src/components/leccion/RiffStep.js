@@ -13,13 +13,14 @@
 // - normal (la sección Canciones): título, botones Empezar / Parar y textos de estado.
 // - inmersiva (las clases): sin botones. El riff arranca solo, el mástil ocupa casi toda la pantalla,
 //   el resultado sale en un cartel sobre el mástil y el menú de pausa lo abre LeccionScreen.
-//   Al pausar el riff se frena; al reanudar vuelve a empezar desde el principio.
+//   Al pausar el riff se frena donde estaba y, al reanudar, sigue desde ahí (un instante antes, para ver venir las notas).
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Modal, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Button } from '../Button';
 import { Icono } from '../icono/Icono';
 import { PracticaConDeteccion } from './PracticaConDeteccion';
 import { RiffMastil } from './RiffMastil';
+import { SwitchVelocidad } from './SwitchVelocidad';
 import { AvisoRiff, CartelRiff } from './CartelRiff';
 import { useRiff } from '../../hooks/useRiff';
 import { estilosZurdo, useZurdo } from '../../hooks/useZurdo';
@@ -34,6 +35,8 @@ const SEGUNDOS_PARA_SALTEAR = 20;
 const MS_FESTEJO_PRACTICA = 1200; // Lo que se ve el "¡Bien!" de la práctica antes de volver a tocar
 // En una lección, al lograrlo se termina sola (un instante después, para que se vea el acierto)
 const MS_AUTO_TERMINAR = 1200;
+const MS_SUGERENCIA_INICIO = 4000; // Lo que se ve la sugerencia de velocidad lenta al empezar
+const MS_RECORDATORIO = 4500; // Y el recordatorio después de errar muchas seguidas
 
 const MENSAJE_MICROFONO = {
   'sin-permiso': 'Necesitamos el micrófono para escuchar tus notas. Activalo en los ajustes del celular.',
@@ -81,31 +84,6 @@ function ModalPractica({ nota, onVolver }) {
   );
 }
 
-// Botones para elegir la velocidad (x0.5, x1). Mientras suena no se puede cambiar.
-function SelectorVelocidad({ opciones, valor, onCambiar, deshabilitado }) {
-  return (
-    <View style={styles.velocidades} accessibilityRole="radiogroup" accessibilityLabel="Velocidad">
-      {opciones.map((o) => {
-        const activa = o.valor === valor;
-        return (
-          <TouchableOpacity
-            key={o.titulo}
-            style={[styles.velocidad, activa && styles.velocidadActiva, deshabilitado && !activa && styles.velocidadDeshabilitada]}
-            onPress={() => onCambiar(o.valor)}
-            disabled={deshabilitado || activa}
-            activeOpacity={0.8}
-            accessibilityRole="radio"
-            accessibilityState={{ selected: activa, disabled: deshabilitado }}
-            accessibilityLabel={`Velocidad ${o.titulo}`}
-          >
-            <Text style={styles.velocidadTexto}>{o.titulo}</Text>
-          </TouchableOpacity>
-        );
-      })}
-    </View>
-  );
-}
-
 // Arriba del mástil en la vista inmersiva: el tempo, la velocidad y cuánto se lleva acertado
 function BarraDeAciertos({ aciertos, total }) {
   const avance = total > 0 ? Math.min(1, aciertos / total) : 0;
@@ -120,7 +98,8 @@ function BarraDeAciertos({ aciertos, total }) {
 }
 
 // Fuera de una lección (en Canciones) no hay XP: se cambia el texto final y no se ofrece saltear.
-// Con `velocidades` (y `velocidad` + `onCambiarVelocidad`) se puede elegir la velocidad antes de tocar.
+// Con `velocidades` (y `velocidad` + `onCambiarVelocidad`) hay un interruptor de velocidad siempre a la vista
+// (lenta / original). Se sugiere la lenta antes de empezar y se vuelve a sugerir si se erra muchas veces seguidas.
 export function RiffStep({
   riff, onBack, onFinish, finishing, textoFinal = 'Terminar Lección', permitirSaltear = true, autoTerminar = false,
   velocidad, velocidades, onCambiarVelocidad,
@@ -132,7 +111,9 @@ export function RiffStep({
   const alto = inmersivo ? Math.min(ALTO_INMERSIVO_MAXIMO, Math.max(ALTO_MASTIL_BASE, Math.round(height * PROPORCION_ALTO_INMERSIVO))) : ALTO_MASTIL_BASE;
   const medidas = useMemo(() => medidasDelMastil(alto), [alto]);
   const [puedeSaltear, setPuedeSaltear] = useState(false);
-  const { fase, estado, empezar, detener, recorrido, tramo, resultados, resumen, retrocesos, practica, volverDePracticar } = useRiff(riff);
+  const [recordar, setRecordar] = useState(false);
+  const [alPrincipio, setAlPrincipio] = useState(true);
+  const { fase, estado, empezar, detener, pausar, reanudar, recorrido, tramo, resultados, resumen, retrocesos, practica, volverDePracticar } = useRiff(riff);
   const pxPorMs = medidas.pxPorPulso / riff.msPulso;
   const espejo = useZurdo() ? estilosZurdo.espejo : null;
 
@@ -148,16 +129,22 @@ export function RiffStep({
   const soloPractica = superado && velocidadParaAprobar !== undefined && velocidad !== velocidadParaAprobar;
   const aprobado = superado && !soloPractica;
 
-  // Vista inmersiva: arranca sola al entrar, se frena al pausar y vuelve a empezar al reanudar
+  // Vista inmersiva: arranca sola al entrar, se frena al pausar y sigue desde ahí al reanudar
   const yaArranco = useRef(false);
   const frenadoPorPausa = useRef(false);
   useEffect(() => {
     if (!inmersivo) return;
     if (pausado) {
-      if (enMarcha && fase !== 'practicando') {
+      if (fase === 'tocando' || fase === 'preparando') {
+        pausar();
+      } else if (enMarcha && fase !== 'practicando') {
         frenadoPorPausa.current = true;
         detener();
       }
+      return;
+    }
+    if (fase === 'pausado') {
+      reanudar();
       return;
     }
     if (fase === 'listo' && (!yaArranco.current || frenadoPorPausa.current)) {
@@ -172,6 +159,24 @@ export function RiffStep({
     const espera = setTimeout(() => onFinish(), MS_AUTO_TERMINAR);
     return () => clearTimeout(espera);
   }, [autoTerminar, aprobado]);
+
+  // Con la velocidad original y una lenta disponible, se sugiere la lenta: antes de empezar y al errar muchas seguidas
+  const sugerirLenta = !!velocidades && velocidad === 1;
+  useEffect(() => {
+    const espera = setTimeout(() => setAlPrincipio(false), MS_SUGERENCIA_INICIO);
+    return () => clearTimeout(espera);
+  }, []);
+  useEffect(() => {
+    if (!sugerirLenta || (fase !== 'retrocediendo' && fase !== 'practicando')) return undefined;
+    setRecordar(true);
+    const espera = setTimeout(() => setRecordar(false), MS_RECORDATORIO);
+    return () => clearTimeout(espera);
+  }, [fase, sugerirLenta]);
+  const textoLenta = velocidades?.[0]?.titulo;
+  const sugerencia = !sugerirLenta ? null
+    : recordar ? `¿Te cuesta? Probá en ${textoLenta}`
+    : alPrincipio ? `Si te cuesta, probalo en ${textoLenta}`
+    : null;
 
   const indiceProxima = resultados.findIndex((r) => r === null);
   const proxima = recorrido.notas[indiceProxima] ?? null;
@@ -216,7 +221,6 @@ export function RiffStep({
   );
 
   if (inmersivo) {
-    const velocidadActual = velocidades?.find((o) => o.valor === velocidad)?.titulo;
     let superposicion = null;
     if (sinMicrofono) {
       superposicion = (
@@ -244,7 +248,6 @@ export function RiffStep({
       superposicion = (
         <CartelRiff titulo="¡Casi!" texto={`Acertaste ${resumen.aciertos} de ${resumen.total}. Necesitás ${necesarios} para superarlo.`}>
           <Button title="Reintentar" onPress={empezar} style={styles.btnCartel} />
-          {velocidades && onCambiarVelocidad ? <SelectorVelocidad opciones={velocidades} valor={velocidad} onCambiar={onCambiarVelocidad} deshabilitado={false} /> : null}
         </CartelRiff>
       );
     }
@@ -257,13 +260,14 @@ export function RiffStep({
               <Icono nombre="notas" tamano={16} />
               <Text style={styles.chipTexto}>{riff.bpm} BPM</Text>
             </View>
-            {velocidadActual ? <View style={styles.chip}><Text style={styles.chipTexto}>{velocidadActual}</Text></View> : null}
-            {fase === 'tocando' || fase === 'retrocediendo' || fase === 'terminado' ? <BarraDeAciertos aciertos={resumen.aciertos} total={resumen.total} /> : null}
+            {velocidades && onCambiarVelocidad ? <SwitchVelocidad opciones={velocidades} valor={velocidad} onCambiar={onCambiarVelocidad} /> : null}
+            {fase === 'tocando' || fase === 'pausado' || fase === 'retrocediendo' || fase === 'terminado' ? <BarraDeAciertos aciertos={resumen.aciertos} total={resumen.total} /> : null}
           </View>
           <View style={styles.zonaMastil}>
             {mastil}
             <View style={styles.superposicion} pointerEvents="box-none">{superposicion}</View>
           </View>
+          {velocidades ? <View style={styles.zonaSugerencia}>{sugerencia ? <AvisoRiff texto={`💡 ${sugerencia}`} /> : null}</View> : null}
           {guia}
         </View>
         {modalPractica}
@@ -277,8 +281,9 @@ export function RiffStep({
     estadoTexto = esCancion
       ? `Tocá "Empezar". Los acordes avanzan hacia la ${espejo ? 'derecha' : 'izquierda'}: armá cada uno y rasgueá cuando llegue a la línea amarilla. La progresión se repite ${vueltas} veces.`
       : `Tocá "Empezar". Las notas avanzan hacia la ${espejo ? 'derecha' : 'izquierda'}: tocá cada una cuando llegue a la línea amarilla. El riff se toca ${vueltas} veces.`;
+    if (sugerirLenta) estadoTexto += ` Si te cuesta, probalo en ${textoLenta}.`;
   } else if (fase === 'preparando') estadoTexto = 'Abriendo el micrófono…';
-  else if (fase === 'retrocediendo') estadoTexto = '↩ Volvamos a donde empezaste a errar';
+  else if (fase === 'retrocediendo') estadoTexto = `↩ Volvamos a donde empezaste a errar${sugerirLenta ? `. ¿Te cuesta? Probá en ${textoLenta}` : ''}`;
   else if (fase === 'practicando') estadoTexto = esCancion ? 'Practiquemos ese acorde un momento' : 'Practiquemos esa nota un momento';
   else if (fase === 'tocando') {
     if (!proxima) estadoTexto = `${resumen.aciertos} ${elementos} acertados`;
@@ -309,7 +314,7 @@ export function RiffStep({
         <View style={styles.encabezado}>
           <Text style={styles.titulo} numberOfLines={1}>{riff.nombre}  •  {riff.bpm} BPM</Text>
           {velocidades && onCambiarVelocidad ? (
-            <SelectorVelocidad opciones={velocidades} valor={velocidad} onCambiar={onCambiarVelocidad} deshabilitado={enMarcha} />
+            <SwitchVelocidad opciones={velocidades} valor={velocidad} onCambiar={onCambiarVelocidad} />
           ) : null}
         </View>
 
@@ -334,11 +339,6 @@ const styles = StyleSheet.create({
   content: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%', gap: 8 },
   encabezado: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 12 },
   titulo: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
-  velocidades: { flexDirection: 'row', gap: 6 },
-  velocidad: { minWidth: 52, minHeight: 36, paddingHorizontal: 10, justifyContent: 'center', alignItems: 'center', borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.3)' },
-  velocidadActiva: { backgroundColor: '#4c52d9' },
-  velocidadDeshabilitada: { opacity: 0.45 },
-  velocidadTexto: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
   hud: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 10, minHeight: 28 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.35)' },
   chipTexto: { color: '#fff', fontSize: 13, fontWeight: 'bold' },
@@ -346,6 +346,7 @@ const styles = StyleSheet.create({
   aciertosBarra: { width: 150, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.2)', overflow: 'hidden' },
   aciertosRelleno: { height: '100%', borderRadius: 4, backgroundColor: '#2fbf5b' },
   aciertosTexto: { color: '#fff', fontSize: 13, fontWeight: 'bold' },
+  zonaSugerencia: { minHeight: 34, justifyContent: 'center' },
   zonaMastil: { width: '100%', justifyContent: 'center' },
   superposicion: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, justifyContent: 'center', alignItems: 'center' },
   btnCartel: { backgroundColor: '#4c52d9', minWidth: 220 },
