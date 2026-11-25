@@ -64,7 +64,7 @@ export function LeccionScreen({ route, navigation }) {
   // Vista inmersiva de la práctica: la intro se ve una vez y el menú de pausa se abre al tocar la pantalla
   const [introHecha, setIntroHecha] = useState(false);
   const [pausado, setPausado] = useState(false);
-  // Sube cada vez que se reinicia la práctica: como es la `key` de PracticeStep, la práctica empieza de cero
+  // Sube cada vez que se toca Reiniciar: PracticeStep vuelve a empezar la consigna en la que estaba
   const [reinicios, setReinicios] = useState(0);
   const [fin, setFin] = useState(null); // { titulo, mensaje, icono, cursoCompletado } al terminar
 
@@ -237,7 +237,7 @@ export function LeccionScreen({ route, navigation }) {
             </View>
             <View style={styles.zonaInmersiva}>
               <PracticeStep
-                key={reinicios}
+                reinicio={reinicios}
                 leccion={leccion}
                 onBack={irAtras}
                 onFinish={handleTerminar}

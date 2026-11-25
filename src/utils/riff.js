@@ -61,6 +61,15 @@ export function obtenerEscalon(tempo) {
 
 export const esEscalon = (e) => typeof e === 'number' && e > 0 && e < 1;
 
+// Con qué velocidad arranca la clase y cuál hace falta para aprobarla (`paraAprobar` sin definir =
+// cualquiera). Normalmente arranca y aprueba a la original. Con `tempo.aprobarLento` arranca en el
+// escalón y aprueba tanto ahí como a la original.
+export function velocidadesDeClase(tempo) {
+  const escalon = obtenerEscalon(tempo);
+  if (escalon && tempo.aprobarLento === true) return { escalon, inicial: escalon, paraAprobar: undefined };
+  return { escalon, inicial: 1, paraAprobar: 1 };
+}
+
 // Botones del selector de velocidad cuando hay escalón: el escalón (ej. x0.75) y la original (x1)
 export const opcionesConEscalon = (escalon) => [{ valor: escalon, titulo: `x${escalon}` }, { valor: 1, titulo: 'x1' }];
 
@@ -79,6 +88,10 @@ export const finDeVentana = (nota) => nota.t + (nota.msDespues ?? MS_DESPUES);
 
 // ¿Este momento (ms del recorrido) está dentro del margen de la nota?
 export const enVentana = (nota, t) => t >= nota.t - MS_ANTES && t <= finDeVentana(nota);
+
+// Al llegar la primera nota a la línea, el recorrido espera hasta que se toque bien (es la largada).
+// Devuelve true si en ese momento hay que frenar.
+export const esperaLaPrimera = (notas, resultados, t) => resultados[0] === null && t >= notas[0].t;
 
 // resultados: true (acertada), false (errada) o null (todavía no pasó), uno por nota.
 // Si hay que volver atrás, devuelve el índice de la nota donde empezó a errar; si no, null.

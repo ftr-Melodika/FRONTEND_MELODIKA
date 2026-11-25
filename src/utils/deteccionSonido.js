@@ -24,7 +24,8 @@ const UMBRAL_SOBRANTE = 0.15; // Una nota ajena solo molesta si suena fuerte
 // Qué tan cerca de la nota tiene que sonar para contar (un semitono son 100 cents). Antes se
 // redondeaba a la nota más cercana: algo corrido hasta 49 cents, a mitad de camino de la nota
 // de al lado, aprobaba igual. La frecuencia se mide con un error de unos 10 cents en el peor ruido.
-const TOLERANCIA_NOTA_CENTS = 30;
+// Era 30: con guitarras reales una nota pisada suele salir algo alta y se rechazaba a veces.
+const TOLERANCIA_NOTA_CENTS = 40;
 // En un acorde los armónicos de varias cuerdas se pisan y corren un poco cada pico
 const TOLERANCIA_ACORDE_CENTS = 40;
 // La nota pedida tiene que ser de lo más fuerte que suena. Antes alcanzaba con un 3 %: se podía

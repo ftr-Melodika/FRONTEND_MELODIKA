@@ -1,6 +1,7 @@
 // Archivo: src/hooks/useRiff.js
 // El riff en movimiento: lleva el reloj del recorrido, escucha qué nota suena y marca cada nota
-// como acertada o errada cuando pasa por la línea. Si se erra mucho, vuelve atrás; si se traba
+// como acertada o errada cuando pasa por la línea. En la primera el recorrido se frena hasta que se
+// toque bien y recién ahí avanza a tempo. Si se erra mucho, vuelve atrás; si se traba
 // siempre en el mismo acorde (o nota), se frena para practicarlo aparte y después sigue desde ahí.
 // En las canciones cada "nota" del recorrido es un acorde (tipo 'acorde', con sus midis).
 // El audio se procesa en el celular: no se guarda ni se envía a ningún lado.
@@ -8,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMicrofono } from './useMicrofono';
 import { crearDetector, compararAcorde, compararNota } from '../utils/deteccionSonido';
 import { ruidoMedido } from '../utils/ruidoAmbiente';
-import { armarRecorrido, decidirTropiezo, enVentana, finDeVentana, olvidarTropiezo, resumir, MS_DESPUES } from '../utils/riff';
+import { armarRecorrido, decidirTropiezo, enVentana, esperaLaPrimera, finDeVentana, olvidarTropiezo, resumir, MS_DESPUES } from '../utils/riff';
 
 // Antes de la primera nota: el detector mide el ruido del lugar (~1,5 s) y las notas se acercan
 export const MS_ENTRADA = 2500;
@@ -42,6 +43,7 @@ export function useRiff(riff) {
   const muestras = useRef(0);
   const desfase = useRef(null);
   const enMarcha = useRef(false);
+  const esperando = useRef(false); // Frenado en la primera nota (ver esperaLaPrimera): el reloj no corre
   const recientes = useRef([]);
   const practicaActual = useRef(null); // Lo mismo que `practica`, para no depender del render
   const esperaVolver = useRef(null); // El regreso de la práctica, por si se para antes
@@ -53,6 +55,10 @@ export function useRiff(riff) {
   const posicion = (ahora = Date.now()) => (reloj.current ? reloj.current.desde + (ahora - reloj.current.inicio) : -Infinity);
 
   const publicar = () => setResultados([...marcas.current]);
+
+  const suena = (nota, lectura) => (nota.tipo === 'acorde'
+    ? compararAcorde(lectura.fundamentales, nota.midis, recientes.current.flat()).correcta
+    : compararNota(lectura.fundamentales, nota.midi).correcta);
 
   const procesarBuffer = ({ data, sampleRate, channels }) => {
     if (!detector.current) return;
@@ -71,15 +77,22 @@ export function useRiff(riff) {
     if (recientes.current.length > LECTURAS_RECIENTES) recientes.current.shift();
     if (!enMarcha.current || !lectura.fundamentales?.length) return;
 
+    // Frenado en la primera: solo se escucha esa y, al sonar bien, el recorrido sigue desde ella
+    if (esperando.current) {
+      const primera = recorrido.notas[0];
+      if (!suena(primera, lectura)) return;
+      marcas.current[0] = true;
+      publicar();
+      arrancarDesde(primera.t);
+      return;
+    }
+
     // ¿La nota que suena es la de alguna nota que está pasando por la línea?
     const t = posicion(ahora);
     let cambio = false;
     recorrido.notas.forEach((nota, i) => {
       if (marcas.current[i] !== null || !enVentana(nota, t)) return;
-      const suena = nota.tipo === 'acorde'
-        ? compararAcorde(lectura.fundamentales, nota.midis, recientes.current.flat()).correcta
-        : compararNota(lectura.fundamentales, nota.midi).correcta;
-      if (suena) {
+      if (suena(nota, lectura)) {
         marcas.current[i] = true;
         cambio = true;
       }
@@ -91,6 +104,7 @@ export function useRiff(riff) {
   const estado = useMicrofono(procesarBuffer, fase !== 'listo' && fase !== 'terminado' && fase !== 'practicando' && fase !== 'pausado');
 
   const arrancarDesde = (desde) => {
+    esperando.current = false;
     reloj.current = { desde, inicio: Date.now() };
     enMarcha.current = true;
     setTramo({ ...reloj.current });
@@ -107,6 +121,7 @@ export function useRiff(riff) {
     desfase.current = null;
     reloj.current = null;
     enMarcha.current = false;
+    esperando.current = false;
     desdePendiente.current = desde;
     setFase('preparando');
   };
@@ -137,7 +152,10 @@ export function useRiff(riff) {
   // Frena donde está, sin perder los aciertos: reanudar() sigue desde ahí. Solo en pleno riff (o abriendo el micrófono)
   const pausar = () => {
     if (fase !== 'tocando' && fase !== 'preparando') return;
-    const t = fase === 'tocando' ? posicion() : desdePendiente.current ?? -MS_ENTRADA;
+    // Frenado en la primera nota el reloj no corre: la posición es la de esa nota
+    const enPantalla = esperando.current ? recorrido.notas[0].t : posicion();
+    const t = fase === 'tocando' ? enPantalla : desdePendiente.current ?? -MS_ENTRADA;
+    esperando.current = false;
     retomarEn.current = fase === 'tocando' ? t - MS_RETOMAR_PAUSA : t;
     enMarcha.current = false;
     detector.current = null;
@@ -154,6 +172,7 @@ export function useRiff(riff) {
   const detener = () => {
     clearTimeout(esperaVolver.current);
     enMarcha.current = false;
+    esperando.current = false;
     detector.current = null;
     reloj.current = null;
     setTramo(null);
@@ -174,6 +193,12 @@ export function useRiff(riff) {
     if (fase !== 'tocando') return undefined;
     const intervalo = setInterval(() => {
       const t = posicion();
+      if (esperaLaPrimera(recorrido.notas, marcas.current, t)) {
+        esperando.current = true;
+        reloj.current = null;
+        setTramo({ desde: recorrido.notas[0].t, inicio: null }); // Quieto con la primera nota en la línea
+        return;
+      }
       const nuevosErrores = [];
       recorrido.notas.forEach((nota, i) => {
         if (marcas.current[i] === null && t > finDeVentana(nota)) {

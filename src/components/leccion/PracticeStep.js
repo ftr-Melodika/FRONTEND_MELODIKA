@@ -12,7 +12,7 @@ import { AfinacionStep } from './AfinacionStep';
 import { RitmoStep } from './RitmoStep';
 import { obtenerRitmo } from '../../utils/ritmo';
 import { RiffStep } from './RiffStep';
-import { obtenerEscalon, obtenerRiff, opcionesConEscalon } from '../../utils/riff';
+import { obtenerRiff, opcionesConEscalon, velocidadesDeClase } from '../../utils/riff';
 import { obtenerConsignas, resolverNotasAlAzar } from '../../utils/consignas';
 import { ConsignasStep } from './ConsignasStep';
 
@@ -40,9 +40,9 @@ function PracticaUnica({ onBack, onFinish, finishing, leccion: leccionOriginal }
   const secuencia = useMemo(() => obtenerSecuencia(leccion), [leccion]);
   const ritmo = useMemo(() => obtenerRitmo(leccion), [leccion]);
   // Un riff o melodía con ritmo (secuencia con `tempo`) se toca directo a tempo
-  const escalon = obtenerEscalon(leccion.practica?.tempo);
-  // Siempre se empieza a la velocidad original; con escalón se sugiere la lenta, y solo se aprueba a la original
-  const [velocidad, setVelocidad] = useState(1);
+  // Con qué velocidad arranca y cuál aprueba lo dicen los datos de la clase (ver velocidadesDeClase)
+  const { escalon, inicial, paraAprobar } = velocidadesDeClase(leccion.practica?.tempo);
+  const [velocidad, setVelocidad] = useState(inicial);
   const riff = useMemo(() => obtenerRiff(leccion, velocidad), [leccion, velocidad]);
 
   const cancion = useMemo(() => obtenerCancion(leccion), [leccion]);
@@ -63,7 +63,7 @@ function PracticaUnica({ onBack, onFinish, finishing, leccion: leccionOriginal }
         onFinish={onFinish}
         finishing={finishing}
         autoTerminar
-        {...(escalon ? { velocidad, velocidades: opcionesConEscalon(escalon), onCambiarVelocidad: setVelocidad, velocidadParaAprobar: 1 } : {})}
+        {...(escalon ? { velocidad, velocidades: opcionesConEscalon(escalon), onCambiarVelocidad: setVelocidad, velocidadParaAprobar: paraAprobar } : {})}
       />
     );
   }
@@ -72,9 +72,10 @@ function PracticaUnica({ onBack, onFinish, finishing, leccion: leccionOriginal }
 
 // La práctica de una lección: una sola, o varias consignas seguidas (practica.tipo = 'consignas').
 // `onInstruccion` avisa el texto de la consigna actual para la barra lateral.
-export function PracticeStep({ onBack, onFinish, finishing, leccion, onInstruccion }) {
+// Al cambiar `reinicio` empieza de cero la práctica actual, sin volver a la primera consigna.
+export function PracticeStep({ onBack, onFinish, finishing, leccion, onInstruccion, reinicio = 0 }) {
   const consignas = useMemo(() => obtenerConsignas(leccion), [leccion]);
-  if (!consignas) return <PracticaUnica onBack={onBack} onFinish={onFinish} finishing={finishing} leccion={leccion} />;
+  if (!consignas) return <PracticaUnica key={reinicio} onBack={onBack} onFinish={onFinish} finishing={finishing} leccion={leccion} />;
   return (
     <ConsignasStep
       consignas={consignas}
@@ -83,6 +84,7 @@ export function PracticeStep({ onBack, onFinish, finishing, leccion, onInstrucci
       onFinish={onFinish}
       finishing={finishing}
       onInstruccion={onInstruccion}
+      reinicio={reinicio}
     />
   );
 }

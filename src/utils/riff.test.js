@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import {
   obtenerRiff, armarRecorrido, enVentana, dondeRetroceder, resumir, MS_ANTES, MS_DESPUES,
-  claveDeNota, decidirTropiezo, olvidarTropiezo, secuenciaDePractica, obtenerEscalon, opcionesConEscalon,
+  claveDeNota, decidirTropiezo, olvidarTropiezo, secuenciaDePractica, obtenerEscalon, opcionesConEscalon, velocidadesDeClase, esperaLaPrimera,
 } from './riff.js';
 
 const nota = (cuerda, traste, dedo) => ({ tipo: 'nota', nombre: 'x', posiciones: [traste ? { cuerda, traste, dedo } : { cuerda, traste }] });
@@ -135,4 +135,25 @@ test('obtenerEscalon: solo acepta un factor entre 0 y 1', () => {
   for (const e of [1, 0, -1, 2, '0.5', null, undefined]) assert.strictEqual(obtenerEscalon({ escalon: e }), null);
   assert.strictEqual(obtenerEscalon(undefined), null);
   assert.deepStrictEqual(opcionesConEscalon(0.75), [{ valor: 0.75, titulo: 'x0.75' }, { valor: 1, titulo: 'x1' }]);
+});
+
+test('velocidadesDeClase: normalmente arranca y aprueba a la original', () => {
+  assert.deepStrictEqual(velocidadesDeClase({ escalon: 0.5 }), { escalon: 0.5, inicial: 1, paraAprobar: 1 });
+  assert.deepStrictEqual(velocidadesDeClase(undefined), { escalon: null, inicial: 1, paraAprobar: 1 });
+});
+
+test('velocidadesDeClase: con aprobarLento arranca en el escalón y aprueba a cualquiera', () => {
+  assert.deepStrictEqual(velocidadesDeClase({ escalon: 0.5, aprobarLento: true }), { escalon: 0.5, inicial: 0.5, paraAprobar: undefined });
+  // Sin escalón válido o con un valor que no es booleano, se comporta como siempre
+  assert.deepStrictEqual(velocidadesDeClase({ aprobarLento: true }), { escalon: null, inicial: 1, paraAprobar: 1 });
+  assert.strictEqual(velocidadesDeClase({ escalon: 0.5, aprobarLento: 'true' }).inicial, 1);
+});
+
+test('esperaLaPrimera: frena al llegar la primera nota y solo si todavía no sonó', () => {
+  const notas = [{ t: 0 }, { t: 750 }];
+  assert.strictEqual(esperaLaPrimera(notas, [null, null], -100), false);
+  assert.strictEqual(esperaLaPrimera(notas, [null, null], 0), true);
+  assert.strictEqual(esperaLaPrimera(notas, [true, null], 900), false);
+  // Ya frenado el reloj no corre (-Infinity)
+  assert.strictEqual(esperaLaPrimera(notas, [null, null], -Infinity), false);
 });
