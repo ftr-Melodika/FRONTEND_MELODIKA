@@ -193,16 +193,16 @@ test('seccionesDeCanciones: favoritas, fáciles, intermedias y difíciles, sin r
   ];
   const secciones = seccionesDeCanciones(lista, ['c', 'zzz']);
   assert.deepStrictEqual(secciones.map((s) => [s.titulo, s.canciones.map((c) => c.id)]), [
-    ['Favoritas', ['c']], ['Fáciles', ['b', 'd']], ['Intermedias', ['a']],
+    ['Favoritas', ['c']], ['Fáciles', ['b', 'd']], ['Intermedias', ['a']], ['Difíciles', ['c']],
   ]);
   assert.deepStrictEqual(seccionesDeCanciones(lista).map((s) => s.titulo), ['Fáciles', 'Intermedias', 'Difíciles']);
   assert.deepStrictEqual(seccionesDeCanciones([]), []);
 });
 
-test('seccionesDeCanciones: una canción no sale dos veces, ni repetida ni en dos grupos', () => {
+test('seccionesDeCanciones: una favorita sale en Favoritas y en su dificultad, sin repetirse dentro de un grupo', () => {
   const a = { ...CANCIONES[0], id: 'a', dificultad: 'facil' };
   const secciones = seccionesDeCanciones([a, a, { ...CANCIONES[1], id: 'b', dificultad: 'facil' }], ['a', 'a']);
-  assert.deepStrictEqual(secciones.map((s) => [s.titulo, s.canciones.map((c) => c.id)]), [['Favoritas', ['a']], ['Fáciles', ['b']]]);
+  assert.deepStrictEqual(secciones.map((s) => [s.titulo, s.canciones.map((c) => c.id)]), [['Favoritas', ['a']], ['Fáciles', ['a', 'b']]]);
 });
 
 test('estrellasDeResultado: 1 por intentarla, 2 desde el 75 % y 3 desde el 95 %', () => {

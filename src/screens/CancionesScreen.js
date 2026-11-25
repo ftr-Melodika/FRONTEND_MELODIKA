@@ -1,7 +1,7 @@
 // Archivo: src/screens/CancionesScreen.js
 // Catálogo de canciones para tocar con lo aprendido. Se puede buscar por título o artista y filtrar por
 // favoritas, dificultad y género: los tres al lado del buscador y, al tocar dificultad o género, una fila
-// flotante con todas sus opciones. La lista se desliza de lado, en dos filas. Sin filtros, se agrupa con un
+// flotante con todas sus opciones. La lista se desliza de lado, en tres filas. Sin filtros, se agrupa con un
 // subtítulo por grupo: favoritas, fáciles, intermedias y difíciles. Cada canción muestra sus estrellas.
 // Las canciones vienen del backend.
 import { useContext, useMemo, useState } from 'react';
@@ -15,17 +15,17 @@ import { TarjetaCancion } from '../components/canciones/TarjetaCancion';
 import { AuthContext } from '../context/AuthContext';
 import { useCanciones, useActualizarAlEnfocar, useEstrellasCanciones, useFavoritasCanciones, mensajeError } from '../hooks/useConsultas';
 import { useAlternarFavorita } from '../hooks/useAlternarFavorita';
-import { columnasDeCanciones, filtrarCanciones, generosDeCanciones, seccionesDeCanciones } from '../utils/canciones';
+import { columnasDeCanciones, filtrarCanciones, generosDeCanciones, seccionesDeCanciones, TITULO_FAVORITAS } from '../utils/canciones';
 
-const FILAS = 2;
+const FILAS = 3;
 const SEPARACION = 10;
-const ALTO_TARJETA_MINIMO = 84;
+const ALTO_TARJETA_MINIMO = 74; // Lo justo para el corazón, la dificultad y las estrellas
 const ANCHO_TITULO_GRUPO = 110;
 const MARGEN_INFERIOR_LISTA = 12;
-const ALTO_TARJETA_MAXIMO = 140;
-const ANCHO_TARJETA_MINIMO = 300;
-const ANCHO_TARJETA_MAXIMO = 400;
-const PROPORCION_ANCHO = 0.62; // Del ancho de la pantalla: así se asoma la columna siguiente y se nota que hay más
+const ALTO_TARJETA_MAXIMO = 100;
+const ANCHO_TARJETA_MINIMO = 260;
+const ANCHO_TARJETA_MAXIMO = 340;
+const PROPORCION_ANCHO = 0.5; // Del ancho de la pantalla: así se asoma la columna siguiente y se nota que hay más
 
 const FILTROS = [
   { id: null, titulo: 'Todas' },
@@ -83,18 +83,19 @@ export function CancionesScreen({ navigation }) {
     [todas, busqueda, nivel, genero, soloFavoritas, favoritasDisponibles, favoritas],
   );
   const hayFiltros = !!busqueda.trim() || !!nivel || !!genero || soloFavoritas;
-  // Sin filtros: un grupo por favoritas / fáciles / intermedias / difíciles, cada uno con su subtítulo.
+  // Sin filtros: un grupo por favoritas / fáciles / intermedias / difíciles, cada uno con su subtítulo
+  // (una favorita aparece en Favoritas y también en su dificultad).
   // Con filtros: una sola tanda, sin subtítulos. Cada elemento es un subtítulo o una columna de canciones.
   const elementos = useMemo(() => {
     if (hayFiltros) return columnasDeCanciones(canciones, FILAS).map((columna) => ({ tipo: 'columna', clave: columna[0].id, canciones: columna }));
     return seccionesDeCanciones(canciones, favoritas).flatMap((seccion) => [
       { tipo: 'titulo', clave: `titulo-${seccion.titulo}`, titulo: seccion.titulo, cantidad: seccion.canciones.length },
-      ...columnasDeCanciones(seccion.canciones, FILAS).map((columna) => ({ tipo: 'columna', clave: `${seccion.titulo}-${columna[0].id}`, canciones: columna })),
+      ...columnasDeCanciones(seccion.canciones, FILAS).map((columna) => ({ tipo: 'columna', clave: `${seccion.titulo}-${columna[0].id}`, canciones: columna, enFavoritas: seccion.titulo === TITULO_FAVORITAS })),
     ]);
   }, [canciones, favoritas, hayFiltros]);
 
   const ancho = Math.round(Math.min(ANCHO_TARJETA_MAXIMO, Math.max(ANCHO_TARJETA_MINIMO, width * PROPORCION_ANCHO)));
-  // Las dos filas de tarjetas tienen que entrar enteras: al alto medido se le resta el margen de abajo y lo que separa las filas
+  // Las tres filas de tarjetas tienen que entrar enteras: al alto medido se le resta el margen de abajo y lo que separa las filas
   const alto = Math.round(Math.min(ALTO_TARJETA_MAXIMO, Math.max(ALTO_TARJETA_MINIMO, (altoLista - MARGEN_INFERIOR_LISTA - SEPARACION * (FILAS - 1)) / FILAS)));
   const alternar = (que) => setDesplegado(desplegado === que ? null : que);
   const elegirNivel = (id) => { setNivel(id); setDesplegado(null); };
@@ -171,6 +172,7 @@ export function CancionesScreen({ navigation }) {
                       ancho={ancho}
                       alto={alto}
                       favorita={favoritas.includes(cancion.id)}
+                      enFavoritas={!!item.enFavoritas}
                       estrellas={estrellas[cancion.id] ?? 0}
                       onPress={abrir}
                       onFavorita={favoritasDisponibles ? alternarFavorita : undefined}

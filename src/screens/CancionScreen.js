@@ -17,6 +17,8 @@ import { RiffStep } from '../components/leccion/RiffStep';
 import { Rasgueo } from '../components/canciones/Rasgueo';
 import { AuthContext } from '../context/AuthContext';
 import { cancionesService } from '../services/cancionesService';
+import { useFavoritasCanciones } from '../hooks/useConsultas';
+import { useAlternarFavorita } from '../hooks/useAlternarFavorita';
 import {
   acordesDeCancion, aprendizajeDeCancion, cuentaDeRasgueo, formaDeAcorde, nivelDeCancion, rasgueosDeCancion,
   OPCIONES_VELOCIDAD, riffDeCancion, VELOCIDADES, estrellasDeResultado,
@@ -27,6 +29,12 @@ import { FUENTE_TITULO } from '../theme/fuentes';
 const PASOS_APRENDER = ['acordes', 'cambios', 'tocar'];
 const COLORES_DIVISOR = ['rgba(178,140,255,0)', '#b28cff', '#4c52d9', '#b28cff', 'rgba(178,140,255,0)'];
 const TITULO_PASO = { acordes: 'Los acordes', cambios: 'Los cambios', tocar: 'Tocala' };
+// Los botones de acordes van siempre en un renglón: si no entran a su tamaño, se achican todos por igual
+const ANCHO_ACORDE = 68;
+const ALTO_ACORDE = 52;
+const LETRA_ACORDE = 19;
+const SEPARACION_ACORDES = 10;
+const ESCALA_MINIMA_ACORDES = 0.45; // Más chico ya no se lee
 
 function Dato({ etiqueta, valor }) {
   return (
@@ -34,6 +42,23 @@ function Dato({ etiqueta, valor }) {
       <Text style={styles.datoEtiqueta}>{etiqueta}</Text>
       <Text style={styles.datoValor}>{valor}</Text>
     </View>
+  );
+}
+
+// Al lado de los datos: el corazón para marcar o desmarcar la canción como favorita
+function DatoFavorita({ favorita, onPress }) {
+  return (
+    <TouchableOpacity
+      style={[styles.dato, styles.datoFavorita]}
+      onPress={onPress}
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={favorita ? 'Quitar de favoritas' : 'Marcar como favorita'}
+      accessibilityState={{ selected: favorita }}
+    >
+      <Text style={styles.datoEtiqueta}>Favorita</Text>
+      <Text style={[styles.corazon, favorita && styles.corazonActivo]}>{favorita ? '♥' : '♡'}</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -99,6 +124,9 @@ export function CancionScreen({ route, navigation }) {
   const [conCapo, setConCapo] = useState(true);
   // Se elige adentro de "Tocala" (x0.5 o x1); cada vez que se entra arranca en la original
   const [velocidad, setVelocidad] = useState(VELOCIDADES.original);
+  const [anchoAcordes, setAnchoAcordes] = useState(0);
+  const favoritas = useFavoritasCanciones(perfil?.id).data ?? [];
+  const alternarFavorita = useAlternarFavorita(perfil?.id);
 
   // Sin capo, la app espera las notas de las formas tal cual (suena más grave que la grabación)
   const cancion = useMemo(() => (original && !conCapo ? { ...original, capo: 0 } : original), [original, conCapo]);
@@ -210,6 +238,10 @@ export function CancionScreen({ route, navigation }) {
   }
 
   const acordes = acordesDeCancion(cancion);
+  // Cuánto se achican los acordes para entrar en un renglón (1 = su tamaño normal)
+  const anchoNecesario = acordes.length * ANCHO_ACORDE + (acordes.length - 1) * SEPARACION_ACORDES;
+  const escala = anchoAcordes > 0 && anchoNecesario > anchoAcordes ? Math.max(ESCALA_MINIMA_ACORDES, anchoAcordes / anchoNecesario) : 1;
+  const tamanoAcorde = { width: ANCHO_ACORDE * escala, height: ALTO_ACORDE * escala };
 
   return (
     <Background>
@@ -224,13 +256,14 @@ export function CancionScreen({ route, navigation }) {
               <Dato etiqueta="Tempo" valor={`~${original.bpm} BPM`} />
               {original.capo > 0 && <Dato etiqueta="Capo" valor={`Traste ${original.capo}`} />}
               <Dato etiqueta="Nivel" valor={nivelDeCancion(cancion)} />
+              {perfil?.id ? <DatoFavorita favorita={favoritas.includes(original.id)} onPress={() => alternarFavorita(original)} /> : null}
             </View>
 
             <Text style={styles.subtitulo}>Acordes</Text>
-            <View style={styles.acordes}>
+            <View style={[styles.acordes, { gap: SEPARACION_ACORDES * escala }]} onLayout={(e) => setAnchoAcordes(e.nativeEvent.layout.width)}>
               {acordes.map((a) => (
-                <TouchableOpacity key={a} style={styles.acorde} onPress={() => setAcordeAbierto(a)} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={`Ver cómo se arma ${a}`}>
-                  <Text style={styles.acordeTexto}>{a}</Text>
+                <TouchableOpacity key={a} style={[styles.acorde, tamanoAcorde]} onPress={() => setAcordeAbierto(a)} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={`Ver cómo se arma ${a}`}>
+                  <Text style={[styles.acordeTexto, { fontSize: LETRA_ACORDE * escala }]} numberOfLines={1} adjustsFontSizeToFit>{a}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -293,16 +326,19 @@ const styles = StyleSheet.create({
   dato: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.3)' },
   datoEtiqueta: { color: 'rgba(255,255,255,0.65)', fontSize: 12, fontWeight: '600' },
   datoValor: { color: '#fff', fontSize: 17, fontWeight: 'bold' },
+  datoFavorita: { alignItems: 'center' },
+  corazon: { color: 'rgba(255,255,255,0.85)', fontSize: 22, lineHeight: 22 },
+  corazonActivo: { color: '#ffb3bd' },
   texto: { color: '#fff', fontSize: 16, lineHeight: 22 },
   subtitulo: { color: '#fff', fontSize: 21, fontWeight: 'bold', fontFamily: FUENTE_TITULO, marginTop: 8 },
   ayuda: { color: 'rgba(255,255,255,0.8)', fontSize: 15, lineHeight: 21 },
-  acordes: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  acorde: { minWidth: 68, minHeight: 52, paddingHorizontal: 14, justifyContent: 'center', alignItems: 'center', borderRadius: 12, backgroundColor: '#4c52d9' },
-  acordeTexto: { color: '#fff', fontSize: 19, fontWeight: 'bold' },
+  acordes: { flexDirection: 'row', overflow: 'hidden' },
+  acorde: { paddingHorizontal: 4, justifyContent: 'center', alignItems: 'center', borderRadius: 12, backgroundColor: 'rgba(30,26,92,0.88)', borderWidth: 1.5, borderColor: '#b28cff' },
+  acordeTexto: { color: '#fff', fontWeight: 'bold' },
   rasgueo: { gap: 4 },
   rasgueoCompases: { color: 'rgba(255,255,255,0.85)', fontSize: 15, fontWeight: 'bold' },
   acciones: { gap: 12 },
-  eleccion: { flex: 1, justifyContent: 'center', padding: 18, borderRadius: 16, backgroundColor: 'rgba(76,82,217,0.85)', gap: 6 },
+  eleccion: { flex: 1, justifyContent: 'center', padding: 18, borderRadius: 16, backgroundColor: 'rgba(30,26,92,0.88)', borderWidth: 1.5, borderColor: '#b28cff', gap: 6 },
   eleccionTitulo: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
   eleccionTexto: { color: 'rgba(255,255,255,0.9)', fontSize: 16, lineHeight: 22 },
   opciones: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

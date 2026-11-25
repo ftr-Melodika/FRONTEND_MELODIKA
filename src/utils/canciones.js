@@ -217,16 +217,16 @@ export function generosDeCanciones(canciones) {
 }
 
 // El orden del catálogo cuando no hay filtros, con un subtítulo por grupo: primero las favoritas
-// y después las fáciles, intermedias y difíciles (una canción favorita va solo en Favoritas).
+// y después las fáciles, intermedias y difíciles (una canción favorita sale en Favoritas y también en su dificultad).
 // Devuelve [{ titulo, canciones }] sin los grupos vacíos.
+export const TITULO_FAVORITAS = 'Favoritas';
 export function seccionesDeCanciones(canciones, favoritas = []) {
   const ids = new Set(favoritas.map(String));
-  // Cada canción sale una sola vez, aunque el catálogo la traiga repetida
+  // Cada canción sale una sola vez por grupo, aunque el catálogo la traiga repetida
   const unicas = canciones.filter((c, i) => canciones.findIndex((otra) => String(otra.id) === String(c.id)) === i);
-  const secciones = [{ titulo: 'Favoritas', canciones: unicas.filter((c) => ids.has(String(c.id))) }];
-  const resto = unicas.filter((c) => !ids.has(String(c.id)));
+  const secciones = [{ titulo: TITULO_FAVORITAS, canciones: unicas.filter((c) => ids.has(String(c.id))) }];
   [['Fácil', 'Fáciles'], ['Intermedia', 'Intermedias'], ['Difícil', 'Difíciles']].forEach(([nivel, titulo]) => {
-    secciones.push({ titulo, canciones: resto.filter((c) => nivelDeCancion(c) === nivel) });
+    secciones.push({ titulo, canciones: unicas.filter((c) => nivelDeCancion(c) === nivel) });
   });
   return secciones.filter((s) => s.canciones.length > 0);
 }
