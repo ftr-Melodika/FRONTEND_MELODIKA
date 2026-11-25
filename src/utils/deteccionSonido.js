@@ -95,7 +95,13 @@ export function obtenerObjetivo(leccion) {
     if ((practica.tipo === 'nota' && cantidad === 1) || (practica.tipo === 'acorde' && cantidad >= 2)) {
       const posiciones = practica.posiciones.map((p) => ({ ...p, cuerda: Number(p.cuerda), traste: Number(p.traste) }));
       const midis = posiciones.map((p) => midiDePosicion(p.cuerda, p.traste));
-      return { tipo: practica.tipo, nombre: practica.nombre || nombreDeMidi(midis[0]), posiciones, midis };
+      const objetivo = { tipo: practica.tipo, nombre: practica.nombre || nombreDeMidi(midis[0]), posiciones, midis };
+      // Una nota que forma parte de un acorde que se toca cuerda por cuerda: la forma entera, para dibujarla
+      if (practica.tipo === 'nota' && posicionesValidas(practica.formaAcorde)) {
+        objetivo.formaAcorde = practica.formaAcorde.map((p) => ({ ...p, cuerda: Number(p.cuerda), traste: Number(p.traste) }));
+        if (typeof practica.nombreAcorde === 'string') objetivo.nombreAcorde = practica.nombreAcorde;
+      }
+      return objetivo;
     }
   }
 

@@ -5,7 +5,8 @@ import { FORMAS } from '../data/canciones.js';
 import { CANCIONES } from './canciones.fixture.js';
 import {
   acordesDeCancion, aprendizajeDeCancion, filtrarCanciones, formaDeAcorde, golpesDeRasgueo, nivelDeCancion, objetivoDeAcorde, partesDeCompas, cuentaDeRasgueo,
-  rasgueosDeCancion, riffDeCancion, textoDeRasgueo, VELOCIDADES,
+  rasgueosDeCancion, riffDeCancion, textoDeRasgueo, VELOCIDADES, generosDeCanciones, columnasDeCanciones,
+  seccionesDeCanciones, estrellasDeResultado, estrellasPorCancion,
 } from './canciones.js';
 import { midiDePosicion } from './deteccionSonido.js';
 import { armarRecorrido } from './riff.js';
@@ -146,4 +147,76 @@ test('búsqueda y filtro por nivel', () => {
   assert.deepStrictEqual(filtrarCanciones(CANCIONES, 'calamaro').map((c) => c.id), ['flaca']);
   assert.deepStrictEqual(filtrarCanciones(CANCIONES, '', 'Fácil'), []); // Por ahora no hay fáciles
   assert.strictEqual(filtrarCanciones(CANCIONES, '', 'Intermedia').length, CANCIONES.length);
+});
+
+test('nivelDeCancion: si el backend indica la dificultad, se usa esa', () => {
+  const cancion = CANCIONES[0];
+  assert.strictEqual(nivelDeCancion({ ...cancion, dificultad: 'dificil' }), 'Difícil');
+  assert.strictEqual(nivelDeCancion({ ...cancion, dificultad: 'facil' }), 'Fácil');
+  assert.strictEqual(nivelDeCancion({ ...cancion, dificultad: 'otra' }), nivelDeCancion(cancion)); // Dato raro: se deduce
+});
+
+test('filtro por dificultad, género y favoritas', () => {
+  const lista = [
+    { ...CANCIONES[0], id: 'a', genero: 'Rock nacional', dificultad: 'dificil' },
+    { ...CANCIONES[1], id: 'b', genero: 'Pop' },
+    { ...CANCIONES[2], id: 'c' },
+  ];
+  assert.deepStrictEqual(filtrarCanciones(lista, '', 'Difícil').map((c) => c.id), ['a']);
+  assert.deepStrictEqual(filtrarCanciones(lista, '', null, { genero: 'rock NACIONAL' }).map((c) => c.id), ['a']);
+  assert.deepStrictEqual(filtrarCanciones(lista, '', null, { favoritas: ['b', 'c'] }).map((c) => c.id), ['b', 'c']);
+  assert.deepStrictEqual(filtrarCanciones(lista, '', null, { favoritas: [] }), []); // Sin favoritas marcadas, no hay nada
+  assert.deepStrictEqual(filtrarCanciones(lista, '', null, { genero: 'Pop', favoritas: ['a'] }), []);
+  assert.strictEqual(filtrarCanciones(lista, '', null, { favoritas: null }).length, 3); // null = no filtrar
+});
+
+test('generosDeCanciones: sin repetir, ordenados, y vacío si no hay géneros', () => {
+  assert.deepStrictEqual(generosDeCanciones(CANCIONES), []);
+  assert.deepStrictEqual(
+    generosDeCanciones([{ genero: 'Rock' }, { genero: 'pop' }, { genero: 'rock ' }, { genero: '' }, {}]),
+    ['pop', 'Rock'],
+  );
+});
+
+test('columnasDeCanciones: parte la lista en columnas de a dos', () => {
+  assert.deepStrictEqual(columnasDeCanciones([1, 2, 3, 4, 5]), [[1, 2], [3, 4], [5]]);
+  assert.deepStrictEqual(columnasDeCanciones([]), []);
+  assert.deepStrictEqual(columnasDeCanciones([1, 2, 3], 3), [[1, 2, 3]]);
+});
+
+test('seccionesDeCanciones: favoritas, fáciles, intermedias y difíciles, sin repetir ni dejar grupos vacíos', () => {
+  const lista = [
+    { ...CANCIONES[0], id: 'a', dificultad: 'intermedia' },
+    { ...CANCIONES[1], id: 'b', dificultad: 'facil' },
+    { ...CANCIONES[2], id: 'c', dificultad: 'dificil' },
+    { ...CANCIONES[3], id: 'd', dificultad: 'facil' },
+  ];
+  const secciones = seccionesDeCanciones(lista, ['c', 'zzz']);
+  assert.deepStrictEqual(secciones.map((s) => [s.titulo, s.canciones.map((c) => c.id)]), [
+    ['Favoritas', ['c']], ['Fáciles', ['b', 'd']], ['Intermedias', ['a']],
+  ]);
+  assert.deepStrictEqual(seccionesDeCanciones(lista).map((s) => s.titulo), ['Fáciles', 'Intermedias', 'Difíciles']);
+  assert.deepStrictEqual(seccionesDeCanciones([]), []);
+});
+
+test('seccionesDeCanciones: una canción no sale dos veces, ni repetida ni en dos grupos', () => {
+  const a = { ...CANCIONES[0], id: 'a', dificultad: 'facil' };
+  const secciones = seccionesDeCanciones([a, a, { ...CANCIONES[1], id: 'b', dificultad: 'facil' }], ['a', 'a']);
+  assert.deepStrictEqual(secciones.map((s) => [s.titulo, s.canciones.map((c) => c.id)]), [['Favoritas', ['a']], ['Fáciles', ['b']]]);
+});
+
+test('estrellasDeResultado: 1 por intentarla, 2 desde el 75 % y 3 desde el 95 %', () => {
+  assert.strictEqual(estrellasDeResultado(0, 40), 1);
+  assert.strictEqual(estrellasDeResultado(29, 40), 1); // 72,5 %
+  assert.strictEqual(estrellasDeResultado(30, 40), 2); // 75 %
+  assert.strictEqual(estrellasDeResultado(37, 40), 2); // 92,5 %
+  assert.strictEqual(estrellasDeResultado(38, 40), 3); // 95 %
+  assert.strictEqual(estrellasDeResultado(40, 40), 3);
+  assert.strictEqual(estrellasDeResultado(0, 0), 0);
+});
+
+test('estrellasPorCancion: acepta un objeto o una lista y descarta lo raro', () => {
+  assert.deepStrictEqual(estrellasPorCancion({ sera: 2, creep: '3', flaca: 0, otra: 7 }), { sera: 2, creep: 3 });
+  assert.deepStrictEqual(estrellasPorCancion([{ cancionId: 'sera', estrellas: 1 }, { cancionId: 'x', estrellas: null }, null]), { sera: 1 });
+  assert.deepStrictEqual(estrellasPorCancion(null), {});
 });

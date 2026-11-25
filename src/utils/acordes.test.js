@@ -155,3 +155,12 @@ test('también toma los acordes que vienen dentro de las consignas de una clase'
   ];
   assert.deepStrictEqual(extraerAcordes(lecciones).map((a) => a.nombre), ['Mim', 'Sol7']);
 });
+
+test('acordesDeContexto: una nota que trae la forma de su acorde la muestra aunque el acorde no esté en la secuencia', () => {
+  const forma = [{ cuerda: 4, traste: 0 }, { cuerda: 3, traste: 2, dedo: 1 }];
+  const conForma = (cuerda, traste) => ({ tipo: 'nota', nombre: 'x', posiciones: [{ cuerda, traste }], formaAcorde: forma });
+  const secuencia = [conForma(4, 0), conForma(3, 2)];
+  assert.deepStrictEqual(acordesDeContexto(secuencia), [forma, forma]);
+  // Las dos son un solo grupo: el acorde se toca cuerda por cuerda aunque no haya un paso de acorde
+  assert.deepStrictEqual(agruparConsignas(secuencia), [{ desde: 0, hasta: 1 }]);
+});

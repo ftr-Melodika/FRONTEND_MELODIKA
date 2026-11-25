@@ -94,12 +94,15 @@ export function PracticaConDeteccion({
   }, [autoTerminar, inmersivo, completo]);
 
   // En un acorde cuerda por cuerda, el título es el acorde y el paso se aclara aparte
-  const nombreDelGrupo = secuencia[grupo.hasta].nombre;
+  // El grupo se cierra con el acorde entero, o solo con notas sueltas si el acorde viene en otra consigna
+  const cierraConAcorde = secuencia[grupo.hasta].tipo === 'acorde';
+  const cuerdasDelGrupo = pasosDelGrupo - (cierraConAcorde ? 1 : 0);
+  const nombreDelGrupo = secuencia[grupo.hasta].nombreAcorde ?? secuencia[grupo.hasta].nombre;
   const enAcordePorCuerdas = pasosDelGrupo > 1;
   const titulo = completo
     ? (varias ? `¡Hiciste las ${consignas.length} consignas!` : `¡Sonó ${secuencia[secuencia.length - 1].nombre}!`)
     : enAcordePorCuerdas
-      ? `${varias ? `Consigna ${numeroConsigna + 1} de ${consignas.length}:  ` : ''}Acorde: ${nombreDelGrupo}  •  ${posicion === grupo.hasta ? 'ahora el acorde completo' : `cuerda ${posicion - grupo.desde + 1} de ${pasosDelGrupo - 1}`}`
+      ? `${varias ? `Consigna ${numeroConsigna + 1} de ${consignas.length}:  ` : ''}Acorde: ${nombreDelGrupo}  •  ${posicion === grupo.hasta && cierraConAcorde ? 'ahora el acorde completo' : `cuerda ${posicion - grupo.desde + 1} de ${cuerdasDelGrupo}`}`
       : `${varias ? `Consigna ${numeroConsigna + 1} de ${consignas.length}:  ` : ''}${describir(objetivo)}`;
 
   const acierto = festejo || completo;

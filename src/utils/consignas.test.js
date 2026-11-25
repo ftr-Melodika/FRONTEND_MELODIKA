@@ -79,3 +79,34 @@ test('resolverNotasAlAzar: reemplaza la práctica y deja lo demás; si no aplica
   const comun = clase(nota);
   assert.strictEqual(resolverNotasAlAzar(comun), comun);
 });
+
+// Clase de acordes: la consigna 1 toca el Re cuerda por cuerda (sin acorde) y la 2 lo toca entero
+const paso = (cuerda, traste, nombre) => ({ tipo: 'nota', nombre, posiciones: [{ cuerda, traste }] });
+const RE = [{ cuerda: 4, traste: 0 }, { cuerda: 3, traste: 2 }, { cuerda: 2, traste: 3 }, { cuerda: 1, traste: 2 }];
+const claseDeAcorde = (primera) => clase({
+  tipo: 'consignas',
+  consignas: [
+    { tipo: 'secuencia', pasos: primera, instruccion: 'Armá el Re' },
+    { tipo: 'secuencia', pasos: [{ tipo: 'acorde', nombre: 'Re', posiciones: RE }] },
+  ],
+});
+
+test('obtenerConsignas: las notas cuerda por cuerda traen la forma del acorde que viene después', () => {
+  const lista = obtenerConsignas(claseDeAcorde([paso(4, 0, 'Re'), paso(3, 2, 'La'), paso(2, 3, 'Re'), paso(1, 2, 'Fa#')]));
+  lista[0].practica.pasos.forEach((p) => {
+    assert.deepStrictEqual(p.formaAcorde, RE);
+    assert.strictEqual(p.nombreAcorde, 'Re');
+  });
+  // La consigna del acorde entero queda igual
+  assert.strictEqual(lista[1].practica.pasos[0].formaAcorde, undefined);
+});
+
+test('obtenerConsignas: si una nota no es del acorde, no se le agrega ninguna forma', () => {
+  const lista = obtenerConsignas(claseDeAcorde([paso(4, 0, 'Re'), paso(5, 3, 'Do')]));
+  assert.strictEqual(lista[0].practica.pasos[0].formaAcorde, undefined);
+});
+
+test('obtenerConsignas: sin acorde en ninguna consigna, queda como estaba', () => {
+  const lista = obtenerConsignas(clase({ tipo: 'consignas', consignas: [{ tipo: 'secuencia', pasos: [paso(4, 0, 'Re')] }] }));
+  assert.strictEqual(lista[0].practica.pasos[0].formaAcorde, undefined);
+});

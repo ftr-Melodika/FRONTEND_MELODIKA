@@ -674,3 +674,11 @@ test('un ruido medido con otra frecuencia de muestreo se descarta y se vuelve a 
   assert.ok(lecturas[0].calibrando);
   assert.ok(!lecturas.at(-1).calibrando);
 });
+
+test('obtenerObjetivo: una nota con la forma de su acorde la conserva', () => {
+  const forma = [{ cuerda: 4, traste: 0 }, { cuerda: 3, traste: 2 }];
+  const objetivo = obtenerObjetivo({ practica: { tipo: 'nota', nombre: 'Re', posiciones: [{ cuerda: 4, traste: 0 }], formaAcorde: forma, nombreAcorde: 'Re' } });
+  assert.deepStrictEqual(objetivo.formaAcorde, forma);
+  assert.strictEqual(objetivo.nombreAcorde, 'Re');
+  assert.strictEqual(obtenerObjetivo({ practica: { tipo: 'nota', posiciones: [{ cuerda: 4, traste: 0 }], formaAcorde: 'x' } }).formaAcorde, undefined);
+});

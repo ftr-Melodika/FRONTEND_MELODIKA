@@ -18,11 +18,33 @@ const esObjeto = (valor) => !!valor && typeof valor === 'object' && !Array.isArr
 // pero con su propia `practica` y su `instruccion` (texto de la barra lateral, o null).
 // Una consigna inválida se descarta y no se admiten consignas dentro de consignas.
 // Devuelve null si la clase no es de tipo 'consignas' o no quedó ninguna válida.
+const esPasoNota = (paso) => paso?.tipo === 'nota' && Array.isArray(paso.posiciones) && paso.posiciones.length === 1;
+const primerPasoAcorde = (practica) =>
+  practica?.tipo === 'secuencia' && Array.isArray(practica.pasos)
+    ? practica.pasos.find((paso) => paso?.tipo === 'acorde' && Array.isArray(paso.posiciones))
+    : null;
+const tocaEnElAcorde = (paso, acorde) => acorde.posiciones.some(
+  (a) => Number(a.cuerda) === Number(paso.posiciones[0].cuerda) && Number(a.traste) === Number(paso.posiciones[0].traste),
+);
+
+// En las clases de acordes, la primera consigna toca el acorde cuerda por cuerda (puras notas sueltas)
+// y el acorde entero recién viene en una consigna posterior. A cada nota se le agrega la forma de ese
+// acorde (`formaAcorde` y `nombreAcorde`) para que el mástil la muestre completa desde el principio.
+// Solo si todas las notas de la consigna pertenecen al acorde.
+export function conFormaDelAcorde(practicas) {
+  return practicas.map((practica, i) => {
+    const pasos = practica?.tipo === 'secuencia' ? practica.pasos : null;
+    if (!Array.isArray(pasos) || pasos.length === 0 || !pasos.every(esPasoNota)) return practica;
+    const acorde = practicas.slice(i + 1).map(primerPasoAcorde).find((a) => a && pasos.every((paso) => tocaEnElAcorde(paso, a)));
+    if (!acorde) return practica;
+    return { ...practica, pasos: pasos.map((paso) => ({ ...paso, formaAcorde: acorde.posiciones, nombreAcorde: acorde.nombre })) };
+  });
+}
+
 export function obtenerConsignas(leccion) {
   const practica = leccion?.practica;
   if (practica?.tipo !== 'consignas' || !Array.isArray(practica.consignas)) return null;
-  const consignas = practica.consignas
-    .filter((c) => esObjeto(c) && typeof c.tipo === 'string' && c.tipo !== 'consignas')
+  const consignas = conFormaDelAcorde(practica.consignas.filter((c) => esObjeto(c) && typeof c.tipo === 'string' && c.tipo !== 'consignas'))
     .map((c) => {
       const { instruccion, ...resto } = c;
       const texto = typeof instruccion === 'string' ? instruccion.trim() : '';

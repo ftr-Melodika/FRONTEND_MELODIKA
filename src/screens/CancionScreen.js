@@ -3,9 +3,10 @@
 // - Aprenderla: 1) cada acorde, cuerda por cuerda y después rasgueado; 2) los cambios entre
 //   acordes de la canción; 3) tocarla.
 // - Tocarla: los acordes avanzan por el mástil y se rasguea cada uno cuando llega a la línea.
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Background } from '../components/Background';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { Icono } from '../components/icono/Icono';
@@ -14,16 +15,17 @@ import { GuitarNeck } from '../components/leccion/GuitarNeck';
 import { PracticaConDeteccion } from '../components/leccion/PracticaConDeteccion';
 import { RiffStep } from '../components/leccion/RiffStep';
 import { Rasgueo } from '../components/canciones/Rasgueo';
-import { REFERENCIAS_RASGUEO } from '../data/canciones';
+import { AuthContext } from '../context/AuthContext';
 import { cancionesService } from '../services/cancionesService';
 import {
-  acordesDeCancion, acordesDeCompas, aprendizajeDeCancion, cuentaDeRasgueo, formaDeAcorde, nivelDeCancion, rasgueosDeCancion,
-  OPCIONES_VELOCIDAD, partesDeCompas, riffDeCancion, VELOCIDADES,
+  acordesDeCancion, aprendizajeDeCancion, cuentaDeRasgueo, formaDeAcorde, nivelDeCancion, rasgueosDeCancion,
+  OPCIONES_VELOCIDAD, riffDeCancion, VELOCIDADES, estrellasDeResultado,
 } from '../utils/canciones';
 import { FUENTE_TITULO } from '../theme/fuentes';
 
 // Los pasos de "Aprenderla"
 const PASOS_APRENDER = ['acordes', 'cambios', 'tocar'];
+const COLORES_DIVISOR = ['rgba(178,140,255,0)', '#b28cff', '#4c52d9', '#b28cff', 'rgba(178,140,255,0)'];
 const TITULO_PASO = { acordes: 'Los acordes', cambios: 'Los cambios', tocar: 'Tocala' };
 
 function Dato({ etiqueta, valor }) {
@@ -83,6 +85,7 @@ function Opciones({ opciones, valor, onCambiar }) {
 
 export function CancionScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
+  const { perfil } = useContext(AuthContext);
   const id = route.params?.id;
   // Se muestra la que trae la lista mientras se pide la versión actual al backend
   // (si alguien cambió el tempo o el rasgueo, se usa lo último)
@@ -141,6 +144,13 @@ export function CancionScreen({ route, navigation }) {
     );
   }
 
+  // Al tocarla hasta el final a velocidad original se guardan las estrellas (el backend se queda con el mejor resultado).
+  // Si no se pudo guardar no se molesta: se vuelve a guardar la próxima vez que se toque.
+  const guardarEstrellas = ({ aciertos, total }) => {
+    if (velocidad !== VELOCIDADES.original || !perfil?.id) return;
+    cancionesService.guardarEstrellas(perfil.id, id, estrellasDeResultado(aciertos, total)).catch(() => {});
+  };
+
   const salir = () => {
     setModo(null);
     setPaso(0);
@@ -191,6 +201,7 @@ export function CancionScreen({ route, navigation }) {
               velocidad={velocidad}
               velocidades={OPCIONES_VELOCIDAD}
               onCambiarVelocidad={setVelocidad}
+              onTerminado={guardarEstrellas}
             />
           )}
         </View>
@@ -205,19 +216,17 @@ export function CancionScreen({ route, navigation }) {
       <View style={[styles.container, relleno]}>
         <ScreenHeader title={cancion.titulo} right={volver} />
 
+        {/* Sin scroll: dos columnas con lo justo. Si en una pantalla muy baja no entra, la columna se puede deslizar. */}
         <View style={styles.fila}>
-          <ScrollView style={styles.columna} contentContainerStyle={[styles.columnaContenido, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+          <ScrollView style={styles.columna} contentContainerStyle={styles.columnaContenido} showsVerticalScrollIndicator={false} bounces={false}>
             <Text style={styles.artista}>{cancion.artista}</Text>
             <View style={styles.datos}>
               <Dato etiqueta="Tempo" valor={`~${original.bpm} BPM`} />
-              <Dato etiqueta="Compás" valor="4/4" />
-              <Dato etiqueta="Capo" valor={original.capo ? `Traste ${original.capo}` : 'No'} />
+              {original.capo > 0 && <Dato etiqueta="Capo" valor={`Traste ${original.capo}`} />}
               <Dato etiqueta="Nivel" valor={nivelDeCancion(cancion)} />
             </View>
-            <Text style={styles.texto}>{cancion.consejo}</Text>
 
             <Text style={styles.subtitulo}>Acordes</Text>
-            <Text style={styles.ayuda}>Tocá un acorde para ver cómo se arma.</Text>
             <View style={styles.acordes}>
               {acordes.map((a) => (
                 <TouchableOpacity key={a} style={styles.acorde} onPress={() => setAcordeAbierto(a)} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={`Ver cómo se arma ${a}`}>
@@ -226,73 +235,43 @@ export function CancionScreen({ route, navigation }) {
               ))}
             </View>
 
-            <Text style={styles.subtitulo}>Progresión</Text>
-            <Text style={styles.ayuda}>Cada cuadro es un compás de 4 tiempos y se repite en toda la canción.</Text>
-            <View style={styles.compases}>
-              {cancion.progresion.map((compas, i) => (
-                <View key={i} style={styles.compas}>
-                  {acordesDeCompas(compas).map((a, j) => (
-                    <Text key={j} style={styles.compasAcorde} onPress={() => setAcordeAbierto(a)}>{a}</Text>
-                  ))}
-                </View>
-              ))}
-            </View>
-
             <Text style={styles.subtitulo}>Rasgueo</Text>
-            {rasgueos.length > 1 && <Text style={styles.ayuda}>Cambia según el compás.</Text>}
             {rasgueos.map((r) => {
-              const dosAcordes = r.compases[0].acordes.length === 2;
-              // De qué parte a cuál toca cada acorde ("Em: 1 a 1 y  ·  C: 2 a 4 y")
               const cuenta = cuentaDeRasgueo(r.patron);
-              const reparto = partesDeCompas({ acordes: r.compases[0].acordes.join(' '), rasgueo: r.patron })
-                .map((p) => `${p.nombre}: ${cuenta[p.inicio]} a ${cuenta[p.inicio + p.corcheas - 1]}`)
-                .join('  ·  ');
               const compases = r.compases.map((c) => c.acordes.join(' ')).filter((a, i, todos) => todos.indexOf(a) === i).join('  ·  ');
               return (
                 <View key={r.patron} style={styles.rasgueo}>
                   {rasgueos.length > 1 && <Text style={styles.rasgueoCompases}>{compases}</Text>}
                   <Rasgueo rasgueo={{ nombre: compases, golpes: r.golpes, cuenta }} />
-                  {dosAcordes && (
-                    <Text style={styles.ayuda}>
-                      Cada acorde tiene su parte del rasgueo. {reparto}.
-                    </Text>
-                  )}
                 </View>
               );
             })}
-            {!!cancion.notaRasgueo && <Text style={styles.texto}>{cancion.notaRasgueo}</Text>}
-            <Text style={styles.ayuda}>{REFERENCIAS_RASGUEO}</Text>
           </ScrollView>
 
-          <ScrollView style={styles.columna} contentContainerStyle={[styles.columnaContenido, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-            <Text style={styles.subtitulo}>¿Qué querés hacer?</Text>
+          {/* La barra que divide las dos columnas: un degradé violeta que se desvanece en las puntas */}
+          <LinearGradient colors={COLORES_DIVISOR} style={styles.divisor} />
+
+          <View style={[styles.columna, styles.acciones]}>
             <TouchableOpacity style={styles.eleccion} onPress={() => setModo('aprender')} activeOpacity={0.85} accessibilityRole="button">
               <Text style={styles.eleccionTitulo}>📘 Aprenderla</Text>
-              <Text style={styles.eleccionTexto}>
-                Paso a paso: cada acorde (cuerda por cuerda y después rasgueado), los cambios entre acordes y al final la tocás entera.
-              </Text>
+              <Text style={styles.eleccionTexto}>Paso a paso, hasta tocarla entera.</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.eleccion} onPress={() => setModo('tocar')} activeOpacity={0.85} accessibilityRole="button">
               <Text style={styles.eleccionTitulo}>🎸 Tocarla</Text>
-              <Text style={styles.eleccionTexto}>
-                Directo a tempo: los acordes avanzan por el mástil y rasgueás cada uno cuando llega a la línea.
-              </Text>
+              <Text style={styles.eleccionTexto}>Directo a tempo, con los acordes en el mástil.</Text>
             </TouchableOpacity>
 
             {original.capo > 0 && (
               <View style={styles.capo}>
-                <Text style={styles.subtitulo}>Capo en el traste {original.capo}</Text>
-                <Text style={styles.texto}>
-                  El capo es una pinza que aprieta todas las cuerdas en un traste. Los acordes se arman igual, contando los trastes desde el capo, y así suenan como en la grabación. Si no tenés, tocala igual: suena más grave, pero los acordes son los mismos.
-                </Text>
+                <Text style={styles.ayuda}>Capo en el traste {original.capo}. Sin capo suena más grave.</Text>
                 <Opciones
                   valor={conCapo}
                   onCambiar={setConCapo}
-                  opciones={[{ valor: true, titulo: `Con capo (traste ${original.capo})` }, { valor: false, titulo: 'Sin capo' }]}
+                  opciones={[{ valor: true, titulo: 'Con capo' }, { valor: false, titulo: 'Sin capo' }]}
                 />
               </View>
             )}
-          </ScrollView>
+          </View>
         </View>
       </View>
 
@@ -303,35 +282,34 @@ export function CancionScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, width: '100%', paddingTop: 12 },
-  fila: { flex: 1, flexDirection: 'row', gap: 16 },
+  fila: { flex: 1, flexDirection: 'row', gap: 20, paddingBottom: 12 },
   columna: { flex: 1 },
-  columnaContenido: { gap: 8 },
+  divisor: { width: 4, borderRadius: 2, marginVertical: 4 },
+  columnaContenido: { gap: 10 },
   volver: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 12, borderRadius: 22, backgroundColor: 'rgba(0,0,0,0.3)' },
   volverTexto: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-  artista: { color: 'rgba(255,255,255,0.85)', fontSize: 15, fontWeight: '600' },
-  datos: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  dato: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.3)' },
-  datoEtiqueta: { color: 'rgba(255,255,255,0.65)', fontSize: 11, fontWeight: '600' },
-  datoValor: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
-  texto: { color: '#fff', fontSize: 14, lineHeight: 20 },
-  subtitulo: { color: '#fff', fontSize: 17, fontWeight: 'bold', fontFamily: FUENTE_TITULO, marginTop: 6 },
-  ayuda: { color: 'rgba(255,255,255,0.75)', fontSize: 13 },
-  acordes: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  acorde: { minWidth: 56, minHeight: 44, paddingHorizontal: 12, justifyContent: 'center', alignItems: 'center', borderRadius: 10, backgroundColor: '#4c52d9' },
-  acordeTexto: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
-  compases: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  compas: { flexDirection: 'row', gap: 8, minWidth: 54, minHeight: 40, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
-  compasAcorde: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
+  artista: { color: 'rgba(255,255,255,0.9)', fontSize: 19, fontWeight: '600' },
+  datos: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  dato: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.3)' },
+  datoEtiqueta: { color: 'rgba(255,255,255,0.65)', fontSize: 12, fontWeight: '600' },
+  datoValor: { color: '#fff', fontSize: 17, fontWeight: 'bold' },
+  texto: { color: '#fff', fontSize: 16, lineHeight: 22 },
+  subtitulo: { color: '#fff', fontSize: 21, fontWeight: 'bold', fontFamily: FUENTE_TITULO, marginTop: 8 },
+  ayuda: { color: 'rgba(255,255,255,0.8)', fontSize: 15, lineHeight: 21 },
+  acordes: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  acorde: { minWidth: 68, minHeight: 52, paddingHorizontal: 14, justifyContent: 'center', alignItems: 'center', borderRadius: 12, backgroundColor: '#4c52d9' },
+  acordeTexto: { color: '#fff', fontSize: 19, fontWeight: 'bold' },
   rasgueo: { gap: 4 },
-  rasgueoCompases: { color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 'bold' },
-  eleccion: { padding: 12, borderRadius: 14, backgroundColor: 'rgba(76,82,217,0.85)', gap: 4 },
-  eleccionTitulo: { color: '#fff', fontSize: 17, fontWeight: 'bold' },
-  eleccionTexto: { color: 'rgba(255,255,255,0.9)', fontSize: 13, lineHeight: 18 },
+  rasgueoCompases: { color: 'rgba(255,255,255,0.85)', fontSize: 15, fontWeight: 'bold' },
+  acciones: { gap: 12 },
+  eleccion: { flex: 1, justifyContent: 'center', padding: 18, borderRadius: 16, backgroundColor: 'rgba(76,82,217,0.85)', gap: 6 },
+  eleccionTitulo: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
+  eleccionTexto: { color: 'rgba(255,255,255,0.9)', fontSize: 16, lineHeight: 22 },
   opciones: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  opcion: { minHeight: 44, paddingHorizontal: 12, justifyContent: 'center', borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.3)' },
+  opcion: { minHeight: 48, paddingHorizontal: 16, justifyContent: 'center', borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.3)' },
   opcionActiva: { backgroundColor: '#4c52d9' },
-  opcionTexto: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
-  capo: { padding: 10, borderRadius: 12, backgroundColor: 'rgba(255,211,92,0.12)', borderWidth: 1, borderColor: 'rgba(255,211,92,0.4)', gap: 6 },
+  opcionTexto: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  capo: { padding: 14, borderRadius: 14, backgroundColor: 'rgba(255,211,92,0.12)', borderWidth: 1, borderColor: 'rgba(255,211,92,0.4)', gap: 6 },
   fondoModal: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 },
   tarjetaModal: { width: '100%', maxWidth: 640, padding: 16, borderRadius: 18, backgroundColor: '#2b2660', gap: 10 },
   tituloModal: { color: '#fff', fontSize: 20, fontWeight: 'bold', fontFamily: FUENTE_TITULO, textAlign: 'center' },

@@ -53,7 +53,8 @@ export function dedoSugerido(traste, primerTraste = Math.max(1, traste - CANT_TR
 
 // Punto lleno sobre un traste (con el número de dedo), o anillo vacío si la cuerda se toca al aire
 function Punto({ cuerda, traste, dedo, tamano, separacion, primerTraste, correcto, resaltar, espejo }) {
-  const atenuado = !!resaltar && cuerda !== resaltar;
+  const destacado = !!resaltar && cuerda === resaltar;
+  const atenuado = !!resaltar && !destacado;
   const alAire = traste === 0;
   const top = alturaDeCuerda(cuerda, separacion) - tamano / 2;
   const left = alAire
@@ -70,6 +71,7 @@ function Punto({ cuerda, traste, dedo, tamano, separacion, primerTraste, correct
         alAire && correcto && styles.puntoAlAireCorrecto,
         { width: tamano, height: tamano, borderRadius: tamano / 2, top, left },
         !alAire && { marginLeft: -tamano / 2 },
+        destacado && styles.destacado,
         atenuado && styles.atenuado,
       ]}
     >
@@ -80,7 +82,8 @@ function Punto({ cuerda, traste, dedo, tamano, separacion, primerTraste, correct
 
 // Cejilla: una barra sobre el traste que cubre todas las cuerdas que aprieta el dedo, con su número
 function Cejilla({ dedo, traste, desde, hasta, tamano, separacion, primerTraste, correcto, resaltar, espejo }) {
-  const atenuado = !!resaltar && (resaltar > desde || resaltar < hasta);
+  const destacado = !!resaltar && resaltar <= desde && resaltar >= hasta;
+  const atenuado = !!resaltar && !destacado;
   const top = alturaDeCuerda(desde, separacion) - tamano / 2;
   const height = alturaDeCuerda(hasta, separacion) - alturaDeCuerda(desde, separacion) + tamano;
   const left = `${(((traste - primerTraste + 0.5) / CANT_TRASTES) * 100).toFixed(2)}%`;
@@ -91,6 +94,7 @@ function Cejilla({ dedo, traste, desde, hasta, tamano, separacion, primerTraste,
         styles.punto,
         correcto && styles.puntoCorrecto,
         { width: tamano, height, borderRadius: tamano / 2, top, left, marginLeft: -tamano / 2 },
+        destacado && styles.destacado,
         atenuado && styles.atenuado,
       ]}
     >
@@ -135,7 +139,7 @@ function Marcador({ traste, primerTraste, separacion, tamano }) {
 // cuando esa nota la aprieta la cejilla. Debe ser estable, como `posiciones`.
 // Con el modo zurdo (ver useZurdo) todo el mástil se ve como en un espejo: las cuerdas al aire a la
 // derecha y los trastes hacia la izquierda. Los textos se vuelven a dar vuelta para que se lean.
-// `resaltar` (número de cuerda), junto con `posiciones`: muestra el acorde entero pero remarca solo
+// `resaltar` (número de cuerda), junto con `posiciones`: muestra el acorde entero, transparente, y remarca solo
 // esa cuerda y atenúa el resto. Es para tocar un acorde cuerda por cuerda.
 // `grande` agranda el mástil para la vista inmersiva de las clases (ver VistaLeccionContext).
 export const GuitarNeck = memo(function GuitarNeck({ targetNumber, cuerda, dotLeft, dotBottom, posiciones, onElegir, correcto, cejillas: cejillasLeccion, resaltar, grande = false }) {
@@ -308,7 +312,8 @@ const styles = StyleSheet.create({
 
   capaTactil: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, flexDirection: 'row', zIndex: 20 },
   zonaPresionada: { backgroundColor: 'rgba(255,255,255,0.15)' },
-  // El resto del acorde, cuando se toca cuerda por cuerda
+  // Un acorde tocado cuerda por cuerda se ve entero: la cuerda de ahora destaca con borde dorado y el resto va transparente
+  destacado: { borderColor: '#ffd35c', borderWidth: 3.5 },
   atenuado: { opacity: 0.3 },
 
   pie: { flexDirection: 'row', height: ALTO_PIE, alignItems: 'center', marginLeft: ANCHO_ETIQUETA_CUERDA },

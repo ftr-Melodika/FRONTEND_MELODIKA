@@ -85,9 +85,15 @@ export function acordesDeCancion(cancion) {
 export const tieneRasgueo = (cancion) => cancion.progresion.some((compas) =>
   partesDeCompas(compas).some((parte) => (parte.patron.match(/[DUX]/g) || []).length > 1));
 
+export const NIVELES = ['Fácil', 'Intermedia', 'Difícil'];
+const NIVEL_DEL_BACKEND = { facil: 'Fácil', intermedia: 'Intermedia', dificil: 'Difícil' };
+
+// Si el backend indica la `dificultad` ('facil' | 'intermedia' | 'dificil'), se usa esa. Si no, se deduce:
 // 'Fácil' si es un golpe por acorde y solo usa los acordes del curso de acordes; si tiene rasgueo
 // o suma otros acordes, 'Intermedia'
 export function nivelDeCancion(cancion) {
+  const indicado = NIVEL_DEL_BACKEND[cancion.dificultad];
+  if (indicado) return indicado;
   const acordesBasicos = acordesDeCancion(cancion).every((a) => ACORDES_INICIALES.includes(a));
   return acordesBasicos && !tieneRasgueo(cancion) ? 'Fácil' : 'Intermedia';
 }
@@ -187,10 +193,67 @@ export function riffDeCancion(cancion, velocidad = VELOCIDADES.original) {
   };
 }
 
-// Busca por título o artista, sin importar tildes ni mayúsculas. `nivel` = 'Fácil' | 'Intermedia' | null.
-export function filtrarCanciones(canciones, texto = '', nivel = null) {
+// Busca por título o artista, sin importar tildes ni mayúsculas. `nivel` = 'Fácil' | 'Intermedia' | 'Difícil' | null.
+// `genero` (texto o null) deja solo ese género. `favoritas` (lista de ids, o null para no filtrar) deja solo esas.
+export function filtrarCanciones(canciones, texto = '', nivel = null, { genero = null, favoritas = null } = {}) {
   const buscado = normalizar(texto);
+  const generoBuscado = genero ? normalizar(genero) : null;
+  const ids = favoritas ? new Set(favoritas) : null;
   return canciones.filter((c) =>
     (!nivel || nivelDeCancion(c) === nivel) &&
+    (!generoBuscado || normalizar(c.genero || '') === generoBuscado) &&
+    (!ids || ids.has(c.id)) &&
     (!buscado || normalizar(`${c.titulo} ${c.artista}`).includes(buscado)));
+}
+
+// Los géneros que hay en el catálogo (sin repetir, por orden alfabético). Vacío si el backend no manda géneros.
+export function generosDeCanciones(canciones) {
+  const vistos = new Map();
+  canciones.forEach((c) => {
+    const genero = typeof c.genero === 'string' ? c.genero.trim() : '';
+    if (genero && !vistos.has(normalizar(genero))) vistos.set(normalizar(genero), genero);
+  });
+  return [...vistos.values()].sort((a, b) => a.localeCompare(b, 'es'));
+}
+
+// El orden del catálogo cuando no hay filtros, con un subtítulo por grupo: primero las favoritas
+// y después las fáciles, intermedias y difíciles (una canción favorita va solo en Favoritas).
+// Devuelve [{ titulo, canciones }] sin los grupos vacíos.
+export function seccionesDeCanciones(canciones, favoritas = []) {
+  const ids = new Set(favoritas.map(String));
+  // Cada canción sale una sola vez, aunque el catálogo la traiga repetida
+  const unicas = canciones.filter((c, i) => canciones.findIndex((otra) => String(otra.id) === String(c.id)) === i);
+  const secciones = [{ titulo: 'Favoritas', canciones: unicas.filter((c) => ids.has(String(c.id))) }];
+  const resto = unicas.filter((c) => !ids.has(String(c.id)));
+  [['Fácil', 'Fáciles'], ['Intermedia', 'Intermedias'], ['Difícil', 'Difíciles']].forEach(([nivel, titulo]) => {
+    secciones.push({ titulo, canciones: resto.filter((c) => nivelDeCancion(c) === nivel) });
+  });
+  return secciones.filter((s) => s.canciones.length > 0);
+}
+
+// Estrellas de una vez que se tocó la canción hasta el final: 1 por intentarla, 2 desde el 75 % de aciertos
+// y 3 desde el 95 %. 0 si no hay nada que medir.
+export const ESTRELLAS_MAXIMAS = 3;
+export const ACIERTOS_PARA_DOS_ESTRELLAS = 0.75;
+export const ACIERTOS_PARA_TRES_ESTRELLAS = 0.95;
+export function estrellasDeResultado(aciertos, total) {
+  if (!(total > 0)) return 0;
+  const proporcion = aciertos / total;
+  if (proporcion >= ACIERTOS_PARA_TRES_ESTRELLAS) return 3;
+  if (proporcion >= ACIERTOS_PARA_DOS_ESTRELLAS) return 2;
+  return 1;
+}
+
+// Las estrellas que ya tiene cada canción: { idDeLaCancion: 1 a 3 }. El backend puede mandarlas como
+// un objeto o como una lista [{ cancionId, estrellas }]; lo que no es 1, 2 o 3 se descarta.
+export function estrellasPorCancion(datos) {
+  const pares = Array.isArray(datos) ? datos.map((d) => [d?.cancionId, d?.estrellas]) : Object.entries(datos || {});
+  return Object.fromEntries(pares.filter(([id, estrellas]) => id && [1, 2, 3].includes(Number(estrellas))).map(([id, estrellas]) => [id, Number(estrellas)]));
+}
+
+// Para una lista que se desliza de lado en varias filas: la lista partida en columnas de `filas` canciones
+export function columnasDeCanciones(canciones, filas = 2) {
+  const columnas = [];
+  for (let i = 0; i < canciones.length; i += filas) columnas.push(canciones.slice(i, i + filas));
+  return columnas;
 }

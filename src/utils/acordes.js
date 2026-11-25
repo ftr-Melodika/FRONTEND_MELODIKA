@@ -128,9 +128,11 @@ export function acordesDeContexto(secuencia) {
   return secuencia.map((paso, i) => {
     if (paso?.tipo !== 'nota') return null;
     const { cuerda, traste } = paso.posiciones[0];
+    const incluye = (posiciones) => posiciones.some((p) => Number(p.cuerda) === Number(cuerda) && Number(p.traste) === Number(traste));
+    // Cuando el acorde no está en la secuencia (viene de otra consigna), la nota trae su forma
+    if (paso.formaAcorde && incluye(paso.formaAcorde)) return paso.formaAcorde;
     const acorde = secuencia.slice(i + 1).find((otro) => otro?.tipo === 'acorde');
-    const pertenece = acorde?.posiciones.some((p) => Number(p.cuerda) === Number(cuerda) && Number(p.traste) === Number(traste));
-    return pertenece ? acorde.posiciones : null;
+    return acorde && incluye(acorde.posiciones) ? acorde.posiciones : null;
   });
 }
 

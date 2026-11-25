@@ -52,4 +52,10 @@ export const ENDPOINTS = {
   // Canciones de la sección Canciones (y de las clases finales de los cursos)
   canciones: `${BASE_URL}/canciones`,
   cancion: (id) => `${BASE_URL}/canciones/${encodeURIComponent(id)}`,
+  // Canciones favoritas del perfil (GET: lista de ids; POST / DELETE sobre una canción)
+  cancionesFavoritas: (perfilId) => `${BASE_URL}/canciones/perfil/${perfilId}/favoritas`,
+  cancionFavorita: (perfilId, id) => `${BASE_URL}/canciones/perfil/${perfilId}/${encodeURIComponent(id)}/favorita`,
+  // Estrellas (el mejor resultado) del perfil en cada canción
+  cancionesEstrellas: (perfilId) => `${BASE_URL}/canciones/perfil/${perfilId}/estrellas`,
+  cancionEstrellas: (perfilId, id) => `${BASE_URL}/canciones/perfil/${perfilId}/${encodeURIComponent(id)}/estrellas`,
 };

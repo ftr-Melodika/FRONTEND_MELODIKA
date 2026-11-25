@@ -105,6 +105,8 @@ export function RiffStep({
   velocidad, velocidades, onCambiarVelocidad,
   // Si se indica, solo cuenta como aprobado a esa velocidad: en otras es práctica y se ofrece pasar a esa
   velocidadParaAprobar,
+  // Avisa el resumen ({ total, aciertos, aprobado }) cada vez que se toca el riff hasta el final
+  onTerminado,
 }) {
   const { inmersivo, pausado } = useVistaLeccion();
   const { height } = useWindowDimensions();
@@ -153,6 +155,10 @@ export function RiffStep({
       empezar();
     }
   }, [inmersivo, pausado, fase]);
+
+  useEffect(() => {
+    if (fase === 'terminado') onTerminado?.(resumen);
+  }, [fase]);
 
   useEffect(() => {
     if (!autoTerminar || !aprobado) return undefined;

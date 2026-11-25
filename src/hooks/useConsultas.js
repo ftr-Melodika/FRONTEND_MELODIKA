@@ -94,5 +94,21 @@ export const useCancion = (id) =>
     staleTime: STALE_CATALOGO_MS,
   });
 
+// Los ids de las canciones favoritas del perfil activo. Si el pedido falla, no hay favoritas que mostrar.
+export const useFavoritasCanciones = (perfilId) =>
+  useQuery({
+    queryKey: ['cancionesFavoritas', perfilId],
+    queryFn: () => cancionesService.favoritas(perfilId),
+    enabled: !!perfilId,
+  });
+
+// Las estrellas de cada canción del perfil activo ({ id: 1 a 3 }). Si falla, todas se ven sin estrellas.
+export const useEstrellasCanciones = (perfilId) =>
+  useQuery({
+    queryKey: ['cancionesEstrellas', perfilId],
+    queryFn: () => cancionesService.estrellas(perfilId),
+    enabled: !!perfilId,
+  });
+
 // El mensaje de error de una consulta, solo si no hay nada para mostrar (con datos viejos no se molesta)
 export const mensajeError = (consulta) => (consulta.isError && consulta.data === undefined ? consulta.error.message : null);
