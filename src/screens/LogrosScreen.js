@@ -1,68 +1,75 @@
 // Archivo: src/screens/LogrosScreen.js
-// Los logros se calculan con los datos de progreso que ya da el backend (xp, racha, lecciones, cursos).
+// Los logros se calculan con los datos que ya da el backend (progreso de cursos, xp, racha y
+// estrellas de canciones): la lista se arma en utils/logros.js. Tocar un logro abre su detalle.
 import { Icono, COLORES_ICONO } from '../components/icono/Icono';
-import { useContext } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useContext, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Background } from '../components/Background';
 import { LoadingModal } from '../components/LoadingModal';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { DetalleLogroModal } from '../components/DetalleLogroModal';
 import { AuthContext } from '../context/AuthContext';
-import { useResumen, useActualizarAlEnfocar } from '../hooks/useConsultas';
+import { useResumen, useCanciones, useEstrellasCanciones, useActualizarAlEnfocar } from '../hooks/useConsultas';
+import { armarLogros } from '../utils/logros';
 
-// Cada logro dice qué dato mira y cuánto hace falta para desbloquearlo
-const LOGROS = [
-  { id: 'primera', icono: 'guitarra', titulo: 'Primeros acordes', descripcion: 'Completá tu primera lección', dato: 'lecciones', meta: 1 },
-  { id: 'cinco', icono: 'notas', titulo: 'Tomando ritmo', descripcion: 'Completá 5 lecciones', dato: 'lecciones', meta: 5 },
-  { id: 'diez', icono: 'partitura', titulo: 'Músico dedicado', descripcion: 'Completá 10 lecciones', dato: 'lecciones', meta: 10 },
-  { id: 'curso', icono: 'trofeo', color: COLORES_ICONO.oro, titulo: 'Graduado', descripcion: 'Terminá un curso completo', dato: 'cursos', meta: 1 },
-  { id: 'racha3', icono: 'llama', color: COLORES_ICONO.llama, titulo: 'En llamas', descripcion: 'Llegá a una racha de 3 días', dato: 'racha', meta: 3 },
-  { id: 'racha7', icono: 'cometa', color: COLORES_ICONO.llama, titulo: 'Imparable', descripcion: 'Llegá a una racha de 7 días', dato: 'racha', meta: 7 },
-  { id: 'xp100', icono: 'rayo', color: COLORES_ICONO.rayo, titulo: 'Aprendiz', descripcion: 'Juntá 100 XP', dato: 'xp', meta: 100 },
-  { id: 'xp500', icono: 'diamante', color: COLORES_ICONO.celeste, titulo: 'Virtuoso', descripcion: 'Juntá 500 XP', dato: 'xp', meta: 500 },
-];
+const ACENTO_BLOQUEADO = 'rgba(255,255,255,0.25)';
 
 export function LogrosScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { perfil } = useContext(AuthContext);
   const consulta = useResumen(perfil?.id);
+  const consultaCanciones = useCanciones();
+  const consultaEstrellas = useEstrellasCanciones(perfil?.id);
   useActualizarAlEnfocar(consulta);
-  const resumen = consulta.data ?? null;
+  useActualizarAlEnfocar(consultaEstrellas);
+  const [elegido, setElegido] = useState(null);
+
+  const logros = useMemo(
+    () => armarLogros({
+      resumen: consulta.data ?? null,
+      perfil,
+      canciones: consultaCanciones.data ?? [],
+      estrellas: consultaEstrellas.data ?? {},
+    }),
+    [consulta.data, perfil, consultaCanciones.data, consultaEstrellas.data]
+  );
+  const desbloqueados = logros.filter((l) => l.conseguido).length;
   const loading = consulta.isPending;
 
-  const valores = {
-    lecciones: resumen?.leccionesCompletadas ?? 0,
-    cursos: resumen?.cursosCompletados ?? 0,
-    racha: resumen?.racha ?? perfil?.racha ?? 0,
-    xp: resumen?.xp ?? perfil?.xp ?? 0,
+  const irA = (pantalla) => {
+    setElegido(null);
+    navigation.navigate(pantalla);
   };
-  const desbloqueados = LOGROS.filter((l) => valores[l.dato] >= l.meta).length;
 
   return (
     <Background>
       <View style={[styles.container, { paddingLeft: Math.max(insets.left, 20) }]}>
         <ScreenHeader title="Logros y recompensas" />
-        <Text style={styles.subtitulo}>{desbloqueados} de {LOGROS.length} logros desbloqueados</Text>
+        <Text style={styles.subtitulo}>{desbloqueados} de {logros.length} logros desbloqueados · Tocá uno para ver cómo conseguirlo</Text>
 
         <ScrollView contentContainerStyle={styles.grid}>
-          {LOGROS.map((logro) => {
-            const actual = valores[logro.dato];
-            const conseguido = actual >= logro.meta;
-            const pct = Math.min(100, Math.round((actual / logro.meta) * 100));
-            return (
-              <View key={logro.id} style={[styles.card, !conseguido && styles.cardBloqueada]}>
-                <Icono nombre={conseguido ? logro.icono : 'candado'} tamano={40} acento={conseguido ? logro.color : 'rgba(255,255,255,0.25)'} style={styles.icono} />
-                <Text style={styles.titulo}>{logro.titulo}</Text>
-                <Text style={styles.descripcion}>{logro.descripcion}</Text>
-                <View style={styles.barraBg}>
-                  <View style={[styles.barraFill, { width: `${pct}%` }]} />
-                </View>
-                <Text style={styles.contador}>{Math.min(actual, logro.meta)} / {logro.meta}</Text>
+          {logros.map((logro) => (
+            <TouchableOpacity
+              key={logro.id}
+              style={[styles.card, !logro.conseguido && styles.cardBloqueada]}
+              onPress={() => setElegido(logro)}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={`${logro.titulo}, ${logro.conseguido ? 'desbloqueado' : 'bloqueado'}. Ver cómo conseguirlo`}
+            >
+              <Icono nombre={logro.conseguido ? logro.icono : 'candado'} tamano={40} acento={logro.conseguido ? COLORES_ICONO[logro.color] : ACENTO_BLOQUEADO} style={styles.icono} />
+              <Text style={styles.titulo} numberOfLines={2}>{logro.titulo}</Text>
+              <Text style={styles.descripcion}>{logro.descripcion}</Text>
+              <View style={styles.barraBg}>
+                <View style={[styles.barraFill, { width: `${logro.porcentaje}%` }]} />
               </View>
-            );
-          })}
+              <Text style={styles.contador}>{logro.actual} / {logro.meta}</Text>
+            </TouchableOpacity>
+          ))}
         </ScrollView>
       </View>
+      <DetalleLogroModal logro={elegido} onCerrar={() => setElegido(null)} onIr={irA} />
       <LoadingModal visible={loading} text="Buscando tus logros..." />
     </Background>
   );
