@@ -62,12 +62,12 @@ export function ModoContrarreloj({ material, acordes }) {
       .catch(() => {});
   }, [claveRecord]);
 
-  // El reloj arranca recién cuando terminó de medir el ruido del lugar
+  // El reloj arranca recién cuando el micrófono ya está escuchando
   useEffect(() => {
-    if (fase !== 'preparando' || !lectura || lectura.calibrando) return;
+    if (fase !== 'preparando' || !lectura) return;
     finEn.current = Date.now() + DURACION_S * 1000;
     setRestante(DURACION_S);
-    siguiente(); // Lo que se tocó mientras medía no cuenta
+    siguiente(); // Lo que se tocó mientras se preparaba no cuenta
     setFase('jugando');
   }, [fase, lectura]);
 
@@ -172,7 +172,7 @@ export function ModoContrarreloj({ material, acordes }) {
             {sinMicrofono ? (
               <AvisoMicrofono estado={estado} />
             ) : (
-              <Text style={styles.explicacion}>Hacé silencio un momento: estoy midiendo el ruido del lugar…</Text>
+              <Text style={styles.explicacion}>Preparando el micrófono…</Text>
             )}
             <Button title="Cancelar" variant="secondary" onPress={() => setFase('inicio')} />
           </>

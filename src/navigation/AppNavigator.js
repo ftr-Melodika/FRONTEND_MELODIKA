@@ -34,6 +34,8 @@ import { AfinadorScreen } from '../screens/AfinadorScreen';
 import { CancionesScreen } from '../screens/CancionesScreen';
 import { CancionScreen } from '../screens/CancionScreen';
 import { Background } from '../components/Background';
+import { MedidorDeRuido } from '../components/MedidorDeRuido';
+import { UsoMicrofonoScreen } from '../screens/UsoMicrofonoScreen';
 
 const Stack = createNativeStackNavigator();
 const navigationRef = createNavigationContainerRef();
@@ -68,6 +70,8 @@ export function AppNavigator() {
   }
 
   return (
+    <>
+    {userToken !== null && <MedidorDeRuido navigationRef={navigationRef} navegacionLista={navegacionLista} />}
     <NavigationContainer ref={navigationRef} onReady={() => setNavegacionLista(true)}>
       <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
         {userToken === null ? (
@@ -98,6 +102,7 @@ export function AppNavigator() {
             <Stack.Screen name="GrupoChat" component={GrupoChatScreen} />
             <Stack.Screen name="ReportarError" component={ReportarErrorScreen} />
             <Stack.Screen name="Contacto" component={ContactoScreen} />
+            <Stack.Screen name="UsoMicrofono" component={UsoMicrofonoScreen} />
             <Stack.Screen name="Afinador" component={AfinadorScreen} />
             <Stack.Screen name="Canciones" component={CancionesScreen} />
             <Stack.Screen name="Cancion" component={CancionScreen} />
@@ -105,5 +110,6 @@ export function AppNavigator() {
         )}
       </Stack.Navigator>
     </NavigationContainer>
+    </>
   );
 }

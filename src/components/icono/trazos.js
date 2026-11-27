@@ -98,6 +98,7 @@ export const ICONOS = {
   // Herramientas
   ajustes: [L('M4 7h8.5M17.5 7H20M4 17h2.5M11.5 17H20'), LA(c(15, 7, 2.5)), LA(c(9, 17, 2.5))],
   barras: [LA('M3.5 14h3v7h-3zM10.5 4h3v17h-3zM17.5 9.5h3V21h-3z')],
+  microfono: [L('M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z'), L('M5 11a7 7 0 0 0 14 0'), L('M12 18v3')],
   soporte: [LA('M20.5 6.5a5 5 0 0 1-6.6 6.2L7 19.6a2 2 0 1 1-2.8-2.8l6.9-6.9A5 5 0 0 1 17.5 3.5l-3 3 3 3 3-3z')],
   pregunta: [LA(c(12, 12, 9)), L('M9.5 9.5a2.5 2.5 0 1 1 3.7 2.2c-.8.5-1.2 1-1.2 2v.3'), L('M12 17v.1')],
   insecto: [

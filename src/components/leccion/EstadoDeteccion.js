@@ -32,7 +32,6 @@ function dondeTocar({ cuerda, traste }) {
 
 function textoDeLectura(objetivo, lectura) {
   const esAcorde = objetivo.tipo === 'acorde';
-  if (lectura?.calibrando) return 'Midiendo el ruido del lugar, esperá un momento…';
   if (!lectura?.hayNota) return esAcorde ? `Rasgueá ${objetivo.nombre}` : `Tocá ${objetivo.nombre}`;
   if (lectura.correcta) return '¡Eso es, dejalo sonar!';
   if (!esAcorde) {
@@ -77,7 +76,7 @@ function useMensajeLegible(texto, inmediato) {
 // `compacto` (vista inmersiva): una cápsula centrada y más chica, para no tapar el mástil
 export function EstadoDeteccion({ objetivo, estado, lectura, aprobado, compacto = false }) {
   const texto = textoDeLectura(objetivo, lectura);
-  const mensaje = useMensajeLegible(texto, !lectura || lectura.calibrando || lectura.correcta);
+  const mensaje = useMensajeLegible(texto, !lectura || lectura.correcta);
 
   if (aprobado) {
     return (

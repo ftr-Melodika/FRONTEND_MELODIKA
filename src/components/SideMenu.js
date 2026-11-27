@@ -50,7 +50,7 @@ export function SideMenu({ visible, onClose }) {
     if (['EditUser', 'AjustesCuenta', 'Logros', 'Progreso', 'Ranking'].includes(pantalla)) return 'Perfil';
     if (['Practica', 'Canciones', 'Cancion'].includes(pantalla)) return 'Práctica';
     if (['Solicitudes', 'Feedback', 'Grupos', 'GrupoChat'].includes(pantalla)) return 'Comunidad';
-    if (['PreguntasFrecuentes', 'ReportarError', 'Contacto'].includes(pantalla)) return 'Soporte';
+    if (['PreguntasFrecuentes', 'UsoMicrofono', 'ReportarError', 'Contacto'].includes(pantalla)) return 'Soporte';
     return null;
   };
   const [seccionAbierta, setSeccionAbierta] = useState(() => seccionDe(pantallaActual));
@@ -155,6 +155,7 @@ export function SideMenu({ visible, onClose }) {
                 isActive={pantallaActual === 'PreguntasFrecuentes'}
                 onPress={() => irA('PreguntasFrecuentes')}
               />
+              <SubMenuItem title="Uso del micrófono" icon="microfono" isActive={pantallaActual === 'UsoMicrofono'} onPress={() => irA('UsoMicrofono')} />
               <SubMenuItem title="Reportar errores" icon="insecto" isActive={pantallaActual === 'ReportarError'} onPress={() => irA('ReportarError')} />
               <SubMenuItem title="Contacto" icon="sobre" isActive={pantallaActual === 'Contacto'} onPress={() => irA('Contacto')} />
               <SubMenuItem title="Sitio web" icon="globo" onPress={abrirSitioWeb} />

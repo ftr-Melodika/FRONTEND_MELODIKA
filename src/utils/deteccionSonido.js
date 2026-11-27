@@ -518,18 +518,9 @@ export function crearVerificador(msParaAprobar = MS_PARA_APROBAR, msDeGracia = M
   };
 }
 
-// Recibe los buffers del micrófono a medida que llegan y evalúa cada cierto tiempo.
-// agregarBuffer devuelve null si todavía no toca analizar, o la lectura:
-// { calibrando, hayNota, correcta, aprobado, nivel, oidas, ...detalle }
-// cambiarObjetivo pasa a otra nota sin volver a medir el ruido del lugar.
-// `ruido` (opcional, de detector.ruido()) es un ruido ya medido: se empieza con él en vez de calibrar.
-export function crearDetector(objetivoInicial, { ruido = null } = {}) {
-  let objetivo = objetivoInicial;
-  let esAcorde = objetivo.tipo === 'acorde';
-  let verificador = crearVerificador();
-  const perfilRuido = crearPerfilRuido();
-  if (ruido) perfilRuido.cargar(ruido);
-  let sampleRateDelRuido = ruido?.sampleRate ?? null; // Cada posición del ruido es una frecuencia: depende de la frecuencia de muestreo
+// Junta los buffers del micrófono y, cada cierto tiempo, entrega la ventana de audio a analizar.
+// agregar devuelve null si todavía no toca, o { nivel, potencias, factor }.
+function crearVentana() {
   let anillo = null;
   let ordenadas = null; // Se reusan en cada análisis: crear arreglos de 16.000 muestras cada 150 ms pesa
   let reducidas = null;
@@ -537,32 +528,9 @@ export function crearDetector(objetivoInicial, { ruido = null } = {}) {
   let posicion = 0;
   let llenas = 0;
   let ultimoAnalisis = -Infinity;
-  let aprobado = false;
-  let ultimaClave = null;
-  let repeticiones = 0;
-  const recientes = [];
 
   return {
-    // El ruido que lleva medido, para guardarlo y usarlo en otro detector (ver utils/ruidoAmbiente.js)
-    ruido() {
-      const estado = perfilRuido.estado();
-      return estado && sampleRateDelRuido ? { ...estado, sampleRate: sampleRateDelRuido } : null;
-    },
-
-    cambiarObjetivo(nuevo) {
-      objetivo = nuevo;
-      esAcorde = nuevo.tipo === 'acorde';
-      verificador = crearVerificador();
-      aprobado = false;
-      ultimaClave = null;
-      repeticiones = 0;
-      recientes.length = 0;
-    },
-
-    agregarBuffer(entrada, canales, sampleRate, ahora) {
-      // Un ruido medido con otra frecuencia de muestreo no sirve: se vuelve a calibrar
-      if (sampleRateDelRuido !== null && sampleRateDelRuido !== sampleRate) perfilRuido.descartar();
-      sampleRateDelRuido = sampleRate;
+    agregar(entrada, canales, sampleRate, ahora) {
       const nuevoFactor = Math.max(1, Math.floor(sampleRate / FRECUENCIA_TRABAJO));
       const tamano = VENTANA * nuevoFactor;
       if (!anillo || anillo.length !== tamano) {
@@ -584,21 +552,90 @@ export function crearDetector(objetivoInicial, { ruido = null } = {}) {
       ultimoAnalisis = ahora;
 
       // Ordenamos el anillo: lo más viejo primero
-      const muestras = ordenadas;
-      muestras.set(anillo.subarray(posicion));
-      muestras.set(anillo.subarray(0, posicion), tamano - posicion);
+      ordenadas.set(anillo.subarray(posicion));
+      ordenadas.set(anillo.subarray(0, posicion), tamano - posicion);
 
-      const nivel = calcularVolumen(muestras);
-      const potencias = calcularPotencias(reducir(muestras, factor, reducidas));
+      return { nivel: calcularVolumen(ordenadas), potencias: calcularPotencias(reducir(ordenadas, factor, reducidas)), factor };
+    },
+  };
+}
 
-      if (!perfilRuido.listo(potencias.length)) {
-        perfilRuido.agregar(potencias);
-        return { calibrando: true, hayNota: false, correcta: false, aprobado, nivel, oidas: [] };
-      }
+// El perfil de ruido junto con la frecuencia de muestreo con la que se midió: cada posición del
+// ruido es una frecuencia, así que medido con otra frecuencia de muestreo no sirve y se descarta.
+function crearRuidoDelLugar(ruido) {
+  const perfil = crearPerfilRuido();
+  if (ruido) perfil.cargar(ruido);
+  let sampleRateDelRuido = ruido?.sampleRate ?? null;
+  return {
+    perfil,
+    usarSampleRate(sampleRate) {
+      if (sampleRateDelRuido !== null && sampleRateDelRuido !== sampleRate) perfil.descartar();
+      sampleRateDelRuido = sampleRate;
+    },
+    // Lo medido, para guardarlo y usarlo en un detector (ver utils/ruidoAmbiente.js)
+    estado() {
+      const estado = perfil.estado();
+      return estado && sampleRateDelRuido ? { ...estado, sampleRate: sampleRateDelRuido } : null;
+    },
+  };
+}
 
+// Mide el ruido del lugar mientras no se está tocando: no evalúa ninguna nota.
+// ruido() devuelve null hasta que escuchó lo suficiente.
+// `ruido` (opcional) es lo medido antes, para seguir desde ahí.
+export function crearMedidorRuido({ ruido = null } = {}) {
+  const lugar = crearRuidoDelLugar(ruido);
+  const ventana = crearVentana();
+  return {
+    ruido: () => lugar.estado(),
+    agregarBuffer(entrada, canales, sampleRate, ahora) {
+      lugar.usarSampleRate(sampleRate);
+      const analisis = ventana.agregar(entrada, canales, sampleRate, ahora);
+      if (analisis) lugar.perfil.agregar(analisis.potencias);
+    },
+  };
+}
+
+// Recibe los buffers del micrófono a medida que llegan y evalúa cada cierto tiempo, desde el primero.
+// agregarBuffer devuelve null si todavía no toca analizar, o la lectura:
+// { hayNota, correcta, aprobado, nivel, oidas, ...detalle }
+// cambiarObjetivo pasa a otra nota.
+// `ruido` (opcional, de crearMedidorRuido) es el ruido del lugar, que se descuenta de lo que suena.
+// Sin él no se descuenta nada: no se mide acá, porque lo primero que suena puede ser la guitarra.
+export function crearDetector(objetivoInicial, { ruido = null } = {}) {
+  let objetivo = objetivoInicial;
+  let esAcorde = objetivo.tipo === 'acorde';
+  let verificador = crearVerificador();
+  const lugar = crearRuidoDelLugar(ruido);
+  const ventana = crearVentana();
+  let aprobado = false;
+  let ultimaClave = null;
+  let repeticiones = 0;
+  const recientes = [];
+
+  return {
+    cambiarObjetivo(nuevo) {
+      objetivo = nuevo;
+      esAcorde = nuevo.tipo === 'acorde';
+      verificador = crearVerificador();
+      aprobado = false;
+      ultimaClave = null;
+      repeticiones = 0;
+      recientes.length = 0;
+    },
+
+    agregarBuffer(entrada, canales, sampleRate, ahora) {
+      lugar.usarSampleRate(sampleRate);
+      const analisis = ventana.agregar(entrada, canales, sampleRate, ahora);
+      if (!analisis) return null;
+      const { nivel, potencias, factor } = analisis;
+
+      const conRuido = lugar.perfil.listo(potencias.length);
       const hzPorBin = sampleRate / factor / VENTANA;
-      const fundamentales = nivel >= NIVEL_MINIMO ? encontrarFundamentales(potencias, hzPorBin, perfilRuido.potencias()) : [];
-      perfilRuido.agregar(potencias); // Después de analizar: la nota actual no debe contar como ruido
+      const fundamentales = nivel >= NIVEL_MINIMO
+        ? encontrarFundamentales(potencias, hzPorBin, conRuido ? lugar.perfil.potencias() : null)
+        : [];
+      if (conRuido) lugar.perfil.agregar(potencias); // Después de analizar: la nota actual no debe contar como ruido
 
       recientes.push(fundamentales);
       if (recientes.length > LECTURAS_MEMORIA_ACORDE) recientes.shift();
@@ -615,7 +652,6 @@ export function crearDetector(objetivoInicial, { ruido = null } = {}) {
 
       return {
         ...comparacion,
-        calibrando: false,
         hayNota: clave !== null && repeticiones >= LECTURAS_ESTABLES,
         aprobado,
         nivel,

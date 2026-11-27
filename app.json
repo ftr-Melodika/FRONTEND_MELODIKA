@@ -32,7 +32,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Melodika usa el micrófono para escuchar las notas y acordes que tocás. El audio no se guarda ni se envía."
+          "microphonePermission": "Melodika usa el micrófono para escuchar las notas y acordes que tocás y para medir el ruido del lugar mientras no estás tocando. El audio no se guarda ni se envía."
         }
       ],
       "expo-asset",

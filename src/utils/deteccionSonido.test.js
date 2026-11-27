@@ -5,7 +5,7 @@ import {
   calcularPotencias,
   compararAcorde,
   compararNota,
-  crearDetector,
+  crearDetector, crearMedidorRuido,
   crearVerificador,
   encontrarFundamentales,
   midiAFrecuencia,
@@ -417,19 +417,27 @@ function pasaje(midis, sr, segundos, ruido, dbSobreRuido) {
   return mezcla;
 }
 
+// El ruido del lugar tal como se mide mientras no se está tocando
+function medirRuido(audio, sr) {
+  const medidor = crearMedidorRuido();
+  reproducir(medidor, audio, sr);
+  return medidor.ruido();
+}
+
 // Mide el ruido del lugar y después toca
 function tocarEnRuido(objetivo, midis, dbSobreRuido, opciones = {}) {
   const previo = ambiente(SR, SR * 2.5, opciones);
   const durante = ambiente(SR, SR * 2.5, { ...opciones, semilla: 23 });
-  const audio = concatenar(previo, pasaje(midis, SR, 2.5, durante, dbSobreRuido));
-  return reproducir(crearDetector(objetivo), audio, SR).filter((l) => !l.calibrando);
+  const detector = crearDetector(objetivo, { ruido: medirRuido(previo, SR) });
+  // El micrófono ya está abierto un momento antes de que suene la cuerda
+  const antes = ambiente(SR, SR * 0.5, { ...opciones, semilla: 31 });
+  return reproducir(detector, concatenar(antes, pasaje(midis, SR, 2.5, durante, dbSobreRuido)), SR, 100000);
 }
 
-test('primero mide el ruido y avisa que está calibrando', () => {
-  const lecturas = reproducir(crearDetector(nota(5, 0)), ambiente(SR, SR * 3), SR);
-  assert.ok(lecturas[0].calibrando);
-  assert.strictEqual(lecturas.filter((l) => l.calibrando).length, 8);
-  assert.ok(!lecturas.at(-1).calibrando);
+test('sin ruido medido evalúa desde la primera lectura, sin esperar', () => {
+  const lecturas = reproducir(crearDetector(nota(5, 0)), sintetizar([midiDePosicion(5, 0)], SR, SR * 2), SR);
+  assert.ok(lecturas[0].correcta);
+  assert.ok(lecturas.at(-1).aprobado);
 });
 
 test('el ambiente solo no dispara notas, con distintos ruidos y niveles', () => {
@@ -437,7 +445,7 @@ test('el ambiente solo no dispara notas, con distintos ruidos y niveles', () => 
     for (const semilla of [11, 37, 91]) {
       const audio = ambiente(SR, SR * 15, { nivel, semilla });
       for (const objetivo of [nota(5, 0), nota(1, 3), nota(6, 0), acorde(FORMAS.Do), acorde(FORMAS.Mim)]) {
-        const lecturas = reproducir(crearDetector(objetivo), audio, SR);
+        const lecturas = reproducir(crearDetector(objetivo, { ruido: medirRuido(audio, SR) }), audio, SR);
         assert.ok(!lecturas.at(-1).aprobado, `aprobó solo con ambiente, nivel ${nivel}`);
         assert.ok(!lecturas.some((l) => l.hayNota), `mostró una nota solo con ambiente, nivel ${nivel}`);
       }
@@ -484,7 +492,8 @@ test('con el celular lejos sigue rechazando lo equivocado', () => {
 test('un lugar silencioso, sin tocar, no dispara notas', () => {
   for (const semilla of [11, 37, 91]) {
     for (const objetivo of [nota(5, 0), nota(1, 3), acorde(FORMAS.Do)]) {
-      const lecturas = reproducir(crearDetector(objetivo), ambiente(SR, SR * 15, { ...LEJOS, semilla }), SR);
+      const audio = ambiente(SR, SR * 15, { ...LEJOS, semilla });
+      const lecturas = reproducir(crearDetector(objetivo, { ruido: medirRuido(audio, SR) }), audio, SR);
       assert.ok(!lecturas.at(-1).aprobado);
       assert.ok(!lecturas.some((l) => l.hayNota));
     }
@@ -550,18 +559,19 @@ test('una voz que cambia de altura no aprueba una nota', () => {
     const silabas = Math.max(0, Math.sin(2 * Math.PI * 3 * t));
     voz[i] = 0.1 * silabas * (Math.sin(fase) + 0.6 * Math.sin(2 * fase) + 0.3 * Math.sin(3 * fase));
   }
-  const audio = concatenar(ambiente(SR, SR * 2), voz);
+  const ruido = medirRuido(ambiente(SR, SR * 2), SR);
   for (const objetivo of [nota(5, 0), nota(3, 0), nota(4, 0)]) {
-    assert.ok(!reproducir(crearDetector(objetivo), audio, SR).at(-1).aprobado);
+    assert.ok(!reproducir(crearDetector(objetivo, { ruido }), voz, SR).at(-1).aprobado);
   }
 });
 
 test('se recupera si alguien tocó mientras medía el ruido', () => {
-  const tocandoAlCalibrar = pasaje([45], SR, 2, ambiente(SR, SR * 2), 10);
+  const tocandoAlMedir = pasaje([45], SR, 2, ambiente(SR, SR * 2), 10);
   const pausa = ambiente(SR, SR * 3, { semilla: 41 });
   const despues = pasaje([45], SR, 2.5, ambiente(SR, SR * 2.5, { semilla: 53 }), 0);
-  const lecturas = reproducir(crearDetector(nota(5, 0)), concatenar(tocandoAlCalibrar, pausa, despues), SR);
-  assert.ok(lecturas.at(-1).aprobado);
+  const ruido = medirRuido(concatenar(tocandoAlMedir, pausa), SR);
+  const antes = ambiente(SR, SR * 0.5, { semilla: 31 });
+  assert.ok(reproducir(crearDetector(nota(5, 0), { ruido }), concatenar(antes, despues), SR).at(-1).aprobado);
 });
 
 test('de punta a punta en un lugar silencioso', () => {
@@ -628,51 +638,34 @@ test('una nota aguda fuerte no se descarta como armónico de un zumbido grave', 
   assert.ok(midis.includes(76), `se perdió la nota aguda: ${midis}`);
 });
 
-test('cambiarObjetivo pasa a otra nota sin volver a calibrar', () => {
-  const detector = crearDetector(nota(5, 0));
-  const primera = reproducir(detector, concatenar(ambiente(SR, SR * 2.5), pasaje([midiDePosicion(5, 0)], SR, 2.5, ambiente(SR, SR * 2.5, { semilla: 23 }), 0)), SR);
+test('cambiarObjetivo pasa a otra nota sin arrastrar el acierto anterior', () => {
+  const detector = crearDetector(nota(5, 0), { ruido: medirRuido(ambiente(SR, SR * 2.5), SR) });
+  const primera = reproducir(detector, pasaje([midiDePosicion(5, 0)], SR, 2.5, ambiente(SR, SR * 2.5, { semilla: 23 }), 0), SR);
   assert.ok(primera.at(-1).aprobado);
 
   detector.cambiarObjetivo(nota(1, 3));
   const durante = ambiente(SR, SR * 2.5, { semilla: 29 });
   const segunda = reproducir(detector, concatenar(ambiente(SR, SR * 0.5, { semilla: 31 }), pasaje([midiDePosicion(1, 3)], SR, 2.5, durante, 0)), SR, 100000);
-  assert.ok(!segunda.some((l) => l.calibrando), 'volvió a calibrar');
   assert.ok(!segunda[0].aprobado, 'arrastró el acierto anterior');
   assert.ok(segunda.at(-1).aprobado);
 });
 
 test('después de cambiarObjetivo la nota anterior no aprueba la nueva', () => {
-  const detector = crearDetector(nota(5, 0));
-  reproducir(detector, ambiente(SR, SR * 2.5), SR);
+  const detector = crearDetector(nota(5, 0), { ruido: medirRuido(ambiente(SR, SR * 2.5), SR) });
   detector.cambiarObjetivo(nota(1, 3));
-  const lecturas = reproducir(detector, pasaje([midiDePosicion(5, 0)], SR, 2.5, ambiente(SR, SR * 2.5, { semilla: 23 }), 0), SR, 100000);
+  const lecturas = reproducir(detector, pasaje([midiDePosicion(5, 0)], SR, 2.5, ambiente(SR, SR * 2.5, { semilla: 23 }), 0), SR);
   assert.ok(!lecturas.at(-1).aprobado);
 });
 
-test('un detector que arranca con un ruido ya medido no vuelve a calibrar', () => {
-  const medidor = crearDetector(nota(5, 0));
-  reproducir(medidor, ambiente(SR, SR * 3), SR);
-  const ruido = medidor.ruido();
-  assert.ok(ruido, 'después de calibrar hay un ruido para compartir');
-
-  const lecturas = reproducir(crearDetector(nota(5, 0), { ruido }), ambiente(SR, SR * 2), SR);
-  assert.ok(lecturas.length > 0);
-  assert.ok(!lecturas.some((l) => l.calibrando), 'volvió a calibrar');
+test('el medidor no entrega ruido hasta haber escuchado lo suficiente', () => {
+  assert.strictEqual(medirRuido(ambiente(SR, SR * 0.5), SR), null);
+  assert.ok(medirRuido(ambiente(SR, SR * 3), SR));
 });
 
-test('mientras calibra todavía no hay ruido para compartir', () => {
-  const detector = crearDetector(nota(5, 0));
-  reproducir(detector, ambiente(SR, SR * 0.5), SR);
-  assert.strictEqual(detector.ruido(), null);
-});
-
-test('un ruido medido con otra frecuencia de muestreo se descarta y se vuelve a calibrar', () => {
-  const medidor = crearDetector(nota(5, 0));
-  reproducir(medidor, ambiente(SR, SR * 3), SR);
-  const otraFrecuencia = 44100;
-  const lecturas = reproducir(crearDetector(nota(5, 0), { ruido: medidor.ruido() }), ambiente(otraFrecuencia, otraFrecuencia * 3), otraFrecuencia);
-  assert.ok(lecturas[0].calibrando);
-  assert.ok(!lecturas.at(-1).calibrando);
+test('un ruido medido con otra frecuencia de muestreo se descarta', () => {
+  const ruido = medirRuido(ambiente(SR, SR * 3), SR);
+  const otra = 44100;
+  assert.ok(reproducir(crearDetector(nota(5, 3), { ruido }), sintetizar([48], otra, otra * 2), otra).at(-1).aprobado);
 });
 
 test('obtenerObjetivo: una nota con la forma de su acorde la conserva', () => {

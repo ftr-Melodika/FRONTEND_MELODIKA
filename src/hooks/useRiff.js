@@ -11,7 +11,7 @@ import { crearDetector, compararAcorde, compararNota } from '../utils/deteccionS
 import { ruidoMedido } from '../utils/ruidoAmbiente';
 import { armarRecorrido, decidirTropiezo, enVentana, esperaLaPrimera, finDeVentana, olvidarTropiezo, resumir, MS_DESPUES } from '../utils/riff';
 
-// Antes de la primera nota: el detector mide el ruido del lugar (~1,5 s) y las notas se acercan
+// Antes de la primera nota: tiempo para ver cómo se acercan las notas
 export const MS_ENTRADA = 2500;
 // Después de volver atrás, cuánto antes de la nota se retoma (para verla venir)
 export const MS_ENTRADA_RETOMAR = 2000;
@@ -72,7 +72,7 @@ export function useRiff(riff) {
     const ahora = fin + desfase.current;
 
     const lectura = detector.current.agregarBuffer(crudo, canales, sampleRate, ahora);
-    if (!lectura || lectura.calibrando) return;
+    if (!lectura) return;
     recientes.current.push(lectura.fundamentales || []);
     if (recientes.current.length > LECTURAS_RECIENTES) recientes.current.shift();
     if (!enMarcha.current || !lectura.fundamentales?.length) return;

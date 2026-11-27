@@ -15,6 +15,8 @@ import { CourseMap } from '../components/home/CourseMap';
 import { CourseList } from '../components/home/CourseList';
 import { TarjetasSkeleton } from '../components/Skeleton';
 import { PrimeraCuerdaModal } from '../components/PrimeraCuerdaModal';
+import { PermisoMicrofonoModal } from '../components/PermisoMicrofonoModal';
+import { usePermisoMicrofono } from '../hooks/usePermisoMicrofono';
 
 import { leccionesService } from '../services/leccionesService';
 import { useMapa, useSolicitudes, useActualizarAlEnfocar } from '../hooks/useConsultas';
@@ -48,6 +50,8 @@ export function HomeScreen({ navigation, route }) {
   const solicitudesPendientes = solicitudes?.recibidas?.length ?? 0;
 
   useActualizarAlEnfocar(consultaMapa);
+
+  const permisoMicrofono = usePermisoMicrofono();
 
   useEffect(() => {
     if (!perfilId) navigation.replace('SelectUser');
@@ -171,8 +175,13 @@ export function HomeScreen({ navigation, route }) {
         visible={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
       />
-      {/* Después de la carga: dos modales a la vez no se ven bien */}
-      <PrimeraCuerdaModal visible={bienvenida && !cargando} onCerrar={cerrarBienvenida} />
+      {/* Después de la carga y de a uno (primero el permiso): dos modales a la vez no se ven bien */}
+      <PermisoMicrofonoModal
+        visible={enfocada && !cargando && permisoMicrofono.preguntando}
+        onPermitir={permisoMicrofono.permitir}
+        onOmitir={permisoMicrofono.omitir}
+      />
+      <PrimeraCuerdaModal visible={bienvenida && !cargando && permisoMicrofono.resuelto} onCerrar={cerrarBienvenida} />
     </Background>
   );
 }

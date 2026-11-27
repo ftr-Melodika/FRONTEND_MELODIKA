@@ -91,7 +91,8 @@ export function LeccionScreen({ route, navigation }) {
   const mostrarIntro = inmersiva && indice === 0 && !introHecha;
   const jugandoInmersiva = inmersiva && !mostrarIntro && !fin;
   // El ruido del lugar se mide siempre que el alumno no esté tocando ni mirando un video
-  useRuidoAmbiente(!finishing && (!!fin || pasoActual === 'teoria' || mostrarIntro || (jugandoInmersiva && pausado)));
+  const respondiendoPreguntas = pasoActual === 'practica' && tipoPractica === 'quiz';
+  useRuidoAmbiente(!finishing && (!!fin || pasoActual === 'teoria' || respondiendoPreguntas || mostrarIntro || (jugandoInmersiva && pausado)));
   const salirDeLaClase = () => (irAtras ? irAtras() : navigation.goBack());
 
   // El botón "atrás" de Android abre la pausa (y la cierra si ya estaba abierta) en vez de salir de golpe

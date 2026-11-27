@@ -9,6 +9,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import { Button } from './Button';
 import { useMicrofono } from '../hooks/useMicrofono';
 import { crearDetector } from '../utils/deteccionSonido';
+import { ruidoMedido } from '../utils/ruidoAmbiente';
 import { FUENTE_TITULO } from '../theme/fuentes';
 
 const MS_VISIBLE_DESPUES = 2500; // Desde el tic hasta que se cierra sola
@@ -132,24 +133,21 @@ function Tic() {
 
 export function PrimeraCuerdaModal({ visible, onCerrar }) {
   const [sono, setSono] = useState(false);
-  const [calibrando, setCalibrando] = useState(true);
   const detector = useRef(null);
   const yaSono = useRef(false);
 
   useEffect(() => {
     if (!visible) return;
     // El objetivo no importa: alcanza con que se oiga una nota que se mantiene
-    detector.current = crearDetector({ tipo: 'nota', nombre: 'Mi', posiciones: [], midis: [40] });
+    detector.current = crearDetector({ tipo: 'nota', nombre: 'Mi', posiciones: [], midis: [40] }, { ruido: ruidoMedido() });
     yaSono.current = false;
     setSono(false);
-    setCalibrando(true);
   }, [visible]);
 
   const procesarBuffer = ({ data, sampleRate, channels }) => {
     if (!detector.current || yaSono.current) return;
     const lectura = detector.current.agregarBuffer(new Float32Array(data), channels || 1, sampleRate, Date.now());
     if (!lectura) return;
-    if (!lectura.calibrando) setCalibrando(false);
     if (lectura.hayNota) {
       yaSono.current = true;
       setSono(true);
@@ -169,7 +167,7 @@ export function PrimeraCuerdaModal({ visible, onCerrar }) {
   let ayuda;
   if (sono) ayuda = '¡Sonó! Ya estás listo para empezar.';
   else if (sinMicrofono) ayuda = sinMicrofono;
-  else if (estado !== 'escuchando' || calibrando) ayuda = 'Preparando el micrófono…';
+  else if (estado !== 'escuchando') ayuda = 'Preparando el micrófono…';
   else ayuda = 'Te estamos escuchando 🎸';
 
   return (
